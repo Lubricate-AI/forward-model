@@ -15,7 +15,6 @@ lint: lint-python lint-spellcheck lint-yaml type-checking ## Run all linting che
 
 lint-python: ## Run ruff linting and formatting checks (passive)
 	uv run ruff check $(SOURCE_PATH) $(TEST_PATH)
-	uv run ruff check --select I $(SOURCE_PATH) $(TEST_PATH)
 	uv run ruff format --check $(SOURCE_PATH) $(TEST_PATH)
 
 lint-spellcheck: ## Run typos spellchecker
