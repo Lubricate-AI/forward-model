@@ -39,6 +39,41 @@ class TestPlotModel:
 
         plt.close()
 
+    def test_plot_model_color_by_index(self, simple_model: ForwardModel) -> None:
+        """Test plotting with color_by='index'."""
+        ax = plot_model(simple_model, color_by="index")
+        assert ax is not None
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_plot_model_color_by_susceptibility(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """Test plotting with color_by='susceptibility'."""
+        ax = plot_model(simple_model, color_by="susceptibility")
+        assert ax is not None
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_plot_model_with_observation_lines(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """Test plotting with observation lines enabled."""
+        ax = plot_model(simple_model, show_observation_lines=True)
+        assert ax is not None
+        # Lines should include observation points plus vertical lines
+        assert len(ax.lines) > 0
+        plt.close()
+
+    def test_plot_model_without_observation_lines(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """Test plotting with observation lines disabled."""
+        ax = plot_model(simple_model, show_observation_lines=False)
+        assert ax is not None
+        assert len(ax.patches) > 0
+        plt.close()
+
 
 class TestPlotAnomaly:
     """Tests for plot_anomaly function."""
@@ -116,10 +151,88 @@ class TestPlotCombined:
         fig = plot_combined(simple_model, anomaly)
         axes = fig.axes
 
-        assert len(axes) == 2
+        assert len(axes) >= 2  # At least 2 (may have colorbar)
         # First subplot should have polygons (cross-section)
         assert len(axes[0].patches) > 0
         # Second subplot should have lines (anomaly)
         assert len(axes[1].lines) > 0
 
         plt.close()
+
+    def test_plot_combined_with_style(
+        self, tmp_path: Path, simple_model: ForwardModel
+    ) -> None:
+        """Test combined plot with different styles."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+
+        for style in ["default", "publication", "presentation"]:
+            output_file = tmp_path / f"test_plot_{style}.png"
+            fig = plot_combined(
+                simple_model, anomaly, save_path=output_file, style=style
+            )
+            assert output_file.exists()
+            plt.close(fig)
+
+    def test_plot_combined_with_custom_figsize(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """Test combined plot with custom figure size."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+        custom_figsize = (10, 6)
+
+        fig = plot_combined(simple_model, anomaly, figsize=custom_figsize)
+        # Check that figure size is approximately correct (allowing for tight_layout)
+        assert abs(fig.get_figwidth() - custom_figsize[0]) < 0.1
+        assert abs(fig.get_figheight() - custom_figsize[1]) < 0.1
+        plt.close()
+
+    def test_plot_combined_with_custom_dpi(
+        self, tmp_path: Path, simple_model: ForwardModel
+    ) -> None:
+        """Test combined plot with custom DPI."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+        output_file = tmp_path / "test_plot_300dpi.png"
+
+        fig = plot_combined(simple_model, anomaly, save_path=output_file, dpi=300)
+        assert output_file.exists()
+        plt.close(fig)
+
+    def test_plot_combined_vector_formats(
+        self, tmp_path: Path, simple_model: ForwardModel
+    ) -> None:
+        """Test combined plot with vector formats (PDF, SVG)."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+
+        for fmt in ["pdf", "svg"]:
+            output_file = tmp_path / f"test_plot.{fmt}"
+            fig = plot_combined(simple_model, anomaly, save_path=output_file)
+            assert output_file.exists()
+            plt.close(fig)
+
+    def test_plot_combined_color_options(self, simple_model: ForwardModel) -> None:
+        """Test combined plot with different color options."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+
+        # Test color_by index
+        fig1 = plot_combined(simple_model, anomaly, color_by="index")
+        assert fig1 is not None
+        plt.close(fig1)
+
+        # Test color_by susceptibility
+        fig2 = plot_combined(simple_model, anomaly, color_by="susceptibility")
+        assert fig2 is not None
+        plt.close(fig2)
+
+    def test_plot_combined_observation_lines(self, simple_model: ForwardModel) -> None:
+        """Test combined plot with observation lines option."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+
+        # With lines
+        fig1 = plot_combined(simple_model, anomaly, show_observation_lines=True)
+        assert fig1 is not None
+        plt.close(fig1)
+
+        # Without lines
+        fig2 = plot_combined(simple_model, anomaly, show_observation_lines=False)
+        assert fig2 is not None
+        plt.close(fig2)

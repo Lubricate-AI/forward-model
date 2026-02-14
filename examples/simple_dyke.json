@@ -1,0 +1,21 @@
+{
+  "bodies": [
+    {
+      "name": "Vertical Dyke",
+      "susceptibility": 0.08,
+      "vertices": [
+        [20.0, 50.0],
+        [30.0, 50.0],
+        [30.0, 200.0],
+        [20.0, 200.0]
+      ]
+    }
+  ],
+  "field": {
+    "intensity": 50000.0,
+    "inclination": 60.0,
+    "declination": 0.0
+  },
+  "observation_x": [-100, -75, -50, -25, 0, 25, 50, 75, 100, 125, 150],
+  "observation_z": 0.0
+}

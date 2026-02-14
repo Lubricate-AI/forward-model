@@ -67,3 +67,50 @@ def write_json(
 
     with open(filepath, "w") as f:
         json.dump(output, f, indent=2)
+
+
+def write_numpy(
+    filepath: str | Path,
+    observation_x: list[float],
+    anomaly: NDArray[np.float64],
+    compressed: bool = False,
+) -> None:
+    """Write anomaly results to NumPy format.
+
+    Supports both .npy (single array) and .npz (named arrays) formats.
+    The format is determined by the file extension.
+
+    For .npy files:
+        Creates a 2D array with shape (N, 2) where columns are [x, anomaly].
+
+    For .npz files:
+        Creates a dictionary with keys 'x' and 'anomaly'.
+        Use compressed=True to create a compressed .npz file.
+
+    Args:
+        filepath: Output file path (.npy or .npz). Can be string or Path.
+        observation_x: List of x-coordinates for observation points (meters).
+        anomaly: Array of magnetic anomaly values (nanoTesla).
+        compressed: If True and filepath ends with .npz, uses compression.
+
+    Example:
+        >>> write_numpy("results.npy", model.observation_x, anomaly)
+        >>> write_numpy("results.npz", model.observation_x, anomaly, compressed=True)
+    """
+    filepath = Path(filepath)
+
+    # Determine format from extension
+    if filepath.suffix == ".npz":
+        # NPZ format: dictionary with named arrays
+        x_array = np.array(observation_x)
+
+        if compressed:
+            np.savez_compressed(filepath, x=x_array, anomaly=anomaly)
+        else:
+            np.savez(filepath, x=x_array, anomaly=anomaly)
+
+    else:
+        # NPY format (or default): 2D array with [x, anomaly] columns
+        x_array = np.array(observation_x)
+        combined = np.column_stack([x_array, anomaly])
+        np.save(filepath, combined)

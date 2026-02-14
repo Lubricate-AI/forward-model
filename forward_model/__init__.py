@@ -14,7 +14,13 @@ Example:
 from forward_model.compute import calculate_anomaly
 
 # I/O
-from forward_model.io import load_model, write_csv, write_json
+from forward_model.io import (
+    load_model,
+    load_model_from_csv,
+    write_csv,
+    write_json,
+    write_numpy,
+)
 from forward_model.models import ForwardModel, GeologicBody, MagneticField
 
 # Visualization
@@ -29,8 +35,10 @@ __all__ = [
     "calculate_anomaly",
     # I/O
     "load_model",
+    "load_model_from_csv",
     "write_csv",
     "write_json",
+    "write_numpy",
     # Visualization
     "plot_model",
     "plot_anomaly",

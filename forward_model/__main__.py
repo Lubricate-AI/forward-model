@@ -1,12 +1,6 @@
-import typer
+"""Entry point for the forward-model CLI."""
 
-app = typer.Typer()
-
-
-@app.command("run")
-def run() -> None:
-    print("Hello World!")
-
+from forward_model.cli import app
 
 if __name__ == "__main__":
     app()

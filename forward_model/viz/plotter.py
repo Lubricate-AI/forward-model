@@ -4,6 +4,7 @@
 # pyright: reportUnknownArgumentType=false, reportArgumentType=false
 
 from pathlib import Path
+from typing import Literal
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +16,12 @@ from numpy.typing import NDArray
 from forward_model.models.model import ForwardModel
 
 
-def plot_model(model: ForwardModel, ax: Axes | None = None) -> Axes:
+def plot_model(
+    model: ForwardModel,
+    ax: Axes | None = None,
+    color_by: Literal["index", "susceptibility"] = "susceptibility",
+    show_observation_lines: bool = True,
+) -> Axes:
     """Plot geologic cross-section of the forward model.
 
     Creates a 2D cross-section showing the geologic bodies and
@@ -24,25 +30,46 @@ def plot_model(model: ForwardModel, ax: Axes | None = None) -> Axes:
     Args:
         model: The forward model to visualize.
         ax: Matplotlib axes to plot on. If None, creates new axes.
+        color_by: How to color bodies. "index" uses different colors for each
+                 body, "susceptibility" uses a colormap based on susceptibility.
+        show_observation_lines: If True, show vertical dashed lines at obs points.
 
     Returns:
         The matplotlib Axes object containing the plot.
 
     Example:
         >>> fig, ax = plt.subplots()
-        >>> plot_model(model, ax=ax)
+        >>> plot_model(model, ax=ax, color_by="susceptibility")
         >>> plt.show()
     """
     if ax is None:
         _, ax = plt.subplots()
 
-    # Color palette for bodies
-    colors = plt.cm.tab10(np.linspace(0, 1, max(len(model.bodies), 10)))  # type: ignore
+    # Determine colors based on color_by parameter
+    cmap = plt.cm.viridis  # type: ignore
+    if color_by == "susceptibility":
+        # Use susceptibility-based colormap
+        susc_values = [body.susceptibility for body in model.bodies]
+        susc_set = set(susc_values)
+
+        if len(susc_set) == 1:
+            # All susceptibilities are the same - use single color
+            colors = [cmap(0.5)] * len(model.bodies)
+            show_colorbar = False
+        else:
+            # Multiple susceptibilities - use colormap
+            norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
+            colors = [cmap(norm(body.susceptibility)) for body in model.bodies]  # type: ignore
+            show_colorbar = True
+    else:
+        # Use index-based colors
+        colors = plt.cm.tab10(np.linspace(0, 1, max(len(model.bodies), 10)))  # type: ignore
+        show_colorbar = False
 
     # Plot each body
     for i, body in enumerate(model.bodies):
         vertices = body.to_numpy()
-        color = colors[i % len(colors)]
+        color = colors[i % len(colors)] if color_by == "index" else colors[i]
 
         # Create polygon patch
         poly = Polygon(
@@ -68,6 +95,22 @@ def plot_model(model: ForwardModel, ax: Axes | None = None) -> Axes:
             fontsize=8,
             bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.7},
         )
+
+    # Add colorbar if using susceptibility coloring with multiple values
+    if color_by == "susceptibility" and show_colorbar:
+        susc_values = [body.susceptibility for body in model.bodies]
+        sm = plt.cm.ScalarMappable(  # type: ignore
+            cmap=cmap,
+            norm=plt.Normalize(vmin=min(susc_values), vmax=max(susc_values)),  # type: ignore
+        )
+        sm.set_array([])  # type: ignore
+        plt.colorbar(sm, ax=ax, label="Susceptibility (SI)")  # type: ignore
+
+    # Plot observation lines
+    if show_observation_lines:
+        obs_points = model.get_observation_points()
+        for x in obs_points[:, 0]:
+            ax.axvline(x, color="gray", linestyle="--", alpha=0.3, linewidth=0.8)
 
     # Plot observation points
     obs_points = model.get_observation_points()
@@ -138,6 +181,11 @@ def plot_combined(
     model: ForwardModel,
     anomaly: NDArray[np.float64],
     save_path: str | Path | None = None,
+    style: str = "default",
+    figsize: tuple[float, float] | None = None,
+    dpi: int | None = None,
+    color_by: Literal["index", "susceptibility"] = "susceptibility",
+    show_observation_lines: bool = True,
 ) -> Figure:
     """Create combined plot with cross-section and anomaly profile.
 
@@ -148,30 +196,70 @@ def plot_combined(
         model: The forward model to visualize.
         anomaly: Magnetic anomaly values (nanoTesla).
         save_path: Optional path to save the figure. If None, does not save.
+        style: Plot style name ("default", "publication", "presentation").
+        figsize: Figure size as (width, height) in inches. If None, uses (12, 8).
+        dpi: DPI for saved figure. If None, uses style default.
+        color_by: How to color bodies in cross-section.
+        show_observation_lines: If True, show vertical lines at observation points.
 
     Returns:
         The matplotlib Figure object.
 
     Example:
-        >>> fig = plot_combined(model, anomaly, save_path="output.png")
+        >>> fig = plot_combined(model, anomaly, save_path="output.png",
+        ...                     style="publication", dpi=300)
         >>> plt.show()
     """
-    fig, (ax1, ax2) = plt.subplots(
-        2, 1, figsize=(12, 8), sharex=True, gridspec_kw={"hspace": 0.15}
-    )
+    from forward_model.viz.styles import get_style
 
-    # Plot cross-section on top
-    plot_model(model, ax=ax1)
+    # Get style configuration
+    style_config = get_style(style)
 
-    # Plot anomaly below
-    plot_anomaly(model.observation_x, anomaly, ax=ax2)
+    # Use context manager to apply style
+    with plt.rc_context(style_config):
+        # Use provided figsize or default
+        if figsize is None:
+            figsize = (12, 8)
 
-    # Adjust layout
-    fig.tight_layout()
+        fig, (ax1, ax2) = plt.subplots(
+            2, 1, figsize=figsize, sharex=True, gridspec_kw={"hspace": 0.15}
+        )
 
-    # Save if requested
-    if save_path is not None:
-        save_path = Path(save_path)
-        fig.savefig(save_path, dpi=150, bbox_inches="tight")
+        # Plot cross-section on top
+        plot_model(
+            model,
+            ax=ax1,
+            color_by=color_by,
+            show_observation_lines=show_observation_lines,
+        )
+
+        # Plot anomaly below
+        plot_anomaly(model.observation_x, anomaly, ax=ax2)
+
+        # Adjust layout
+        fig.tight_layout()
+
+        # Save if requested
+        if save_path is not None:
+            save_path = Path(save_path)
+            # Use provided DPI or style default
+            save_dpi = dpi if dpi is not None else style_config.get("savefig.dpi", 150)
+
+            # Detect format from extension
+            suffix = save_path.suffix.lower()
+            if suffix in [".png", ".jpg", ".jpeg"]:
+                # Raster formats
+                fig.savefig(
+                    save_path, dpi=save_dpi, bbox_inches="tight", facecolor="white"
+                )
+            elif suffix in [".pdf", ".svg", ".eps"]:
+                # Vector formats - DPI less relevant but still used for
+                # rasterized elements
+                fig.savefig(
+                    save_path, dpi=save_dpi, bbox_inches="tight", format=suffix[1:]
+                )
+            else:
+                # Default format
+                fig.savefig(save_path, dpi=save_dpi, bbox_inches="tight")
 
     return fig

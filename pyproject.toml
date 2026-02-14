@@ -9,7 +9,11 @@ dependencies = [
     "typer~=0.23.1",
 ]
 
+[project.scripts]
+forward-model = "forward_model.__main__:app"
+
 [tool.uv]
+package = true
 dev-dependencies = [
     "pyright>=1.1.408",
     "pytest>=8.0.0",
