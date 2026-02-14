@@ -2,7 +2,7 @@ VENV_PATH ?= .venv
 SOURCE_PATH ?= forward_model
 TEST_PATH ?= tests
 
-.PHONY: help install lint-python lint-spellcheck lint-yaml type-checking format test coverage docs
+.PHONY: help install lint-python lint-spellcheck lint-yaml type-checking format test coverage
 
 help: ## Show this help message
 	@echo "Available commands:"
