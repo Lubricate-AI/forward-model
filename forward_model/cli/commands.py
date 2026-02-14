@@ -223,7 +223,7 @@ def visualize(
             if verbose:
                 typer.echo(f"  Plot saved to {output}")
 
-        if not no_show and not output:
+        if not no_show:
             if verbose:
                 typer.echo("  Displaying plot...")
             import matplotlib.pyplot as plt
