@@ -13,9 +13,11 @@ from pydantic import ValidationError
 from forward_model import (
     calculate_anomaly,
     load_model,
+    load_model_from_csv,
     plot_combined,
     write_csv,
     write_json,
+    write_numpy,
 )
 
 app = typer.Typer(
@@ -55,10 +57,14 @@ def run(
     exports results and generates visualizations.
     """
     try:
-        # Load model
+        # Load model (auto-detect format from extension)
         if verbose:
             typer.echo(f"Loading model from {input_file}...")
-        model = load_model(input_file)
+
+        if input_file.suffix.lower() == ".csv":
+            model = load_model_from_csv(input_file)
+        else:
+            model = load_model(input_file)
         if verbose:
             typer.echo(f"  Loaded {len(model.bodies)} bodies")
             typer.echo(f"  {len(model.observation_x)} observation points")
@@ -86,9 +92,6 @@ def run(
         if output_npy:
             if verbose:
                 typer.echo(f"Writing NumPy to {output_npy}...")
-            # Import here to avoid circular dependency during module load
-            from forward_model.io.writers import write_numpy
-
             write_numpy(output_npy, model.observation_x, anomaly)
 
         # Generate plot
@@ -137,7 +140,11 @@ def validate(
         if verbose:
             typer.echo(f"Validating {input_file}...")
 
-        model = load_model(input_file)
+        # Auto-detect format from extension
+        if input_file.suffix.lower() == ".csv":
+            model = load_model_from_csv(input_file)
+        else:
+            model = load_model(input_file)
 
         typer.echo(typer.style("✓ Model is valid", fg=typer.colors.GREEN))
         if verbose:

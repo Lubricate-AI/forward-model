@@ -132,6 +132,48 @@ class TestRunCommand:
         assert result.exit_code == 0
         assert output_plot.exists()
 
+    def test_run_with_npy_output(self, model_json_file: Path, tmp_path: Path) -> None:
+        """Test run command with NumPy output."""
+        import numpy as np
+
+        output_npy = tmp_path / "output.npy"
+
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                str(model_json_file),
+                "--output-npy",
+                str(output_npy),
+                "--no-plot",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert output_npy.exists()
+
+        # Verify NumPy array structure
+        data = np.load(output_npy)
+        assert data.shape[1] == 2  # [x, anomaly] columns
+        assert len(data) > 0
+
+    def test_run_with_csv_input(
+        self, tmp_path: Path, simple_model: ForwardModel
+    ) -> None:
+        """Test run command with CSV input file."""
+        # Create CSV model file
+        csv_file = tmp_path / "model.csv"
+        csv_content = """50000.0,60.0,0.0,0.0
+Rectangle,0.05,0.0,100.0,50.0,100.0,50.0,200.0,0.0,200.0
+-100.0,-50.0,0.0,25.0,50.0,100.0,150.0
+"""
+        csv_file.write_text(csv_content)
+
+        result = runner.invoke(app, ["run", str(csv_file), "--no-plot"])
+
+        assert result.exit_code == 0
+        assert "Calculation complete" in result.stdout
+
     def test_run_verbose(self, model_json_file: Path) -> None:
         """Test run command with verbose output."""
         result = runner.invoke(
@@ -169,6 +211,20 @@ class TestValidateCommand:
     def test_validate_valid_model(self, model_json_file: Path) -> None:
         """Test validate command with valid model."""
         result = runner.invoke(app, ["validate", str(model_json_file)])
+
+        assert result.exit_code == 0
+        assert "Model is valid" in result.stdout
+
+    def test_validate_csv_model(self, tmp_path: Path) -> None:
+        """Test validate command with CSV model file."""
+        csv_file = tmp_path / "model.csv"
+        csv_content = """50000.0,60.0,0.0,0.0
+Rectangle,0.05,0.0,100.0,50.0,100.0,50.0,200.0,0.0,200.0
+-100.0,-50.0,0.0,50.0,100.0
+"""
+        csv_file.write_text(csv_content)
+
+        result = runner.invoke(app, ["validate", str(csv_file)])
 
         assert result.exit_code == 0
         assert "Model is valid" in result.stdout

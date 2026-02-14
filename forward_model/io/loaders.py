@@ -49,20 +49,19 @@ def load_model(filepath: str | Path) -> ForwardModel:
 def load_model_from_csv(filepath: str | Path) -> ForwardModel:
     """Load a forward model from a CSV file.
 
-    CSV Format (3 sections separated by blank lines):
+    CSV Format (3 sections, in order):
 
     1. Field parameters (4 values on one line):
        intensity,inclination,declination,observation_z
 
     2. Bodies section (one body per line):
-       # Bodies
        name,susceptibility,x1,z1,x2,z2,...
 
     3. Observations section (one line of x-coordinates):
-       # Observations
        x1,x2,x3,...
 
-    Lines starting with # are comments/headers.
+    Lines starting with # are comments/headers and are ignored.
+    Blank lines are ignored and can be used for readability.
 
     Args:
         filepath: Path to CSV file containing model definition.
