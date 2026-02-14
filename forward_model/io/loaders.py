@@ -131,7 +131,7 @@ def load_model_from_csv(filepath: str | Path) -> ForwardModel:
 
             vertices = [[coords[i], coords[i + 1]] for i in range(0, len(coords), 2)]
 
-            bodies_data.append(
+            bodies_data.append(  # type: ignore[reportUnknownMemberType]
                 {"name": name, "susceptibility": susceptibility, "vertices": vertices}
             )
 

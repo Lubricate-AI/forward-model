@@ -58,10 +58,10 @@ class TestRunCommand:
         # Mock plt.show to avoid displaying plot
         import matplotlib.pyplot as plt
 
-        show_called = []
+        show_called: list[bool] = []
 
         def mock_show() -> None:
-            show_called.append(True)
+            show_called.append(True)  # type: ignore[reportUnknownMemberType]
 
         monkeypatch.setattr(plt, "show", mock_show)
 
@@ -223,10 +223,10 @@ class TestVisualizeCommand:
         # Mock plt.show to avoid displaying plot
         import matplotlib.pyplot as plt
 
-        show_called = []
+        show_called: list[bool] = []
 
         def mock_show() -> None:
-            show_called.append(True)
+            show_called.append(True)  # type: ignore[reportUnknownMemberType]
 
         monkeypatch.setattr(plt, "show", mock_show)
 

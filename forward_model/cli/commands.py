@@ -104,7 +104,7 @@ def run(
                     typer.echo("  Displaying plot...")
                 import matplotlib.pyplot as plt
 
-                plt.show()
+                plt.show()  # type: ignore[reportUnknownMemberType]
 
         typer.echo(typer.style("✓ Calculation complete", fg=typer.colors.GREEN))
 
@@ -228,7 +228,7 @@ def visualize(
                 typer.echo("  Displaying plot...")
             import matplotlib.pyplot as plt
 
-            plt.show()
+            plt.show()  # type: ignore[reportUnknownMemberType]
 
         typer.echo(typer.style("✓ Visualization complete", fg=typer.colors.GREEN))
 
