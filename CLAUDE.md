@@ -16,7 +16,7 @@ A repo for conducting Talwani-style 2D forward magnetic models
 - Auto-include attribution footer when making commits
 
 ### GitHub Issues
-- When creating issues, structure using `.github/ISSUE_TEMPLATE.md`
+- When creating issues, structure them using the templates in `.github/ISSUE_TEMPLATE/`
 - Include Overview (brief description)
 - Include Details (expected/actual behavior, proposed solution)
 - Include Context (type, priority, affected component)
