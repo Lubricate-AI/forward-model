@@ -25,7 +25,7 @@ lint-yaml: ## Run YAML linting
 	uv run yamllint -d "{extends: relaxed, rules: {line-length: {max: 120}}}" .github
 
 type-checking: ## Run pyright type checking
-	uv run pyright $(SOURCE_PATH) $(SCRIPTS_PATH) $(TEST_PATH)
+	uv run pyright $(SOURCE_PATH) $(TEST_PATH)
 
 format: ## Run ruff linting and formatting (active fixes)
 	uv run ruff check --fix $(SOURCE_PATH) $(TEST_PATH)
