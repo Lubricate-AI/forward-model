@@ -13,7 +13,7 @@ pip install forward-model
 Or for development:
 
 ```bash
-git clone https://github.com/yourusername/forward-model.git
+git clone https://github.com/Lubricate-AI/forward-model.git
 cd forward-model
 make install
 ```
