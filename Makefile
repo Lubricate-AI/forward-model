@@ -2,7 +2,7 @@ VENV_PATH ?= .venv
 SOURCE_PATH ?= forward_model
 TEST_PATH ?= tests
 
-.PHONY: help install lint-python lint-spellcheck lint-yaml type-checking format test coverage docs-serve docs-build docs-deploy
+.PHONY: help install lint lint-python lint-spellcheck lint-yaml type-checking format test coverage docs-serve docs-build
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -42,6 +42,3 @@ docs-serve: ## Serve documentation locally with live reload
 
 docs-build: ## Build documentation to site/ directory
 	uv run mkdocs build
-
-docs-deploy: ## Deploy documentation to GitHub Pages (manual)
-	uv run mkdocs gh-deploy --force
