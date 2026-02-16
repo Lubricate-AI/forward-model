@@ -5,6 +5,9 @@ A Python package for 2D forward magnetic modeling using the Talwani algorithm.
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-latest-blue.svg)](https://lubricate-ai.github.io/forward-model/)
+[![CI Status](https://github.com/Lubricate-AI/forward-model/actions/workflows/pull-request.yml/badge.svg)](https://github.com/Lubricate-AI/forward-model/actions/workflows/pull-request.yml)
+[![Ruff](https://img.shields.io/badge/linter-ruff-blue)](https://github.com/astral-sh/ruff)
+[![Type Checking](https://img.shields.io/badge/type%20checking-pyright-blue)](https://github.com/microsoft/pyright)
 
 Compute magnetic anomalies from geological cross-sections with arbitrary polygonal shapes. Ideal for exploration geophysics, geological modeling, and educational purposes.
 
@@ -135,6 +138,77 @@ Generating plot...
   Plot saved to dyke_anomaly.png
 ✓ Calculation complete
 ```
+
+![Simple Dyke Model](docs/images/simple_dyke.png)
+
+## Example: Multi-Body Model
+
+Model multiple interacting geological bodies (dyke, intrusion, and void):
+
+```json
+{
+  "bodies": [
+    {
+      "name": "Dyke",
+      "susceptibility": 0.05,
+      "vertices": [
+        [0.0, 100.0],
+        [20.0, 100.0],
+        [20.0, 300.0],
+        [0.0, 300.0]
+      ]
+    },
+    {
+      "name": "Intrusion",
+      "susceptibility": 0.08,
+      "vertices": [
+        [60.0, 150.0],
+        [120.0, 150.0],
+        [120.0, 250.0],
+        [60.0, 250.0]
+      ]
+    },
+    {
+      "name": "Void",
+      "susceptibility": -0.01,
+      "vertices": [
+        [150.0, 120.0],
+        [170.0, 120.0],
+        [160.0, 180.0]
+      ]
+    }
+  ],
+  "field": {
+    "intensity": 50000.0,
+    "inclination": 60.0,
+    "declination": 0.0
+  },
+  "observation_x": [
+    -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50,
+    60, 70, 80, 90, 100, 110, 120, 130, 140, 150,
+    160, 170, 180, 190, 200, 210, 220, 230, 240, 250
+  ],
+  "observation_z": 0.0
+}
+```
+
+Run the calculation:
+
+```bash
+# Using console script
+forward-model run examples/multi_body.json --plot multi_body_anomaly.png --verbose
+
+# Or using Python module (no install needed)
+python -m forward_model run examples/multi_body.json --plot multi_body_anomaly.png --verbose
+```
+
+This example demonstrates:
+- Multiple bodies with different susceptibilities
+- Complex interactions between adjacent bodies
+- Bodies with varying geometries (rectangular dyke/intrusion, triangular void)
+- Negative susceptibility (diamagnetic material)
+
+![Multi-Body Model](docs/images/multi_body.png)
 
 ## Documentation
 
