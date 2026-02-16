@@ -4,11 +4,7 @@
 
 ## Unreleased
 
-### Features
-- Initial release of forward-model package
-- Talwani-style 2D forward magnetic modeling
-- CLI interface with validation and visualization
-- Comprehensive documentation with MkDocs
+_No unreleased changes yet._
 
 All notable changes to this project will be documented in this file.
 
