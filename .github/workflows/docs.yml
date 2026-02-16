@@ -35,6 +35,9 @@ jobs:
     - name: Install dependencies
       run: make install
 
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
     - name: Build documentation
       run: uv run mkdocs build
 
