@@ -41,7 +41,7 @@ jobs:
         enablement: true
 
     - name: Build documentation
-      run: uv run mkdocs build
+      run: make docs-build
 
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
