@@ -2,7 +2,7 @@ VENV_PATH ?= .venv
 SOURCE_PATH ?= forward_model
 TEST_PATH ?= tests
 
-.PHONY: help install lint-python lint-spellcheck lint-yaml type-checking format test coverage
+.PHONY: help install lint lint-python lint-spellcheck lint-yaml type-checking format test coverage docs-serve docs-build
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -36,3 +36,9 @@ test: ## Run all unit tests
 
 coverage: ## Run tests with coverage report
 	uv run pytest --cov=$(SOURCE_PATH) --cov-report=term-missing $(TEST_PATH)
+
+docs-serve: ## Serve documentation locally with live reload
+	uv run mkdocs serve
+
+docs-build: ## Build documentation to site/ directory
+	uv run mkdocs build
