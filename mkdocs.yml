@@ -47,6 +47,7 @@ nav:
       - Examples: user-guide/examples.md
   - API Reference:
       - Overview: api-reference/index.md
+      - ... | api-reference/SUMMARY.md
   - Development:
       - Contributing: development/contributing.md
       - Architecture: development/architecture.md
