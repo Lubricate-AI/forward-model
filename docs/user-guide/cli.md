@@ -209,7 +209,7 @@ forward-model visualize results.json \
 - `field`: Earth's magnetic field parameters
   - `intensity`: Field strength in nanoTesla (nT)
   - `inclination`: Angle from horizontal (-90° to 90°)
-  - `declination`: Azimuth angle (0° to 360°)
+  - `declination`: Azimuth angle (-180° to 180°)
 - `observation_x`: X-coordinates for observation points (meters)
 - `observation_z`: Z-coordinate for observation level (meters, usually 0)
 
@@ -312,7 +312,6 @@ for model in models/*.json; do
 
   forward-model run "$model" \
     --output-csv "results/${basename}.csv" \
-    --plot "plots/${basename}.png" \
     --no-plot
 done
 

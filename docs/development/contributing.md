@@ -312,10 +312,10 @@ git commit -m "chore: update dependencies"
 
 ```bash
 # Serve documentation with live reload
-make docs-serve
+uv run mkdocs serve
 
 # Build documentation
-make docs-build
+uv run mkdocs build
 
 # View in browser
 open site/index.html

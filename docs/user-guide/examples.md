@@ -75,19 +75,19 @@ Model multiple interacting geological bodies.
 {
   "bodies": [
     {
-      "name": "Shallow Dyke",
-      "susceptibility": 0.06,
-      "vertices": [[0, 20], [10, 20], [10, 100], [0, 100]]
-    },
-    {
-      "name": "Deep Sill",
+      "name": "Dyke",
       "susceptibility": 0.05,
-      "vertices": [[-50, 150], [50, 150], [50, 170], [-50, 170]]
+      "vertices": [[0.0, 100.0], [20.0, 100.0], [20.0, 300.0], [0.0, 300.0]]
     },
     {
-      "name": "Basement Block",
-      "susceptibility": 0.03,
-      "vertices": [[60, 80], [100, 80], [100, 200], [60, 200]]
+      "name": "Intrusion",
+      "susceptibility": 0.08,
+      "vertices": [[60.0, 150.0], [120.0, 150.0], [120.0, 250.0], [60.0, 250.0]]
+    },
+    {
+      "name": "Void",
+      "susceptibility": -0.01,
+      "vertices": [[150.0, 120.0], [170.0, 120.0], [160.0, 180.0]]
     }
   ],
   "field": {
@@ -95,7 +95,11 @@ Model multiple interacting geological bodies.
     "inclination": 60.0,
     "declination": 0.0
   },
-  "observation_x": [-100, -80, -60, -40, -20, 0, 20, 40, 60, 80, 100, 120, 140],
+  "observation_x": [
+    -50, -40, -30, -20, -10, 0, 10, 20, 30, 40, 50,
+    60, 70, 80, 90, 100, 110, 120, 130, 140, 150,
+    160, 170, 180, 190, 200, 210, 220, 230, 240, 250
+  ],
   "observation_z": 0.0
 }
 ```

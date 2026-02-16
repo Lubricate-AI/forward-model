@@ -57,7 +57,7 @@ from typing import List, Tuple
 class GeologicBody(BaseModel):
     """Validated geological body model."""
     name: str
-    susceptibility: float = Field(gt=0)
+    susceptibility: float  # Must be finite; negative values allowed
     vertices: List[Tuple[float, float]] = Field(min_length=3)
 ```
 
