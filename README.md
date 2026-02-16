@@ -29,7 +29,7 @@ pip install forward-model
 Or install from source:
 
 ```bash
-git clone https://github.com/yourusername/forward-model.git
+git clone https://github.com/Lubricate-AI/forward-model.git
 cd forward-model
 make install
 ```
@@ -243,7 +243,7 @@ Additional visualization options:
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/forward-model.git
+git clone https://github.com/Lubricate-AI/forward-model.git
 cd forward-model
 
 # Install dependencies
@@ -413,9 +413,9 @@ If you use this software in your research, please cite:
 ```bibtex
 @software{forward_model,
   title = {forward-model: 2D Forward Magnetic Modeling},
-  author = {Your Name},
-  year = {2024},
-  url = {https://github.com/yourusername/forward-model}
+  author = {Joshua Poirier},
+  year = {2026},
+  url = {https://github.com/Lubricate-AI/forward-model}
 }
 ```
 
@@ -436,8 +436,8 @@ MIT License - see LICENSE file for details.
 ## Support
 
 - 📖 Documentation: See `docs/` directory
-- 💬 Issues: [GitHub Issues](https://github.com/yourusername/forward-model/issues)
-- 📧 Contact: your.email@example.com
+- 💬 Issues: [GitHub Issues](https://github.com/Lubricate-AI/forward-model/issues)
+- 📧 Contact: josh.poirier@gmail.com
 
 ## Acknowledgments
 
