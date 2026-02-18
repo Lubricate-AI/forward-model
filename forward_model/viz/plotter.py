@@ -238,7 +238,8 @@ def plot_combined(
         color_by: How to color bodies in cross-section.
         show_observation_lines: If True, show vertical lines at observation points.
         show_gradient: If True, overlay horizontal magnetic gradient on anomaly panel.
-        xlim: Optional x-axis limits as (xmin, xmax) applied to all axes.
+        xlim: Optional x-axis limits as (xmin, xmax) applied to the cross-section,
+            anomaly, and gradient (twinx) axes.
 
     Returns:
         The matplotlib Figure object.
