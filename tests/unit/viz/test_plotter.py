@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from forward_model.models import ForwardModel
-from forward_model.viz import plot_anomaly, plot_combined, plot_model
+from forward_model.viz import plot_anomaly, plot_combined, plot_gradient, plot_model
 
 
 class TestPlotModel:
@@ -107,6 +107,48 @@ class TestPlotAnomaly:
         # Check that lines were plotted
         assert len(ax.lines) > 0
 
+        plt.close()
+
+
+class TestPlotGradient:
+    """Tests for plot_gradient function."""
+
+    def test_plot_gradient_creates_axes(self) -> None:
+        """Test that plot_gradient creates axes without errors when no ax provided."""
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([1.0, 2.0, 3.0])
+
+        ax = plot_gradient(obs_x, anomaly)
+        assert ax is not None
+        plt.close()
+
+    def test_plot_gradient_with_custom_axes(self) -> None:
+        """Test providing custom axes returns the same axes object."""
+        _, ax = plt.subplots()
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([1.0, 2.0, 3.0])
+
+        result_ax = plot_gradient(obs_x, anomaly, ax=ax)
+        assert result_ax is ax
+        plt.close()
+
+    def test_plot_gradient_has_elements(self) -> None:
+        """Test that plot contains a red line."""
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([1.0, 2.0, 3.0])
+
+        ax = plot_gradient(obs_x, anomaly)
+        red_lines = [line for line in ax.lines if line.get_color() == "red"]
+        assert len(red_lines) > 0
+        plt.close()
+
+    def test_plot_gradient_ylabel(self) -> None:
+        """Test that the y-axis label is 'Gradient (nT/m)'."""
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([1.0, 2.0, 3.0])
+
+        ax = plot_gradient(obs_x, anomaly)
+        assert ax.get_ylabel() == "Gradient (nT/m)"
         plt.close()
 
 
@@ -236,3 +278,53 @@ class TestPlotCombined:
         fig2 = plot_combined(simple_model, anomaly, show_observation_lines=False)
         assert fig2 is not None
         plt.close(fig2)
+
+    def test_plot_combined_with_gradient(self, simple_model: ForwardModel) -> None:
+        """Test that show_gradient=True creates a twinx axis on the anomaly panel."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+
+        fig = plot_combined(simple_model, anomaly, show_gradient=True)
+        # With twinx there should be more than 2 axes
+        assert len(fig.axes) > 2
+        plt.close(fig)
+
+    def test_plot_combined_gradient_legend_merged(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """Test that merged legend contains both anomaly and gradient entries."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+
+        fig = plot_combined(simple_model, anomaly, show_gradient=True)
+        # The anomaly axes is the second subplot
+        anomaly_ax = fig.axes[1]
+        legend = anomaly_ax.get_legend()
+        assert legend is not None
+        labels = [t.get_text() for t in legend.get_texts()]
+        assert any("anomaly" in label.lower() for label in labels)
+        assert any("dT/dx" in label for label in labels)
+        plt.close(fig)
+
+    def test_plot_combined_xlim_applied_to_twinx(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """Test that xlim is applied to the twinx axis, not just primary axes."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+        xlim = (0.0, 5000.0)
+
+        fig = plot_combined(simple_model, anomaly, show_gradient=True, xlim=xlim)
+
+        # The first two axes are the main subplots: model and anomaly
+        model_ax = fig.axes[0]
+        anomaly_ax = fig.axes[1]
+        assert model_ax.get_xlim() == xlim
+        assert anomaly_ax.get_xlim() == xlim
+
+        # Any twinx axis for the anomaly panel shares the same position as anomaly_ax
+        anomaly_pos = anomaly_ax.get_position()
+        for ax in fig.axes:
+            if ax is anomaly_ax:
+                continue
+            if ax.get_position() == anomaly_pos:
+                # This should be the gradient twinx axis; must share the same x-limits
+                assert ax.get_xlim() == xlim
+        plt.close(fig)
