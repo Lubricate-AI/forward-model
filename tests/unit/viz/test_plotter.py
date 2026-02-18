@@ -74,6 +74,54 @@ class TestPlotModel:
         assert len(ax.patches) > 0
         plt.close()
 
+    def test_plot_model_with_xlim(self, simple_model: ForwardModel) -> None:
+        """Test that xlim correctly sets the x-axis limits."""
+        xlim = (-50.0, 75.0)
+        ax = plot_model(simple_model, xlim=xlim)
+        assert ax.get_xlim() == xlim
+        plt.close()
+
+    def test_plot_model_with_zlim(self, simple_model: ForwardModel) -> None:
+        """Test that zlim correctly sets the depth axis limits."""
+        zlim = (50.0, 250.0)
+        ax = plot_model(simple_model, zlim=zlim)
+        assert ax.get_ylim() == zlim
+        plt.close()
+
+    def test_plot_model_show_colorbar_false(self) -> None:
+        """Test that show_colorbar=False suppresses the colorbar."""
+        from forward_model.models import GeologicBody, MagneticField
+
+        body1 = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            susceptibility=0.05,
+            name="Body1",
+        )
+        body2 = GeologicBody(
+            vertices=[[60.0, 100.0], [110.0, 100.0], [110.0, 200.0], [60.0, 200.0]],
+            susceptibility=0.10,
+            name="Body2",
+        )
+        field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
+        model = ForwardModel(
+            bodies=[body1, body2],
+            field=field,
+            observation_x=[0.0, 50.0, 100.0],
+            observation_z=0.0,
+        )
+
+        fig, ax = plt.subplots()
+        plot_model(model, ax=ax, show_colorbar=False)
+        # Only the original axes — no colorbar axes added
+        assert len(fig.axes) == 1
+        plt.close()
+
+    def test_plot_model_equal_aspect_false(self, simple_model: ForwardModel) -> None:
+        """Test that equal_aspect=False does not lock axes to equal scale."""
+        ax = plot_model(simple_model, equal_aspect=False)
+        assert ax.get_aspect() != "equal"
+        plt.close()
+
 
 class TestPlotAnomaly:
     """Tests for plot_anomaly function."""
@@ -107,6 +155,16 @@ class TestPlotAnomaly:
         # Check that lines were plotted
         assert len(ax.lines) > 0
 
+        plt.close()
+
+    def test_plot_anomaly_with_xlim(self) -> None:
+        """Test that xlim correctly sets the x-axis limits."""
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([1.0, 2.0, 3.0])
+        xlim = (5.0, 15.0)
+
+        ax = plot_anomaly(obs_x, anomaly, xlim=xlim)
+        assert ax.get_xlim() == xlim
         plt.close()
 
 
@@ -278,6 +336,59 @@ class TestPlotCombined:
         fig2 = plot_combined(simple_model, anomaly, show_observation_lines=False)
         assert fig2 is not None
         plt.close(fig2)
+
+    def test_plot_combined_with_xlim(self, simple_model: ForwardModel) -> None:
+        """Test that xlim is applied to both panels."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+        xlim = (-50.0, 75.0)
+
+        fig = plot_combined(simple_model, anomaly, xlim=xlim)
+        assert fig.axes[0].get_xlim() == xlim
+        assert fig.axes[1].get_xlim() == xlim
+        plt.close(fig)
+
+    def test_plot_combined_with_zlim(self, simple_model: ForwardModel) -> None:
+        """Test that zlim is applied to the cross-section panel."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+        zlim = (50.0, 250.0)
+
+        fig = plot_combined(simple_model, anomaly, zlim=zlim)
+        assert fig.axes[0].get_ylim() == zlim
+        plt.close(fig)
+
+    def test_plot_combined_show_colorbar_false(self) -> None:
+        """Test that show_colorbar=False suppresses colorbar in combined view."""
+        from forward_model.models import GeologicBody, MagneticField
+
+        body1 = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            susceptibility=0.05,
+            name="Body1",
+        )
+        body2 = GeologicBody(
+            vertices=[[60.0, 100.0], [110.0, 100.0], [110.0, 200.0], [60.0, 200.0]],
+            susceptibility=0.10,
+            name="Body2",
+        )
+        field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
+        model = ForwardModel(
+            bodies=[body1, body2],
+            field=field,
+            observation_x=[0.0, 50.0, 100.0],
+            observation_z=0.0,
+        )
+        anomaly = np.random.randn(3)
+
+        fig_with = plot_combined(model, anomaly, show_colorbar=True)
+        axes_with = len(fig_with.axes)
+        plt.close(fig_with)
+
+        fig_without = plot_combined(model, anomaly, show_colorbar=False)
+        axes_without = len(fig_without.axes)
+        plt.close(fig_without)
+
+        # Suppressing colorbar should result in fewer axes
+        assert axes_without < axes_with
 
     def test_plot_combined_with_gradient(self, simple_model: ForwardModel) -> None:
         """Test that show_gradient=True creates a twinx axis on the anomaly panel."""
