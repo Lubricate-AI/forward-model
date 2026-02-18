@@ -73,9 +73,10 @@ def plot_model(
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
         show_colorbar: If True, show colorbar when color_by="susceptibility".
         equal_aspect: If True, lock x and z axes to equal scale.
-        label_offsets: Optional mapping of body name to (x, z) text position.
-                      When provided for a body, an annotate arrow points from the
-                      text to the centroid/label_loc.
+        label_offsets: Optional mapping of body name to (dx, dz) offset from the
+                      computed label anchor. The label text is placed at
+                      anchor + (dx, dz); optional arrows from the text to the
+                      centroid/label_loc are controlled by ``show_label_arrows``.
         show_label_arrows: If True, draw arrows for all offset labels. Can also
                           be a dict mapping body name to bool for per-body control.
 
@@ -137,7 +138,7 @@ def plot_model(
         label = f"{body.name}\n(χ={body.susceptibility:.3f})"
 
         if label_offsets and body.name in label_offsets:
-            ox, oz = label_offsets[body.name]
+            dx, dz = label_offsets[body.name]
             if isinstance(show_label_arrows, dict):
                 show_arrow = show_label_arrows.get(body.name, False)
             else:
@@ -146,7 +147,7 @@ def plot_model(
             ax.annotate(
                 label,
                 xy=(lx, lz),
-                xytext=(ox, oz),
+                xytext=(lx + dx, lz + dz),
                 ha="center",
                 va="center",
                 fontsize=8,
@@ -327,7 +328,8 @@ def plot_combined(
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
         show_colorbar: If True, show colorbar when color_by="susceptibility".
         show_gradient: If True, overlay horizontal magnetic gradient on anomaly panel.
-        label_offsets: Optional mapping of body name to (x, z) text position override.
+        label_offsets: Optional mapping of body name to (dx, dz) offset from the
+                      computed label anchor. Passed through to ``plot_model``.
         show_label_arrows: If True or per-body dict, draw arrows from text to centroid.
 
     Returns:

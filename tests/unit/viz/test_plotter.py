@@ -444,9 +444,11 @@ class TestPlotCombined:
     def test_plot_combined_passes_label_offsets(
         self, simple_model: ForwardModel
     ) -> None:
-        """Test that label_offsets and show_label_arrows propagate without error."""
+        """Test label_offsets and show_label_arrows propagate to cross-section axis."""
+        from matplotlib.text import Annotation
+
         anomaly = np.random.randn(len(simple_model.observation_x))
-        label_offsets = {"Rectangle": (25.0, 50.0)}
+        label_offsets = {"Rectangle": (0.0, -60.0)}
 
         fig = plot_combined(
             simple_model,
@@ -454,7 +456,11 @@ class TestPlotCombined:
             label_offsets=label_offsets,
             show_label_arrows=True,
         )
-        assert fig is not None
+        cross_section_ax = fig.axes[0]
+        annotations = [
+            c for c in cross_section_ax.get_children() if isinstance(c, Annotation)
+        ]
+        assert len(annotations) > 0
         plt.close(fig)
 
 
@@ -505,37 +511,58 @@ class TestPlotModelLabelFeatures:
         )
 
     def test_plot_model_uses_label_loc(self) -> None:
-        """Body with label_loc renders without error."""
+        """Body with label_loc places a plain Text (no annotation) at that location."""
+        from matplotlib.text import Annotation, Text
+
         model = self._make_model(label_loc=[25.0, 150.0])
         ax = plot_model(model)
-        assert ax is not None
+        texts = [
+            c
+            for c in ax.get_children()
+            if isinstance(c, Text) and not isinstance(c, Annotation)
+        ]
+        label_texts = [t for t in texts if "Body" in t.get_text()]
+        assert len(label_texts) == 1
+        assert abs(label_texts[0].get_position()[0] - 25.0) < 1e-9
+        assert abs(label_texts[0].get_position()[1] - 150.0) < 1e-9
         plt.close()
 
     def test_plot_model_label_offsets(self) -> None:
-        """label_offsets dict causes annotate to be called without error."""
+        """label_offsets dict causes an Annotation to be placed, not a plain Text."""
+        from matplotlib.text import Annotation
+
         model = self._make_model()
-        ax = plot_model(model, label_offsets={"Body": (25.0, 50.0)})
-        assert ax is not None
+        ax = plot_model(model, label_offsets={"Body": (0.0, -60.0)})
+        annotations = [c for c in ax.get_children() if isinstance(c, Annotation)]
+        assert len(annotations) == 1
         plt.close()
 
     def test_plot_model_show_label_arrows_global(self) -> None:
-        """show_label_arrows=True global flag runs without error."""
+        """show_label_arrows=True global flag produces an annotation with an arrow."""
+        from matplotlib.text import Annotation
+
         model = self._make_model()
         ax = plot_model(
             model,
-            label_offsets={"Body": (25.0, 50.0)},
+            label_offsets={"Body": (0.0, -60.0)},
             show_label_arrows=True,
         )
-        assert ax is not None
+        annotations = [c for c in ax.get_children() if isinstance(c, Annotation)]
+        assert len(annotations) == 1
+        assert annotations[0].arrow_patch is not None
         plt.close()
 
     def test_plot_model_show_label_arrows_per_body(self) -> None:
-        """show_label_arrows per-body dict controls arrow display."""
+        """show_label_arrows=False per-body dict produces annotation with no arrow."""
+        from matplotlib.text import Annotation
+
         model = self._make_model()
         ax = plot_model(
             model,
-            label_offsets={"Body": (25.0, 50.0)},
-            show_label_arrows={"Body": True},
+            label_offsets={"Body": (0.0, -60.0)},
+            show_label_arrows={"Body": False},
         )
-        assert ax is not None
+        annotations = [c for c in ax.get_children() if isinstance(c, Annotation)]
+        assert len(annotations) == 1
+        assert annotations[0].arrow_patch is None
         plt.close()
