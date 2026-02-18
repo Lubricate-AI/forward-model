@@ -80,68 +80,50 @@ def compute_polygon_anomaly(
 
     Mx, Mz = magnetization
 
-    # Loop over observation points
-    for i, obs in enumerate(observation_points):
-        contribution = 0.0
+    obs_x = observation_points[:, 0]  # (M,)
+    obs_z = observation_points[:, 1]  # (M,)
 
-        # Loop over polygon edges
-        for j in range(n_vertices):
-            j_next = (j + 1) % n_vertices
+    # Loop over polygon edges (N iterations, each vectorized over M obs points)
+    for j in range(n_vertices):
+        j_next = (j + 1) % n_vertices
 
-            # Edge vertices
-            x1, z1 = vertices[j] - obs
-            x2, z2 = vertices[j_next] - obs
+        # Edge geometry — scalars, same for all observation points
+        dx = vertices[j_next, 0] - vertices[j, 0]
+        dz = vertices[j_next, 1] - vertices[j, 1]
+        edge_length = np.sqrt(dx**2 + dz**2)
 
-            # Skip degenerate edges
-            if np.abs(x2 - x1) < min_distance and np.abs(z2 - z1) < min_distance:
-                continue
+        if edge_length < min_distance:
+            continue
 
-            # Distances from observation point
-            r1 = np.sqrt(x1**2 + z1**2)
-            r2 = np.sqrt(x2**2 + z2**2)
+        tx = dx / edge_length
+        tz = dz / edge_length
 
-            # Skip if too close (singularity)
-            if r1 < min_distance or r2 < min_distance:
-                continue
+        # Vectors from each observation point to each edge vertex — (M,) arrays
+        x1 = vertices[j, 0] - obs_x
+        z1 = vertices[j, 1] - obs_z
+        x2 = vertices[j_next, 0] - obs_x
+        z2 = vertices[j_next, 1] - obs_z
 
-            # Angles
-            theta1 = np.arctan2(z1, x1)
-            theta2 = np.arctan2(z2, x2)
+        r1 = np.sqrt(x1**2 + z1**2)
+        r2 = np.sqrt(x2**2 + z2**2)
+        valid = (r1 >= min_distance) & (r2 >= min_distance)
 
-            # Handle angle wrapping for proper integration
-            dtheta = theta2 - theta1
-            if dtheta > np.pi:
-                dtheta -= 2 * np.pi
-            elif dtheta < -np.pi:
-                dtheta += 2 * np.pi
+        theta1: NDArray[np.float64] = np.arctan2(z1, x1)
+        theta2: NDArray[np.float64] = np.arctan2(z2, x2)
+        dtheta: NDArray[np.float64] = theta2 - theta1
+        dtheta = np.where(dtheta > np.pi, dtheta - 2 * np.pi, dtheta)
+        dtheta = np.where(dtheta < -np.pi, dtheta + 2 * np.pi, dtheta)
 
-            # Edge direction vector
-            dx = x2 - x1
-            dz = z2 - z1
-            edge_length = np.sqrt(dx**2 + dz**2)
+        # Guard against log(0) for invalid points
+        r_ratio = np.where(valid, r2 / r1, 1.0)
+        log_term = np.where(valid, np.log(r_ratio), 0.0)
 
-            if edge_length < min_distance:
-                continue
+        contrib = np.where(
+            valid,
+            Mx * (dtheta * tz - log_term * tx) + Mz * (-dtheta * tx - log_term * tz),
+            0.0,
+        )
+        anomaly += contrib
 
-            # Unit tangent along edge
-            tx = dx / edge_length
-            tz = dz / edge_length
-
-            # Logarithmic term
-            if r2 > min_distance and r1 > min_distance:
-                log_term = np.log(r2 / r1)
-            else:
-                log_term = 0.0
-
-            # Talwani formula contributions
-            # Vertical component from horizontal magnetization
-            contrib_x = Mx * (dtheta * tz - log_term * tx)
-
-            # Vertical component from vertical magnetization
-            contrib_z = Mz * (-dtheta * tx - log_term * tz)
-
-            contribution += contrib_x + contrib_z
-
-        anomaly[i] = mu_0_4pi_nT * contribution
-
+    anomaly *= mu_0_4pi_nT
     return anomaly
