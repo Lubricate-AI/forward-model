@@ -177,6 +177,40 @@ def plot_anomaly(
     return ax
 
 
+def plot_gradient(
+    observation_x: list[float],
+    anomaly: NDArray[np.float64],
+    ax: Axes | None = None,
+) -> Axes:
+    """Plot the horizontal derivative of the magnetic anomaly.
+
+    Computes the first derivative using np.gradient (central differences,
+    one-sided at endpoints) normalized by station spacing.
+
+    Args:
+        observation_x: X-coordinates of observation points (meters).
+        anomaly: Magnetic anomaly values (nanoTesla).
+        ax: Optional matplotlib Axes. Creates new axes if None.
+
+    Returns:
+        Matplotlib Axes with gradient plotted.
+
+    Example:
+        >>> ax = plot_gradient(model.observation_x, anomaly)
+    """
+    if ax is None:
+        _, ax = plt.subplots()
+
+    x = np.asarray(observation_x)
+    gradient = np.gradient(anomaly, x)
+
+    ax.plot(x, gradient, color="red", linewidth=2, label="dT/dx (nT/m)")  # type: ignore[union-attr]
+    ax.set_ylabel("Gradient (nT/m)", color="red")  # type: ignore[union-attr]
+    ax.tick_params(axis="y", labelcolor="red")  # type: ignore[union-attr]
+
+    return ax  # type: ignore[return-value]
+
+
 def plot_combined(
     model: ForwardModel,
     anomaly: NDArray[np.float64],
@@ -186,6 +220,8 @@ def plot_combined(
     dpi: int | None = None,
     color_by: Literal["index", "susceptibility"] = "susceptibility",
     show_observation_lines: bool = True,
+    show_gradient: bool = False,
+    xlim: tuple[float, float] | None = None,
 ) -> Figure:
     """Create combined plot with cross-section and anomaly profile.
 
@@ -201,6 +237,8 @@ def plot_combined(
         dpi: DPI for saved figure. If None, uses style default.
         color_by: How to color bodies in cross-section.
         show_observation_lines: If True, show vertical lines at observation points.
+        show_gradient: If True, overlay horizontal magnetic gradient on anomaly panel.
+        xlim: Optional x-axis limits as (xmin, xmax) applied to all axes.
 
     Returns:
         The matplotlib Figure object.
@@ -235,6 +273,21 @@ def plot_combined(
 
         # Plot anomaly below
         plot_anomaly(model.observation_x, anomaly, ax=ax2)
+
+        if show_gradient:
+            ax_grad = ax2.twinx()
+            plot_gradient(model.observation_x, anomaly, ax=ax_grad)
+            handles1, labels1 = ax2.get_legend_handles_labels()
+            handles2, labels2 = ax_grad.get_legend_handles_labels()
+            ax2.legend(handles1 + handles2, labels1 + labels2)
+            if ax_grad.get_legend():
+                ax_grad.get_legend().remove()
+            if xlim is not None:
+                ax_grad.set_xlim(xlim)
+
+        if xlim is not None:
+            ax1.set_xlim(xlim)
+            ax2.set_xlim(xlim)
 
         # Adjust layout
         fig.tight_layout()
