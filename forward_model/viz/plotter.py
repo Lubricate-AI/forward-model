@@ -21,6 +21,10 @@ def plot_model(
     ax: Axes | None = None,
     color_by: Literal["index", "susceptibility"] = "susceptibility",
     show_observation_lines: bool = True,
+    xlim: tuple[float, float] | None = None,
+    zlim: tuple[float, float] | None = None,
+    show_colorbar: bool = True,
+    equal_aspect: bool = True,
 ) -> Axes:
     """Plot geologic cross-section of the forward model.
 
@@ -33,6 +37,10 @@ def plot_model(
         color_by: How to color bodies. "index" uses different colors for each
                  body, "susceptibility" uses a colormap based on susceptibility.
         show_observation_lines: If True, show vertical dashed lines at obs points.
+        xlim: Optional (min, max) x-axis limits in meters.
+        zlim: Optional (min, max) depth limits in meters (shallow, deep).
+        show_colorbar: If True, show colorbar when color_by="susceptibility".
+        equal_aspect: If True, lock x and z axes to equal scale.
 
     Returns:
         The matplotlib Axes object containing the plot.
@@ -55,16 +63,16 @@ def plot_model(
         if len(susc_set) == 1:
             # All susceptibilities are the same - use single color
             colors = [cmap(0.5)] * len(model.bodies)
-            show_colorbar = False
+            _auto_colorbar = False
         else:
             # Multiple susceptibilities - use colormap
             norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
             colors = [cmap(norm(body.susceptibility)) for body in model.bodies]  # type: ignore
-            show_colorbar = True
+            _auto_colorbar = True
     else:
         # Use index-based colors
         colors = plt.cm.tab10(np.linspace(0, 1, max(len(model.bodies), 10)))  # type: ignore
-        show_colorbar = False
+        _auto_colorbar = False
 
     # Plot each body
     for i, body in enumerate(model.bodies):
@@ -97,7 +105,7 @@ def plot_model(
         )
 
     # Add colorbar if using susceptibility coloring with multiple values
-    if color_by == "susceptibility" and show_colorbar:
+    if color_by == "susceptibility" and _auto_colorbar and show_colorbar:
         susc_values = [body.susceptibility for body in model.bodies]
         sm = plt.cm.ScalarMappable(  # type: ignore
             cmap=cmap,
@@ -128,17 +136,27 @@ def plot_model(
     ax.set_ylabel("Depth (m)", fontsize=11)
     ax.set_title("Geologic Cross-Section", fontsize=13, fontweight="bold")
     ax.grid(True, alpha=0.3)
-    ax.set_aspect("equal", adjustable="box")
+    if equal_aspect:
+        ax.set_aspect("equal", adjustable="box")
     ax.legend(loc="best")
 
     # Invert y-axis (depth increases downward)
     ax.invert_yaxis()
 
+    if zlim is not None:
+        ax.set_ylim(*zlim)
+
+    if xlim is not None:
+        ax.set_xlim(*xlim)
+
     return ax
 
 
 def plot_anomaly(
-    observation_x: list[float], anomaly: NDArray[np.float64], ax: Axes | None = None
+    observation_x: list[float],
+    anomaly: NDArray[np.float64],
+    ax: Axes | None = None,
+    xlim: tuple[float, float] | None = None,
 ) -> Axes:
     """Plot magnetic anomaly profile.
 
@@ -149,6 +167,7 @@ def plot_anomaly(
         observation_x: X-coordinates of observation points (meters).
         anomaly: Magnetic anomaly values (nanoTesla).
         ax: Matplotlib axes to plot on. If None, creates new axes.
+        xlim: Optional (min, max) x-axis limits in meters.
 
     Returns:
         The matplotlib Axes object containing the plot.
@@ -174,6 +193,9 @@ def plot_anomaly(
     ax.grid(True, alpha=0.3)
     ax.legend(loc="best")
 
+    if xlim is not None:
+        ax.set_xlim(*xlim)
+
     return ax
 
 
@@ -186,6 +208,9 @@ def plot_combined(
     dpi: int | None = None,
     color_by: Literal["index", "susceptibility"] = "susceptibility",
     show_observation_lines: bool = True,
+    xlim: tuple[float, float] | None = None,
+    zlim: tuple[float, float] | None = None,
+    show_colorbar: bool = True,
 ) -> Figure:
     """Create combined plot with cross-section and anomaly profile.
 
@@ -201,6 +226,9 @@ def plot_combined(
         dpi: DPI for saved figure. If None, uses style default.
         color_by: How to color bodies in cross-section.
         show_observation_lines: If True, show vertical lines at observation points.
+        xlim: Optional (min, max) x-axis limits in meters.
+        zlim: Optional (min, max) depth limits in meters (shallow, deep).
+        show_colorbar: If True, show colorbar when color_by="susceptibility".
 
     Returns:
         The matplotlib Figure object.
@@ -231,10 +259,14 @@ def plot_combined(
             ax=ax1,
             color_by=color_by,
             show_observation_lines=show_observation_lines,
+            xlim=xlim,
+            zlim=zlim,
+            show_colorbar=show_colorbar,
+            equal_aspect=False,
         )
 
         # Plot anomaly below
-        plot_anomaly(model.observation_x, anomaly, ax=ax2)
+        plot_anomaly(model.observation_x, anomaly, ax=ax2, xlim=xlim)
 
         # Adjust layout
         fig.tight_layout()
