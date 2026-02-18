@@ -344,6 +344,7 @@ class TestPlotCombined:
 
         fig = plot_combined(simple_model, anomaly, xlim=xlim)
         assert fig.axes[0].get_xlim() == xlim
+        assert fig.axes[1].get_xlim() == xlim
         plt.close(fig)
 
     def test_plot_combined_with_zlim(self, simple_model: ForwardModel) -> None:
