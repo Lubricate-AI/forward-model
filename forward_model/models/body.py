@@ -19,12 +19,19 @@ class GeologicBody(BaseModel, frozen=True):
         name: Human-readable identifier for this body.
         label_loc: Optional [x, z] override for the label position. When set,
                   the plotter uses this location directly (no clamping applied).
+        color: Optional matplotlib color for this body. Accepts any named color
+               string (e.g. ``"red"``, ``"#87CEEB"``) or an RGB/RGBA list of
+               floats in ``[0.0, 1.0]``. When set, overrides the global colormap.
+        hatch: Optional matplotlib hatch pattern string (e.g. ``"///"``,
+               ``"\\\\"``) applied as a fill pattern. ``None`` means no hatch.
     """
 
     vertices: list[list[float]] = Field(min_length=3)
     susceptibility: float
     name: str
     label_loc: list[float] | None = Field(default=None)
+    color: str | list[float] | None = Field(default=None)
+    hatch: str | None = Field(default=None)
 
     @field_validator("vertices")
     @classmethod
@@ -63,6 +70,25 @@ class GeologicBody(BaseModel, frozen=True):
             raise ValueError("label_loc must have exactly 2 coordinates [x, z]")
         if not all(math.isfinite(c) for c in v):
             raise ValueError("label_loc contains non-finite values")
+        return v
+
+    @field_validator("color")
+    @classmethod
+    def validate_color(cls, v: str | list[float] | None) -> str | list[float] | None:
+        """Validate color field for list[float] RGB/RGBA values."""
+        if v is None or isinstance(v, str):
+            return v
+        if len(v) not in (3, 4):
+            raise ValueError(
+                f"color list must have 3 (RGB) or 4 (RGBA) elements, got {len(v)}"
+            )
+        for component in v:
+            if not math.isfinite(component):
+                raise ValueError(f"color component {component!r} is non-finite")
+            if not (0.0 <= component <= 1.0):
+                raise ValueError(
+                    f"color component {component!r} is out of range [0.0, 1.0]"
+                )
         return v
 
     def to_numpy(self) -> NDArray[np.float64]:
