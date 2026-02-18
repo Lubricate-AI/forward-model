@@ -325,6 +325,6 @@ class TestPlotCombined:
             if ax is anomaly_ax:
                 continue
             if ax.get_position() == anomaly_pos:
-                # This should be the gradient twinx axis; it must share the same x-limits
+                # This should be the gradient twinx axis; must share the same x-limits
                 assert ax.get_xlim() == xlim
         plt.close(fig)
