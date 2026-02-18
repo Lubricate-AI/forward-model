@@ -16,6 +16,36 @@ from numpy.typing import NDArray
 from forward_model.models.model import ForwardModel
 
 
+def _polygon_centroid(vertices: NDArray[np.float64]) -> tuple[float, float]:
+    """Compute area-weighted centroid via shoelace formula.
+
+    Falls back to vertex mean for degenerate (zero-area) polygons.
+    """
+    x, z = vertices[:, 0], vertices[:, 1]
+    cross = x[:-1] * z[1:] - x[1:] * z[:-1]
+    cross_close = x[-1] * z[0] - x[0] * z[-1]
+    area2 = np.sum(cross) + cross_close  # 2 * signed area
+    if abs(area2) < 1e-10:
+        return float(np.mean(x)), float(np.mean(z))
+    cx = (np.sum((x[:-1] + x[1:]) * cross) + (x[-1] + x[0]) * cross_close) / (3 * area2)
+    cz = (np.sum((z[:-1] + z[1:]) * cross) + (z[-1] + z[0]) * cross_close) / (3 * area2)
+    return float(cx), float(cz)
+
+
+def _clamp_to_limits(
+    x: float,
+    z: float,
+    xlim: tuple[float, float] | None,
+    zlim: tuple[float, float] | None,
+) -> tuple[float, float]:
+    """Clamp (x, z) to the given axis limits."""
+    if xlim is not None:
+        x = max(min(xlim), min(max(xlim), x))
+    if zlim is not None:
+        z = max(min(zlim), min(max(zlim), z))
+    return x, z
+
+
 def plot_model(
     model: ForwardModel,
     ax: Axes | None = None,
@@ -25,6 +55,8 @@ def plot_model(
     zlim: tuple[float, float] | None = None,
     show_colorbar: bool = True,
     equal_aspect: bool = True,
+    label_offsets: dict[str, tuple[float, float]] | None = None,
+    show_label_arrows: bool | dict[str, bool] = False,
 ) -> Axes:
     """Plot geologic cross-section of the forward model.
 
@@ -41,6 +73,11 @@ def plot_model(
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
         show_colorbar: If True, show colorbar when color_by="susceptibility".
         equal_aspect: If True, lock x and z axes to equal scale.
+        label_offsets: Optional mapping of body name to (x, z) text position.
+                      When provided for a body, an annotate arrow points from the
+                      text to the centroid/label_loc.
+        show_label_arrows: If True, draw arrows for all offset labels. Can also
+                          be a dict mapping body name to bool for per-body control.
 
     Returns:
         The matplotlib Axes object containing the plot.
@@ -90,19 +127,42 @@ def plot_model(
         )
         ax.add_patch(poly)
 
-        # Add label
-        centroid_x = np.mean(vertices[:, 0])
-        centroid_z = np.mean(vertices[:, 1])
+        # Determine label anchor position
+        if body.label_loc is not None:
+            lx, lz = body.label_loc[0], body.label_loc[1]
+        else:
+            lx, lz = _polygon_centroid(vertices)
+            lx, lz = _clamp_to_limits(lx, lz, xlim, zlim)
+
         label = f"{body.name}\n(χ={body.susceptibility:.3f})"
-        ax.text(
-            centroid_x,
-            centroid_z,
-            label,
-            ha="center",
-            va="center",
-            fontsize=8,
-            bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.7},
-        )
+
+        if label_offsets and body.name in label_offsets:
+            ox, oz = label_offsets[body.name]
+            if isinstance(show_label_arrows, dict):
+                show_arrow = show_label_arrows.get(body.name, False)
+            else:
+                show_arrow = show_label_arrows
+            arrowprops = {"arrowstyle": "->", "color": "black"} if show_arrow else None
+            ax.annotate(
+                label,
+                xy=(lx, lz),
+                xytext=(ox, oz),
+                ha="center",
+                va="center",
+                fontsize=8,
+                bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.7},
+                arrowprops=arrowprops,
+            )
+        else:
+            ax.text(
+                lx,
+                lz,
+                label,
+                ha="center",
+                va="center",
+                fontsize=8,
+                bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.7},
+            )
 
     # Add colorbar if using susceptibility coloring with multiple values
     if color_by == "susceptibility" and _auto_colorbar and show_colorbar:
@@ -246,6 +306,8 @@ def plot_combined(
     zlim: tuple[float, float] | None = None,
     show_colorbar: bool = True,
     show_gradient: bool = False,
+    label_offsets: dict[str, tuple[float, float]] | None = None,
+    show_label_arrows: bool | dict[str, bool] = False,
 ) -> Figure:
     """Create combined plot with cross-section and anomaly profile.
 
@@ -265,6 +327,8 @@ def plot_combined(
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
         show_colorbar: If True, show colorbar when color_by="susceptibility".
         show_gradient: If True, overlay horizontal magnetic gradient on anomaly panel.
+        label_offsets: Optional mapping of body name to (x, z) text position override.
+        show_label_arrows: If True or per-body dict, draw arrows from text to centroid.
 
     Returns:
         The matplotlib Figure object.
@@ -299,6 +363,8 @@ def plot_combined(
             zlim=zlim,
             show_colorbar=show_colorbar,
             equal_aspect=False,
+            label_offsets=label_offsets,
+            show_label_arrows=show_label_arrows,
         )
 
         # Plot anomaly below
