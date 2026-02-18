@@ -1,6 +1,8 @@
 """Tests for visualization functions."""
 
 # pyright: reportUnknownMemberType=false, reportPrivateUsage=false
+# pyright: reportOperatorIssue=false, reportUnknownArgumentType=false
+# pyright: reportGeneralTypeIssues=false
 
 from pathlib import Path
 
@@ -462,6 +464,61 @@ class TestPlotCombined:
         ]
         assert len(annotations) > 0
         plt.close(fig)
+
+
+class TestPlotModelBodyVisualProperties:
+    """Tests verifying plot_model respects body-level color and hatch."""
+
+    def _make_model(
+        self,
+        color: str | list[float] | None = None,
+        hatch: str | None = None,
+    ) -> ForwardModel:
+        from forward_model.models import GeologicBody, MagneticField
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            susceptibility=0.05,
+            name="Body",
+            color=color,
+            hatch=hatch,
+        )
+        field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
+        return ForwardModel(
+            bodies=[body],
+            field=field,
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+
+    def test_body_color_overrides_colormap(self) -> None:
+        """Body with color='#FF0000' renders with facecolor matching that red."""
+        import matplotlib.colors as mcolors
+
+        model = self._make_model(color="#FF0000")
+        ax = plot_model(model)
+        patch_color = ax.patches[0].get_facecolor()
+        expected = mcolors.to_rgba("#FF0000")
+        # Compare RGB channels (alpha may be modified by the alpha=0.6 kwarg)
+        assert abs(patch_color[0] - expected[0]) < 1e-6
+        assert abs(patch_color[1] - expected[1]) < 1e-6
+        assert abs(patch_color[2] - expected[2]) < 1e-6
+        plt.close()
+
+    def test_body_hatch_applied(self) -> None:
+        """Body with hatch='///' produces a patch with get_hatch() == '///'."""
+        model = self._make_model(hatch="///")
+        ax = plot_model(model)
+        assert ax.patches[0].get_hatch() == "///"
+        plt.close()
+
+    def test_body_no_color_uses_colormap(self) -> None:
+        """Body with color=None still gets a colormap-derived (non-None) facecolor."""
+        model = self._make_model(color=None)
+        ax = plot_model(model)
+        face_color = ax.patches[0].get_facecolor()
+        assert face_color is not None
+        plt.close()
 
 
 class TestPolygonCentroid:

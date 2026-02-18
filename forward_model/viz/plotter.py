@@ -118,13 +118,15 @@ def plot_model(
         color = colors[i % len(colors)] if color_by == "index" else colors[i]
 
         # Create polygon patch
+        face_color = body.color if body.color is not None else color
         poly = Polygon(
             vertices,
             closed=True,
-            facecolor=color,
+            facecolor=face_color,
             edgecolor="black",
             alpha=0.6,
             linewidth=1.5,
+            hatch=body.hatch,
         )
         ax.add_patch(poly)
 
