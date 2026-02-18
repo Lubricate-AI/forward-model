@@ -151,3 +151,128 @@ class TestComputePolygonAnomaly:
         # Should not raise an error
         anomaly = compute_polygon_anomaly(vertices, obs, mag)
         assert np.isfinite(anomaly[0])
+
+
+class TestVectorizedVsScalar:
+    """Regression tests: vectorized implementation vs. scalar reference."""
+
+    @staticmethod
+    def _scalar_compute(
+        vertices: np.ndarray,
+        observation_points: np.ndarray,
+        magnetization: np.ndarray,
+        min_distance: float = 1e-10,
+    ) -> np.ndarray:
+        """Scalar reference implementation (original nested-loop version)."""
+        n_vertices = len(vertices)
+        n_obs = len(observation_points)
+        anomaly = np.zeros(n_obs, dtype=np.float64)
+
+        mu_0_4pi_nT = 1e-7 * 1e9
+        Mx, Mz = magnetization
+
+        for i, obs in enumerate(observation_points):
+            contribution = 0.0
+            for j in range(n_vertices):
+                j_next = (j + 1) % n_vertices
+                x1, z1 = vertices[j] - obs
+                x2, z2 = vertices[j_next] - obs
+
+                if np.abs(x2 - x1) < min_distance and np.abs(z2 - z1) < min_distance:
+                    continue
+
+                r1 = np.sqrt(x1**2 + z1**2)
+                r2 = np.sqrt(x2**2 + z2**2)
+
+                if r1 < min_distance or r2 < min_distance:
+                    continue
+
+                theta1 = np.arctan2(z1, x1)
+                theta2 = np.arctan2(z2, x2)
+                dtheta = theta2 - theta1
+                if dtheta > np.pi:
+                    dtheta -= 2 * np.pi
+                elif dtheta < -np.pi:
+                    dtheta += 2 * np.pi
+
+                dx = x2 - x1
+                dz = z2 - z1
+                edge_length = np.sqrt(dx**2 + dz**2)
+                if edge_length < min_distance:
+                    continue
+
+                tx = dx / edge_length
+                tz = dz / edge_length
+
+                log_term = np.log(r2 / r1)
+                contribution += Mx * (dtheta * tz - log_term * tx) + Mz * (
+                    -dtheta * tx - log_term * tz
+                )
+
+            anomaly[i] = mu_0_4pi_nT * contribution
+
+        return anomaly
+
+    def _assert_close(
+        self,
+        vertices: np.ndarray,
+        obs: np.ndarray,
+        mag: np.ndarray,
+    ) -> None:
+        scalar = self._scalar_compute(vertices, obs, mag)
+        vectorized = compute_polygon_anomaly(vertices, obs, mag)
+        max_diff = float(np.max(np.abs(vectorized - scalar)))
+        assert max_diff < 1e-10, f"Max abs diff {max_diff} >= 1e-10"
+
+    def test_simple_rectangle(self) -> None:
+        """Vectorized matches scalar on a simple rectangle."""
+        vertices = np.array(
+            [[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            dtype=np.float64,
+        )
+        obs = np.array(
+            [[-100.0, 0.0], [0.0, 0.0], [25.0, 0.0], [50.0, 0.0], [100.0, 0.0]],
+            dtype=np.float64,
+        )
+        mag = np.array([0.0, -1000.0], dtype=np.float64)
+        self._assert_close(vertices, obs, mag)
+
+    def test_symmetric_body(self) -> None:
+        """Vectorized matches scalar on a symmetric body."""
+        vertices = np.array(
+            [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
+            dtype=np.float64,
+        )
+        obs = np.array(
+            [[-100.0, 0.0], [-50.0, 0.0], [0.0, 0.0], [50.0, 0.0], [100.0, 0.0]],
+            dtype=np.float64,
+        )
+        mag = np.array([500.0, -800.0], dtype=np.float64)
+        self._assert_close(vertices, obs, mag)
+
+    def test_dense_grid(self) -> None:
+        """Vectorized matches scalar on a dense 201-point observation grid."""
+        vertices = np.array(
+            [[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            dtype=np.float64,
+        )
+        xs = np.linspace(-500.0, 500.0, 201)
+        obs = np.column_stack([xs, np.zeros(201)])
+        mag = np.array([300.0, -1000.0], dtype=np.float64)
+        self._assert_close(vertices, obs, mag)
+
+    def test_degenerate_edge_matches(self) -> None:
+        """Vectorized matches scalar even with a degenerate (duplicate) edge."""
+        vertices = np.array(
+            [
+                [0.0, 100.0],
+                [50.0, 100.0],
+                [50.0, 100.0],
+                [50.0, 200.0],
+                [0.0, 200.0],
+            ],
+            dtype=np.float64,
+        )
+        obs = np.array([[25.0, 0.0], [-50.0, 0.0], [200.0, 0.0]], dtype=np.float64)
+        mag = np.array([0.0, -1000.0], dtype=np.float64)
+        self._assert_close(vertices, obs, mag)
