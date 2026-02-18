@@ -1,6 +1,6 @@
 """Tests for visualization functions."""
 
-# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownMemberType=false, reportPrivateUsage=false
 
 from pathlib import Path
 
@@ -9,6 +9,7 @@ import numpy as np
 
 from forward_model.models import ForwardModel
 from forward_model.viz import plot_anomaly, plot_combined, plot_gradient, plot_model
+from forward_model.viz.plotter import _polygon_centroid
 
 
 class TestPlotModel:
@@ -439,3 +440,129 @@ class TestPlotCombined:
                 # This should be the gradient twinx axis; must share the same x-limits
                 assert ax.get_xlim() == xlim
         plt.close(fig)
+
+    def test_plot_combined_passes_label_offsets(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """Test label_offsets and show_label_arrows propagate to cross-section axis."""
+        from matplotlib.text import Annotation
+
+        anomaly = np.random.randn(len(simple_model.observation_x))
+        label_offsets = {"Rectangle": (0.0, -60.0)}
+
+        fig = plot_combined(
+            simple_model,
+            anomaly,
+            label_offsets=label_offsets,
+            show_label_arrows=True,
+        )
+        cross_section_ax = fig.axes[0]
+        annotations = [
+            c for c in cross_section_ax.get_children() if isinstance(c, Annotation)
+        ]
+        assert len(annotations) > 0
+        plt.close(fig)
+
+
+class TestPolygonCentroid:
+    """Tests for the _polygon_centroid helper."""
+
+    def test_centroid_triangle(self) -> None:
+        """Triangle centroid equals mean of vertices (analytic result)."""
+        # Right triangle: (0,0), (6,0), (0,6)
+        vertices = np.array([[0.0, 0.0], [6.0, 0.0], [0.0, 6.0]])
+        cx, cz = _polygon_centroid(vertices)
+        assert abs(cx - 2.0) < 1e-9
+        assert abs(cz - 2.0) < 1e-9
+
+    def test_centroid_rectangle(self) -> None:
+        """Rectangle centroid equals geometric center."""
+        vertices = np.array([[0.0, 0.0], [4.0, 0.0], [4.0, 2.0], [0.0, 2.0]])
+        cx, cz = _polygon_centroid(vertices)
+        assert abs(cx - 2.0) < 1e-9
+        assert abs(cz - 1.0) < 1e-9
+
+    def test_centroid_degenerate(self) -> None:
+        """Collinear (zero-area) polygon falls back to vertex mean."""
+        vertices = np.array([[0.0, 0.0], [1.0, 0.0], [2.0, 0.0]])
+        cx, cz = _polygon_centroid(vertices)
+        assert abs(cx - 1.0) < 1e-9
+        assert abs(cz - 0.0) < 1e-9
+
+
+class TestPlotModelLabelFeatures:
+    """Tests for new label placement features in plot_model."""
+
+    def _make_model(self, label_loc: list[float] | None = None) -> ForwardModel:
+        from forward_model.models import GeologicBody, MagneticField
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            susceptibility=0.05,
+            name="Body",
+            label_loc=label_loc,
+        )
+        field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
+        return ForwardModel(
+            bodies=[body],
+            field=field,
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+
+    def test_plot_model_uses_label_loc(self) -> None:
+        """Body with label_loc places a plain Text (no annotation) at that location."""
+        from matplotlib.text import Annotation, Text
+
+        model = self._make_model(label_loc=[25.0, 150.0])
+        ax = plot_model(model)
+        texts = [
+            c
+            for c in ax.get_children()
+            if isinstance(c, Text) and not isinstance(c, Annotation)
+        ]
+        label_texts = [t for t in texts if "Body" in t.get_text()]
+        assert len(label_texts) == 1
+        assert abs(label_texts[0].get_position()[0] - 25.0) < 1e-9
+        assert abs(label_texts[0].get_position()[1] - 150.0) < 1e-9
+        plt.close()
+
+    def test_plot_model_label_offsets(self) -> None:
+        """label_offsets dict causes an Annotation to be placed, not a plain Text."""
+        from matplotlib.text import Annotation
+
+        model = self._make_model()
+        ax = plot_model(model, label_offsets={"Body": (0.0, -60.0)})
+        annotations = [c for c in ax.get_children() if isinstance(c, Annotation)]
+        assert len(annotations) == 1
+        plt.close()
+
+    def test_plot_model_show_label_arrows_global(self) -> None:
+        """show_label_arrows=True global flag produces an annotation with an arrow."""
+        from matplotlib.text import Annotation
+
+        model = self._make_model()
+        ax = plot_model(
+            model,
+            label_offsets={"Body": (0.0, -60.0)},
+            show_label_arrows=True,
+        )
+        annotations = [c for c in ax.get_children() if isinstance(c, Annotation)]
+        assert len(annotations) == 1
+        assert annotations[0].arrow_patch is not None
+        plt.close()
+
+    def test_plot_model_show_label_arrows_per_body(self) -> None:
+        """show_label_arrows=False per-body dict produces annotation with no arrow."""
+        from matplotlib.text import Annotation
+
+        model = self._make_model()
+        ax = plot_model(
+            model,
+            label_offsets={"Body": (0.0, -60.0)},
+            show_label_arrows={"Body": False},
+        )
+        annotations = [c for c in ax.get_children() if isinstance(c, Annotation)]
+        assert len(annotations) == 1
+        assert annotations[0].arrow_patch is None
+        plt.close()

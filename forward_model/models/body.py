@@ -17,11 +17,14 @@ class GeologicBody(BaseModel, frozen=True):
         susceptibility: Magnetic susceptibility (SI units, dimensionless).
                        Must be finite.
         name: Human-readable identifier for this body.
+        label_loc: Optional [x, z] override for the label position. When set,
+                  the plotter uses this location directly (no clamping applied).
     """
 
     vertices: list[list[float]] = Field(min_length=3)
     susceptibility: float
     name: str
+    label_loc: list[float] | None = Field(default=None)
 
     @field_validator("vertices")
     @classmethod
@@ -48,6 +51,18 @@ class GeologicBody(BaseModel, frozen=True):
         """Validate susceptibility is finite."""
         if not math.isfinite(v):
             raise ValueError(f"Susceptibility must be finite, got {v}")
+        return v
+
+    @field_validator("label_loc")
+    @classmethod
+    def validate_label_loc(cls, v: list[float] | None) -> list[float] | None:
+        """Validate label_loc is a 2-element list of finite floats."""
+        if v is None:
+            return v
+        if len(v) != 2:
+            raise ValueError("label_loc must have exactly 2 coordinates [x, z]")
+        if not all(math.isfinite(c) for c in v):
+            raise ValueError("label_loc contains non-finite values")
         return v
 
     def to_numpy(self) -> NDArray[np.float64]:

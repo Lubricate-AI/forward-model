@@ -64,3 +64,46 @@ class TestGeologicBody:
         """Test that GeologicBody is immutable."""
         with pytest.raises(ValidationError):
             simple_rectangle.susceptibility = 0.1  # type: ignore
+
+
+class TestGeologicBodyLabelLoc:
+    """Tests for the label_loc field on GeologicBody."""
+
+    def test_label_loc_default_is_none(self) -> None:
+        """label_loc defaults to None when not provided."""
+        body = GeologicBody(
+            vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            susceptibility=0.01,
+            name="Body",
+        )
+        assert body.label_loc is None
+
+    def test_label_loc_valid(self) -> None:
+        """label_loc stores a valid 2-element coordinate list."""
+        body = GeologicBody(
+            vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+            susceptibility=0.01,
+            name="Body",
+            label_loc=[100.0, 200.0],
+        )
+        assert body.label_loc == [100.0, 200.0]
+
+    def test_label_loc_wrong_length(self) -> None:
+        """label_loc with wrong number of elements raises ValidationError."""
+        with pytest.raises(ValidationError, match="exactly 2 coordinates"):
+            GeologicBody(
+                vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+                susceptibility=0.01,
+                name="Body",
+                label_loc=[100.0, 200.0, 300.0],
+            )
+
+    def test_label_loc_non_finite(self) -> None:
+        """label_loc with non-finite values raises ValidationError."""
+        with pytest.raises(ValidationError, match="non-finite values"):
+            GeologicBody(
+                vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
+                susceptibility=0.01,
+                name="Body",
+                label_loc=[float("inf"), 200.0],
+            )
