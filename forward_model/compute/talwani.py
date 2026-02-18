@@ -92,7 +92,8 @@ def compute_polygon_anomaly(
         dz = vertices[j_next, 1] - vertices[j, 1]
         edge_length = np.sqrt(dx**2 + dz**2)
 
-        if edge_length < min_distance:
+        # Restore original L∞ predicate for backward-compatible degenerate-edge skipping
+        if np.abs(dx) < min_distance and np.abs(dz) < min_distance:
             continue
 
         tx = dx / edge_length
@@ -114,9 +115,12 @@ def compute_polygon_anomaly(
         dtheta = np.where(dtheta > np.pi, dtheta - 2 * np.pi, dtheta)
         dtheta = np.where(dtheta < -np.pi, dtheta + 2 * np.pi, dtheta)
 
-        # Guard against log(0) for invalid points
-        r_ratio = np.where(valid, r2 / r1, 1.0)
-        log_term = np.where(valid, np.log(r_ratio), 0.0)
+        # Guard against division-by-zero and log(0) using masked ufuncs so
+        # NumPy never evaluates r2/r1 or log(...) for invalid points.
+        r_ratio = np.empty_like(r1)
+        np.divide(r2, r1, out=r_ratio, where=valid)
+        log_term = np.zeros_like(r1)
+        np.log(r_ratio, out=log_term, where=valid)
 
         contrib = np.where(
             valid,

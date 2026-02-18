@@ -85,6 +85,31 @@ class TestCalculateAnomaly:
         # Check superposition
         assert np.allclose(anomaly_both, anomaly1 + anomaly2, rtol=1e-10)
 
+    def test_parallel_matches_serial(
+        self, simple_rectangle: GeologicBody, earth_field: MagneticField
+    ) -> None:
+        """Test that parallel=True produces the same result as parallel=False."""
+        body2 = GeologicBody(
+            vertices=[
+                [100.0, 100.0],
+                [150.0, 100.0],
+                [150.0, 200.0],
+                [100.0, 200.0],
+            ],
+            susceptibility=0.05,
+            name="Body2",
+        )
+        model = ForwardModel(
+            bodies=[simple_rectangle, body2],
+            field=earth_field,
+            observation_x=np.linspace(-100.0, 250.0, 50).tolist(),
+            observation_z=0.0,
+        )
+
+        serial = calculate_anomaly(model, parallel=False)
+        parallel = calculate_anomaly(model, parallel=True)
+        assert np.allclose(serial, parallel, rtol=1e-12)
+
     def test_multiple_observation_points(
         self, simple_rectangle: GeologicBody, earth_field: MagneticField
     ) -> None:
