@@ -312,6 +312,19 @@ class TestPlotCombined:
         xlim = (0.0, 5000.0)
 
         fig = plot_combined(simple_model, anomaly, show_gradient=True, xlim=xlim)
+
+        # The first two axes are the main subplots: model and anomaly
+        model_ax = fig.axes[0]
+        anomaly_ax = fig.axes[1]
+        assert model_ax.get_xlim() == xlim
+        assert anomaly_ax.get_xlim() == xlim
+
+        # Any twinx axis for the anomaly panel shares the same position as anomaly_ax
+        anomaly_pos = anomaly_ax.get_position()
         for ax in fig.axes:
-            assert ax.get_xlim() == xlim
+            if ax is anomaly_ax:
+                continue
+            if ax.get_position() == anomaly_pos:
+                # This should be the gradient twinx axis; it must share the same x-limits
+                assert ax.get_xlim() == xlim
         plt.close(fig)
