@@ -292,9 +292,13 @@ class TestVisualizeCommand:
         assert "Visualization complete" in result.stdout
 
     def test_visualize_with_output(
-        self, results_json_file: Path, tmp_path: Path
+        self, results_json_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test visualize command with output file."""
+        import matplotlib.pyplot as plt
+
+        monkeypatch.setattr(plt, "show", lambda: None)
+
         output_plot = tmp_path / "plot.pdf"
 
         result = runner.invoke(
@@ -305,9 +309,13 @@ class TestVisualizeCommand:
         assert output_plot.exists()
 
     def test_visualize_with_custom_dpi(
-        self, results_json_file: Path, tmp_path: Path
+        self, results_json_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test visualize command with custom DPI."""
+        import matplotlib.pyplot as plt
+
+        monkeypatch.setattr(plt, "show", lambda: None)
+
         output_plot = tmp_path / "plot_hires.png"
 
         result = runner.invoke(
