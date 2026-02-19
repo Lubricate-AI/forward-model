@@ -8,6 +8,7 @@ from forward_model.compute import (
     compute_demagnetization_factor,
     compute_polygon_anomaly,
     compute_polygon_anomaly_2_5d,
+    compute_polygon_anomaly_2_75d,
     field_to_magnetization,
 )
 from forward_model.models import ForwardModel, GeologicBody, MagneticField
@@ -718,3 +719,94 @@ class TestMixed2DAnd25DModel:
         assert peak_25d < peak_2d, (
             f"Expected 2.5D peak ({peak_25d:.4f}) < 2D peak ({peak_2d:.4f})"
         )
+
+
+class TestComputePolygonAnomaly275D:
+    """Tests for 2.75D Talwani computation with finite asymmetric strike extent."""
+
+    # Symmetric rectangle centred at origin, 100–200 m depth
+    _VERTICES = np.array(
+        [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
+        dtype=np.float64,
+    )
+    # Dense symmetric observation grid
+    _OBS = np.column_stack([np.linspace(-200.0, 200.0, 41), np.zeros(41)]).astype(
+        np.float64
+    )
+    _MAG = np.array([0.0, -1000.0], dtype=np.float64)
+
+    def test_symmetric_matches_25d(self) -> None:
+        """y₁ == y₂ == y₀ gives same result as compute_polygon_anomaly_2_5d(y₀)."""
+        y0 = 500.0
+        result_25d = compute_polygon_anomaly_2_5d(
+            self._VERTICES, self._OBS, self._MAG, strike_half_length=y0
+        )
+        result_275d = compute_polygon_anomaly_2_75d(
+            self._VERTICES, self._OBS, self._MAG, strike_forward=y0, strike_backward=y0
+        )
+        max_diff_bz = float(np.max(np.abs(result_275d.bz - result_25d.bz)))
+        max_diff_bx = float(np.max(np.abs(result_275d.bx - result_25d.bx)))
+        assert max_diff_bz < 1e-6, f"bz max diff {max_diff_bz} >= 1e-6 nT"
+        assert max_diff_bx < 1e-6, f"bx max diff {max_diff_bx} >= 1e-6 nT"
+
+    def test_large_halflengths_match_2d(self) -> None:
+        """y₁ == y₂ == 1e9 m recovers the 2D result to within 1e-6 nT."""
+        result_2d = compute_polygon_anomaly(self._VERTICES, self._OBS, self._MAG)
+        result_275d = compute_polygon_anomaly_2_75d(
+            self._VERTICES,
+            self._OBS,
+            self._MAG,
+            strike_forward=1e9,
+            strike_backward=1e9,
+        )
+        max_diff = float(np.max(np.abs(result_275d.bz - result_2d.bz)))
+        assert max_diff < 1e-6, f"Max |bz_2.75D - bz_2D| = {max_diff} >= 1e-6 nT"
+
+    def test_asymmetric_shifts_peak(self) -> None:
+        """Asymmetric y₁ ≠ y₂ produces anomaly between the two symmetric solutions."""
+        y1 = 700.0
+        y2 = 200.0
+        result_sym_y1 = compute_polygon_anomaly_2_5d(
+            self._VERTICES, self._OBS, self._MAG, strike_half_length=y1
+        )
+        result_sym_y2 = compute_polygon_anomaly_2_5d(
+            self._VERTICES, self._OBS, self._MAG, strike_half_length=y2
+        )
+        result_275d = compute_polygon_anomaly_2_75d(
+            self._VERTICES, self._OBS, self._MAG, strike_forward=y1, strike_backward=y2
+        )
+        # 2.75D should equal (2.5D(y1) + 2.5D(y2)) / 2 at every point
+        expected_bz = (result_sym_y1.bz + result_sym_y2.bz) / 2.0
+        np.testing.assert_allclose(result_275d.bz, expected_bz, atol=1e-12)
+
+        # Peak amplitude should be between the two symmetric solutions
+        peak_275d = float(np.max(np.abs(result_275d.bz)))
+        peak_y1 = float(np.max(np.abs(result_sym_y1.bz)))
+        peak_y2 = float(np.max(np.abs(result_sym_y2.bz)))
+        assert min(peak_y1, peak_y2) <= peak_275d <= max(peak_y1, peak_y2)
+
+    def test_zero_magnetization(self) -> None:
+        """Zero magnetization gives all-zero outputs."""
+        zero_mag = np.array([0.0, 0.0], dtype=np.float64)
+        result = compute_polygon_anomaly_2_75d(
+            self._VERTICES,
+            self._OBS,
+            zero_mag,
+            strike_forward=500.0,
+            strike_backward=200.0,
+        )
+        assert np.allclose(result.bz, 0.0)
+        assert np.allclose(result.bx, 0.0)
+
+    def test_finite_values_near_vertex(self) -> None:
+        """Observation at a polygon vertex returns finite values (no NaN/inf)."""
+        obs_at_vertex = np.array([[-25.0, 100.0], [0.0, 0.0]], dtype=np.float64)
+        result = compute_polygon_anomaly_2_75d(
+            self._VERTICES,
+            obs_at_vertex,
+            self._MAG,
+            strike_forward=500.0,
+            strike_backward=200.0,
+        )
+        assert np.all(np.isfinite(result.bz))
+        assert np.all(np.isfinite(result.bx))

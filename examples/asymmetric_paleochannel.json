@@ -1,0 +1,27 @@
+{
+  "bodies": [
+    {
+      "name": "Asymmetric Paleochannel",
+      "susceptibility": -0.001,
+      "strike_forward": 700.0,
+      "strike_backward": 200.0,
+      "vertices": [
+        [-75.0, 80.0],
+        [75.0, 80.0],
+        [75.0, 150.0],
+        [-75.0, 150.0]
+      ]
+    }
+  ],
+  "field": {
+    "intensity": 56200.0,
+    "inclination": 71.0,
+    "declination": -9.5
+  },
+  "observation_x": [
+    -500, -450, -400, -350, -300, -250, -200, -150, -100, -75,
+    -50, -25, 0, 25, 50, 75, 100, 150, 200, 250,
+    300, 350, 400, 450, 500
+  ],
+  "observation_z": 0.0
+}
