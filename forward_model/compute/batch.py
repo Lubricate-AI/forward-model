@@ -68,6 +68,10 @@ def _process_single(
         write_json(out_path, model, anomaly)
     elif fmt == "npy":
         write_numpy(out_path, model.observation_x, anomaly)
+    else:  # pyright: ignore[reportUnreachable]
+        raise ValueError(
+            f"Unsupported output format: {fmt!r}. Expected 'csv', 'json', or 'npy'."
+        )
 
     if plot:
         import matplotlib.pyplot as plt
@@ -111,6 +115,10 @@ def batch_calculate(
 
     paths = [Path(p) for p in model_paths]
     result = BatchResult()
+
+    if not paths:
+        return result
+
     anomaly_arrays: list[NDArray[np.float64]] = []
     obs_x_lists: list[list[float]] = []
 

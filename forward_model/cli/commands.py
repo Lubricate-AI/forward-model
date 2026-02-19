@@ -253,7 +253,13 @@ def visualize(
 
 @app.command("batch")
 def batch(
-    models: list[Path] = typer.Argument(..., help="Model file paths (JSON or CSV)"),
+    models: list[Path] = typer.Argument(
+        ...,
+        help="Model file paths (JSON or CSV)",
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+    ),
     output_dir: Path = typer.Option(
         Path("results"), "--output-dir", help="Output directory"
     ),
@@ -292,16 +298,6 @@ def batch(
             err=True,
         )
         sys.exit(1)
-
-    for model_path in models:
-        if not model_path.exists():
-            typer.echo(
-                typer.style(
-                    f"Error: File not found: {model_path}", fg=typer.colors.RED
-                ),
-                err=True,
-            )
-            sys.exit(1)
 
     if verbose:
         typer.echo(f"Processing {len(models)} model(s) → {output_dir} ({format})")
