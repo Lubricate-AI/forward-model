@@ -284,7 +284,9 @@ def batch(
     output_dir: Path = typer.Option(
         Path("results"), "--output-dir", help="Output directory"
     ),
-    fmt: Literal["csv", "json", "npy"] = typer.Option("csv", "--format", help="Output format: csv, json, npy"),
+    fmt: Literal["csv", "json", "npy"] = typer.Option(
+        "csv", "--format", help="Output format: csv, json, npy"
+    ),
     plot: bool = typer.Option(False, "--plot", help="Save a plot for each model"),
     parallel: bool = typer.Option(
         False, "--parallel", help="Process models concurrently"
