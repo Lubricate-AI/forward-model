@@ -184,6 +184,18 @@ The **magnetic anomaly** is the deviation of the observed magnetic field from th
 
 In forward modeling, we calculate the anomaly caused by subsurface bodies with different susceptibilities than the surrounding rocks. The background field is implicitly assumed to be the Earth's field with no local variations.
 
+This implementation computes five output components from the forward model:
+
+| Component | Symbol | Units | Description |
+|-----------|--------|-------|-------------|
+| Vertical | Bz | nT | Vertical anomaly field component |
+| Horizontal | Bx | nT | Horizontal anomaly field component (along profile) |
+| Total field | ΔT | nT | Projection onto inducing field direction |
+| Amplitude | \|ΔB\| | nT | Vector magnitude of anomaly field |
+| Horizontal gradient | d(ΔT)/dx | nT/m | Spatial derivative of total field along profile |
+
+**Note on By:** In 2D modeling, bodies have infinite extent along the strike direction (y-axis), so the y-component of the anomaly field is identically zero by symmetry. Only Bx and Bz are non-zero.
+
 ## Mathematical Formulation
 
 ### 2D Approximation
@@ -203,19 +215,50 @@ where G_i represents the contribution from edge i of the polygon.
 
 ### Edge Contributions
 
-For each edge defined by vertices (x₁, z₁) and (x₂, z₂), the contribution involves:
-
-1. **Geometric terms**: Functions of the edge position relative to observation point
-2. **Field direction terms**: Components of the inducing field (inclination, declination)
-3. **Logarithmic and arctangent functions**: Arising from integration along the edge
-
-The total field anomaly at the observation point is:
+For each edge defined by vertices (x₁, z₁) and (x₂, z₂), the algorithm accumulates two geometric integrals per observation point (Talwani, 1965):
 
 ```
-ΔB = -∂U/∂x * cos(I) - ∂U/∂z * sin(I)
+Δθ  = θ₂ − θ₁              (subtended angle)
+log = ln(r₂ / r₁)           (log of distance ratio)
 ```
 
-for a profile perpendicular to strike (declination = 0).
+where θᵢ and rᵢ are the angle and distance from the observation point to vertex i. The edge direction cosines tx and tz define the geometry.
+
+The two field components contributed by each edge are:
+
+**Vertical component (Bz):**
+```
+Bz_edge = C · [ Mx · (log·tx − Δθ·tz) + Mz · (log·tz + Δθ·tx) ]
+```
+
+**Horizontal component (Bx):**
+```
+Bx_edge = C · [ Mx · (Δθ·tx + log·tz) + Mz · (−Δθ·tz + log·tx) ]
+```
+
+where:
+- **C**: Scaling constant combining susceptibility, field intensity, and μ₀
+- **Mx, Mz**: Horizontal and vertical components of the total magnetization vector
+- Both formulas share all intermediate variables, so Bz and Bx are computed simultaneously in one edge loop
+
+After summing over all edges and all bodies, three derived quantities are computed:
+
+**Total field anomaly (ΔT)** — projection of the anomaly vector onto the inducing field direction:
+```
+ΔT ≈ Bx · cos(I) · cos(D) + Bz · sin(I)
+```
+
+**Vector amplitude** — magnitude of the anomaly field:
+```
+|ΔB| = sqrt(Bx² + Bz²)
+```
+
+**Horizontal gradient** — spatial derivative of total field along the profile:
+```
+d(ΔT)/dx
+```
+
+This is the correct forward model of a **total-field gradiometer** system, which measures the difference in ΔT between two spatially separated sensors divided by their baseline.
 
 ### Superposition Principle
 
@@ -246,7 +289,7 @@ This linearity arises from the linear relationship between magnetization and sus
 
 ### Observation Points
 
-Observation points are typically along a horizontal line at z = 0 (ground surface) or z = constant (airborne survey). The algorithm computes the vertical component of the magnetic anomaly at each observation point.
+Observation points are typically along a horizontal line at z = 0 (ground surface) or z = constant (airborne survey). The algorithm computes both the vertical (Bz) and horizontal (Bx) anomaly components at each observation point, from which the total field anomaly (ΔT), vector amplitude, and horizontal gradient are derived.
 
 ## Algorithm Implementation
 
@@ -269,18 +312,21 @@ Observation points are typically along a horizontal line at z = 0 (ground surfac
 
 1. **Validate input**: Check geometry, ensure closed polygons, verify parameters
 
-2. **For each observation point**:
-   a. Initialize total anomaly to zero
-   b. For each body:
-      - Transform coordinates to observation point reference frame
-      - For each edge of the body polygon:
-        * Calculate geometric terms
-        * Apply field direction factors
-        * Sum edge contributions
-      - Add body contribution to total
-   c. Store computed anomaly value
+2. **For each body, for each observation point**:
+   - Transform coordinates to observation point reference frame
+   - For each edge of the body polygon:
+     * Calculate geometric terms (Δθ, log, tx, tz)
+     * Accumulate Bz and Bx edge contributions simultaneously
+   - Store body-level Bz and Bx arrays
 
-3. **Output results**: Anomaly array corresponding to observation points
+3. **Superpose** Bz and Bx across all bodies
+
+4. **Derive model-level components** from superposed Bz and Bx:
+   - ΔT: project onto inducing field direction
+   - |ΔB|: vector magnitude
+   - d(ΔT)/dx: central-difference gradient along observation x-coordinates
+
+5. **Output results**: `AnomalyComponents(bz, bx, total_field, amplitude, gradient)` or a single selected component array
 
 ### Numerical Considerations
 
@@ -327,11 +373,13 @@ The implementation can be validated by:
 
 2. **Talwani, M., & Heirtzler, J. R. (1964).** Computation of magnetic anomalies caused by two-dimensional structures of arbitrary shape. *Computers in the Mineral Industries*, 464-480.
 
-3. **Blakely, R. J. (1995).** *Potential Theory in Gravity and Magnetic Applications.* Cambridge University Press. (Comprehensive textbook on potential field methods)
+3. **Talwani, M. (1965).** Computation with the help of a digital computer of magnetic anomalies caused by bodies of arbitrary shape. *Geophysics*, 30(5), 797–817. *(Source for the simultaneous Bz and Bx edge formulas)*
 
-4. **Dobrin, M. B., & Savit, C. H. (1988).** *Introduction to Geophysical Prospecting* (4th ed.). McGraw-Hill. (Classical geophysics textbook)
+4. **Blakely, R. J. (1995).** *Potential Theory in Gravity and Magnetic Applications.* Cambridge University Press. (Comprehensive textbook on potential field methods)
 
-5. **Sharma, P. V. (1997).** *Environmental and Engineering Geophysics.* Cambridge University Press. (Applied geophysics with magnetic methods)
+5. **Dobrin, M. B., & Savit, C. H. (1988).** *Introduction to Geophysical Prospecting* (4th ed.). McGraw-Hill. (Classical geophysics textbook)
+
+6. **Sharma, P. V. (1997).** *Environmental and Engineering Geophysics.* Cambridge University Press. (Applied geophysics with magnetic methods)
 
 ## Further Reading
 
