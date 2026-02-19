@@ -7,6 +7,7 @@ from forward_model.compute import (
     calculate_anomaly,
     compute_demagnetization_factor,
     compute_polygon_anomaly,
+    compute_polygon_anomaly_2_5d,
     field_to_magnetization,
 )
 from forward_model.models import ForwardModel, GeologicBody, MagneticField
@@ -591,3 +592,129 @@ class TestAnomalyComponents:
         np.testing.assert_allclose(gradient[1], -gradient[3], atol=1e-6)
         # At x=0, gradient should be ~0 (peak of symmetric anomaly)
         assert abs(gradient[2]) < 1e-6
+
+
+class TestComputePolygonAnomaly2_5D:
+    """Tests for 2.5D Talwani computation with finite symmetric strike extent."""
+
+    # Symmetric rectangle centred at origin, 100–200 m depth
+    _VERTICES = np.array(
+        [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
+        dtype=np.float64,
+    )
+    # Dense symmetric observation grid
+    _OBS = np.column_stack([np.linspace(-200.0, 200.0, 41), np.zeros(41)]).astype(
+        np.float64
+    )
+    _MAG = np.array([0.0, -1000.0], dtype=np.float64)
+
+    def test_large_y0_matches_2d(self) -> None:
+        """y0=1e9 m recovers the 2D result to within 1e-6 nT."""
+        result_2d = compute_polygon_anomaly(self._VERTICES, self._OBS, self._MAG)
+        result_25d = compute_polygon_anomaly_2_5d(
+            self._VERTICES, self._OBS, self._MAG, strike_half_length=1e9
+        )
+        max_diff = float(np.max(np.abs(result_25d.bz - result_2d.bz)))
+        assert max_diff < 1e-6, f"Max |bz_2.5D - bz_2D| = {max_diff} >= 1e-6 nT"
+
+    def test_finite_y0_reduces_amplitude(self) -> None:
+        """Finite y0 (body depth) produces strictly smaller peak |bz| than 2D."""
+        body_depth = 150.0  # mid-depth of the body
+        result_2d = compute_polygon_anomaly(self._VERTICES, self._OBS, self._MAG)
+        result_25d = compute_polygon_anomaly_2_5d(
+            self._VERTICES, self._OBS, self._MAG, strike_half_length=body_depth
+        )
+        peak_2d = float(np.max(np.abs(result_2d.bz)))
+        peak_25d = float(np.max(np.abs(result_25d.bz)))
+        assert peak_25d < peak_2d, (
+            f"Expected 2.5D peak ({peak_25d}) < 2D peak ({peak_2d})"
+        )
+
+    def test_symmetry(self) -> None:
+        """Symmetric body and symmetric obs grid → symmetric anomaly."""
+        result = compute_polygon_anomaly_2_5d(
+            self._VERTICES, self._OBS, self._MAG, strike_half_length=500.0
+        )
+        # Grid is symmetric about centre index 20
+        n = len(self._OBS)
+        for i in range(n // 2):
+            np.testing.assert_allclose(
+                result.bz[i],
+                result.bz[n - 1 - i],
+                rtol=1e-10,
+                err_msg=f"Symmetry broken at index pair ({i}, {n - 1 - i})",
+            )
+
+    def test_zero_magnetization(self) -> None:
+        """Zero magnetization vector gives all-zero outputs."""
+        zero_mag = np.array([0.0, 0.0], dtype=np.float64)
+        result = compute_polygon_anomaly_2_5d(
+            self._VERTICES, self._OBS, zero_mag, strike_half_length=500.0
+        )
+        assert np.allclose(result.bz, 0.0)
+        assert np.allclose(result.bx, 0.0)
+
+    def test_singularity_guard(self) -> None:
+        """Observation point coinciding with a vertex returns finite values."""
+        obs_at_vertex = np.array([[-25.0, 100.0], [0.0, 0.0]], dtype=np.float64)
+        result = compute_polygon_anomaly_2_5d(
+            self._VERTICES, obs_at_vertex, self._MAG, strike_half_length=500.0
+        )
+        assert np.all(np.isfinite(result.bz))
+        assert np.all(np.isfinite(result.bx))
+
+
+class TestMixed2DAnd25DModel:
+    """Integration test: model with mixed 2D and 2.5D bodies."""
+
+    def test_mixed_model_runs_without_error(self) -> None:
+        """ForwardModel with one 2D body and one 2.5D body computes without error."""
+        body_2d = GeologicBody(
+            vertices=[[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
+            susceptibility=0.05,
+            name="2D Body",
+        )
+        body_25d = GeologicBody(
+            vertices=[[50.0, 100.0], [100.0, 100.0], [100.0, 200.0], [50.0, 200.0]],
+            susceptibility=0.05,
+            name="2.5D Body",
+            strike_half_length=500.0,
+        )
+        field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
+        model_mixed = ForwardModel(
+            bodies=[body_2d, body_25d],
+            field=field,
+            observation_x=list(np.linspace(-200.0, 300.0, 51)),
+            observation_z=0.0,
+        )
+        result = calculate_anomaly(model_mixed, component="bz")
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (51,)
+        assert np.all(np.isfinite(result))
+
+    def test_25d_only_model_lower_amplitude_than_2d_only(self) -> None:
+        """Same body as 2.5D has strictly lower peak amplitude than as 2D."""
+        verts = [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]]
+        field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
+        obs_x = list(np.linspace(-200.0, 200.0, 41))
+
+        body_2d = GeologicBody(vertices=verts, susceptibility=0.05, name="2D")
+        model_2d = ForwardModel(
+            bodies=[body_2d], field=field, observation_x=obs_x, observation_z=0.0
+        )
+
+        body_25d = GeologicBody(
+            vertices=verts,
+            susceptibility=0.05,
+            name="2.5D",
+            strike_half_length=150.0,
+        )
+        model_25d = ForwardModel(
+            bodies=[body_25d], field=field, observation_x=obs_x, observation_z=0.0
+        )
+
+        peak_2d = float(np.max(np.abs(calculate_anomaly(model_2d, component="bz"))))
+        peak_25d = float(np.max(np.abs(calculate_anomaly(model_25d, component="bz"))))
+        assert peak_25d < peak_2d, (
+            f"Expected 2.5D peak ({peak_25d:.4f}) < 2D peak ({peak_2d:.4f})"
+        )

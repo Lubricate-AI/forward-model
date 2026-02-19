@@ -213,6 +213,46 @@ U(x,z) = (χ * F / μ₀) * Σ G_i
 
 where G_i represents the contribution from edge i of the polygon.
 
+### 2.5D Modeling (Finite Strike Length)
+
+The pure 2D assumption overestimates anomaly amplitude for bodies with limited along-strike extent — for example, a paleochannel 200 m wide and only 500 m long appears far stronger in a 2D model than in reality. Won & Bevis (1987) showed that the anomaly of a body that extends symmetrically from y = −y₀ to y = +y₀ along strike can be computed analytically by replacing the standard 2D Talwani vertex functions with 2.5D equivalents:
+
+**Modified angle function:**
+```
+Θₖ = arctan2(zₖ · y₀,  xₖ · √(rₖ² + y₀²))
+```
+
+**Modified log function:**
+```
+Λₖ = ln( rₖ / (√(rₖ² + y₀²) + y₀) )
+```
+
+where (xₖ, zₖ) are the coordinates of vertex k relative to the observation point and rₖ = √(xₖ² + zₖ²).
+
+As y₀ → ∞:
+
+- Θₖ → arctan2(zₖ, xₖ) = θₖ
+- Λ₂ − Λ₁ → ln(r₂ / r₁) = log_term
+
+so the formula **exactly recovers the 2D Talwani result** in the limiting case.
+
+The 2.5D edge contributions use these modified differences in place of the 2D Δθ and log terms:
+
+```
+ΔΘ = Θ₂ − Θ₁         (modified subtended angle)
+ΔΛ = Λ₂ − Λ₁         (modified log of distance ratio)
+```
+
+**Amplitude attenuation**: relative to the 2D value, the 2.5D amplitude is attenuated roughly as y₀ / √(r² + y₀²) at a characteristic 2D distance r from the profile. When y₀ ≫ r this factor approaches 1 and the 2D result is recovered; when y₀ ≪ r the anomaly is strongly suppressed.
+
+**Using 2.5D in practice**: set `strike_half_length` on any `GeologicBody` (the default `null` retains the 2D code path). Bodies with and without `strike_half_length` can coexist freely in a single `ForwardModel`.
+
+Typical applications:
+
+- Isolated paleochannels with known along-strike terminations
+- Short intrusive plugs or ore pods
+- Fault blocks with constrained strike length from seismic or drilling
+
 ### Edge Contributions
 
 For each edge defined by vertices (x₁, z₁) and (x₂, z₂), the algorithm accumulates two geometric integrals per observation point (Talwani, 1965):
@@ -338,22 +378,22 @@ Observation points are typically along a horizontal line at z = 0 (ground surfac
 
 ### Assumptions
 
-1. **2D geometry**: Bodies have infinite extent perpendicular to profile
-2. **Total magnetization**: Both induced and remanent magnetization are modeled; remanent defaults to zero
-3. **Uniform susceptibility**: Each body has constant susceptibility
-4. **Non-interacting bodies**: Bodies don't affect each other's magnetization
-5. **Optional demagnetization correction**: Self-demagnetization can be applied per-body via `demagnetization_factor` (default 0.0 = no correction)
-6. **Flat observation surface**: All observation points at same elevation
+1. **2D or 2.5D geometry**: Bodies either have infinite extent perpendicular to the profile (2D, the default) or a user-specified finite symmetric half-length `strike_half_length` (2.5D, Won & Bevis 1987). Bodies with different assumptions can coexist in the same model.
+2. **Total magnetization**: Both induced and remanent magnetization are modeled; remanent defaults to zero.
+3. **Uniform susceptibility**: Each body has constant susceptibility.
+4. **Non-interacting bodies**: Bodies don't affect each other's magnetization.
+5. **Optional demagnetization correction**: Self-demagnetization can be applied per-body via `demagnetization_factor` (default 0.0 = no correction).
+6. **Flat observation surface**: All observation points at the same elevation.
 
 ### Limitations
 
 1. **Not suitable for**:
-   - 3D bodies (finite strike length)
+   - Fully 3D bodies (asymmetric or irregular along-strike geometry — use `strike_half_length` for the symmetric finite-strike approximation)
    - Body-to-body demagnetization interactions
    - Demagnetization factors above 0.5 (3D geometries only)
 
 2. **Accuracy depends on**:
-   - Validity of 2D approximation
+   - Validity of 2D or 2.5D approximation
    - Knowledge of susceptibility values
    - Accuracy of field parameters
    - Appropriateness of polygon approximation
@@ -375,11 +415,13 @@ The implementation can be validated by:
 
 3. **Talwani, M. (1965).** Computation with the help of a digital computer of magnetic anomalies caused by bodies of arbitrary shape. *Geophysics*, 30(5), 797–817. *(Source for the simultaneous Bz and Bx edge formulas)*
 
-4. **Blakely, R. J. (1995).** *Potential Theory in Gravity and Magnetic Applications.* Cambridge University Press. (Comprehensive textbook on potential field methods)
+4. **Won, I. J., & Bevis, M. (1987).** Computing the gravitational and magnetic anomalies due to a polygon: Algorithms and Fortran subroutines. *Geophysics*, 52(2), 232–238. *(Source for the 2.5D finite-strike extension used in `compute_polygon_anomaly_2_5d`)*
 
-5. **Dobrin, M. B., & Savit, C. H. (1988).** *Introduction to Geophysical Prospecting* (4th ed.). McGraw-Hill. (Classical geophysics textbook)
+5. **Blakely, R. J. (1995).** *Potential Theory in Gravity and Magnetic Applications.* Cambridge University Press. (Comprehensive textbook on potential field methods)
 
-6. **Sharma, P. V. (1997).** *Environmental and Engineering Geophysics.* Cambridge University Press. (Applied geophysics with magnetic methods)
+6. **Dobrin, M. B., & Savit, C. H. (1988).** *Introduction to Geophysical Prospecting* (4th ed.). McGraw-Hill. (Classical geophysics textbook)
+
+7. **Sharma, P. V. (1997).** *Environmental and Engineering Geophysics.* Cambridge University Press. (Applied geophysics with magnetic methods)
 
 ## Further Reading
 

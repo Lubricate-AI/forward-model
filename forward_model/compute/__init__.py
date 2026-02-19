@@ -6,6 +6,7 @@ from forward_model.compute.talwani import (
     AnomalyComponents,
     compute_demagnetization_factor,
     compute_polygon_anomaly,
+    compute_polygon_anomaly_2_5d,
     field_to_magnetization,
 )
 
@@ -16,5 +17,6 @@ __all__ = [
     "calculate_anomaly",
     "compute_demagnetization_factor",
     "compute_polygon_anomaly",
+    "compute_polygon_anomaly_2_5d",
     "field_to_magnetization",
 ]

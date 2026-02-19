@@ -38,6 +38,13 @@ class GeologicBody(BaseModel, frozen=True):
                                correction). For 2D infinite-strike bodies the
                                physically meaningful range is [0.0, 0.5]; values
                                above 0.5 are accepted but trigger a UserWarning.
+        strike_half_length: Half-length of the body in the strike direction (m).
+                           When ``None`` (default), the standard 2D (infinite-strike)
+                           Talwani (1965) algorithm is used. When a positive finite
+                           value is provided, the Won & Bevis (1987) 2.5D correction
+                           factor ``y0 / sqrt(r² + y0²)`` is applied per edge,
+                           attenuating the anomaly for bodies with limited lateral
+                           extent. Must be strictly positive and finite.
     """
 
     vertices: list[list[float]] = Field(min_length=3)
@@ -50,6 +57,7 @@ class GeologicBody(BaseModel, frozen=True):
     remanent_inclination: float = Field(default=0.0, ge=-90.0, le=90.0)
     remanent_declination: float = Field(default=0.0, ge=-180.0, le=180.0)
     demagnetization_factor: float = Field(default=0.0, ge=0.0, le=1.0)
+    strike_half_length: float | None = Field(default=None, gt=0.0)
 
     @field_validator("vertices")
     @classmethod
@@ -114,6 +122,16 @@ class GeologicBody(BaseModel, frozen=True):
                 UserWarning,
                 stacklevel=2,
             )
+        return v
+
+    @field_validator("strike_half_length")
+    @classmethod
+    def validate_strike_half_length(cls, v: float | None) -> float | None:
+        """Validate strike_half_length is finite."""
+        if v is None:
+            return v
+        if not math.isfinite(v):
+            raise ValueError(f"strike_half_length must be finite, got {v}")
         return v
 
     @field_validator("color")
