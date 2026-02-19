@@ -116,7 +116,7 @@ def run(
         help="Anomaly component: bz (default), bx, total_field, amplitude, gradient",
     ),
     plot_style: str | None = typer.Option(
-        None, "--plot-style", help="Plot style (default, publication)"
+        None, "--plot-style", help="Plot style (default, publication, presentation)"
     ),
     plot_dpi: int | None = typer.Option(
         None, "--plot-dpi", help="DPI for saved plot figure"
@@ -269,7 +269,7 @@ def visualize(
         None, "--output", "-o", help="Save plot to file (e.g., output.pdf)"
     ),
     style: str | None = typer.Option(
-        None, "--style", help="Plot style (default, publication)"
+        None, "--style", help="Plot style (default, publication, presentation)"
     ),
     dpi: int | None = typer.Option(None, "--dpi", help="DPI for saved figure"),
     no_show: bool = typer.Option(
@@ -388,19 +388,19 @@ def batch(
     Processes each model through the full load → compute → export pipeline.
     Results are written to OUTPUT_DIR with filenames matching input stems.
     """
-    cfg = load_config()
-    effective_output_dir = output_dir or cfg.output.directory or Path("results")
-    effective_fmt: Literal["csv", "json", "npy"] = (
-        fmt or cfg.output.format or "csv"  # type: ignore[assignment]
-    )
-
-    if verbose:
-        typer.echo(
-            f"Processing {len(models)} model(s)"
-            f" → {effective_output_dir} ({effective_fmt})"
+    try:
+        cfg = load_config()
+        effective_output_dir = output_dir or cfg.output.directory or Path("results")
+        effective_fmt: Literal["csv", "json", "npy"] = (
+            fmt or cfg.output.format or "csv"  # type: ignore[assignment]
         )
 
-    try:
+        if verbose:
+            typer.echo(
+                f"Processing {len(models)} model(s)"
+                f" → {effective_output_dir} ({effective_fmt})"
+            )
+
         result = batch_calculate(
             model_paths=models,
             output_dir=effective_output_dir,

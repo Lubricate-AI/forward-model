@@ -85,7 +85,7 @@ TEMPLATE_TOML: str = """\
 
 # [plot]
 # Visualization defaults
-# style = "default"         # Plot style: default or publication
+# style = "default"         # Plot style: default, publication, or presentation
 # dpi = 150                 # Resolution for saved figures (dots per inch)
 # color_by = "index"        # Body colour scheme: index or susceptibility
 
@@ -170,14 +170,27 @@ def env_config() -> Config:
             raise ValueError(f"Invalid value for {env_var}={raw!r}: {e}") from e
         sections.setdefault(section, {})[field] = value
 
-    # Build Config section by section to satisfy the type checker
-    return Config(
-        field=FieldConfig.model_validate(sections.get("field", {})),
-        observation=ObservationConfig.model_validate(sections.get("observation", {})),
-        output=OutputConfig.model_validate(sections.get("output", {})),
-        plot=PlotConfig.model_validate(sections.get("plot", {})),
-        app=AppConfig.model_validate(sections.get("app", {})),
-    )
+    # Build Config section by section; wrap ValidationError so the env var is named
+    from pydantic import ValidationError
+
+    try:
+        return Config(
+            field=FieldConfig.model_validate(sections.get("field", {})),
+            observation=ObservationConfig.model_validate(
+                sections.get("observation", {})
+            ),
+            output=OutputConfig.model_validate(sections.get("output", {})),
+            plot=PlotConfig.model_validate(sections.get("plot", {})),
+            app=AppConfig.model_validate(sections.get("app", {})),
+        )
+    except ValidationError as e:
+        # Surface which env var(s) caused the validation failure
+        bad = [
+            f"{var}={os.environ[var]!r}" for var in _ENV_VAR_MAP if var in os.environ
+        ]
+        raise ValueError(
+            f"Invalid environment variable value(s): {', '.join(bad)}\n{e}"
+        ) from e
 
 
 def load_config(cwd: Path | None = None) -> Config:
