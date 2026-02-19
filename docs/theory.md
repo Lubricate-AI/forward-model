@@ -45,7 +45,7 @@ In the SI system, susceptibility values for rocks typically range from:
 
 ### Induced Magnetization
 
-This implementation models **induced magnetization only** - the magnetization acquired by rocks in the present-day Earth magnetic field. We do not model remanent magnetization (permanent magnetization acquired when rocks formed).
+This implementation models **induced magnetization** - the magnetization acquired by rocks in the present-day Earth magnetic field - as well as **remanent magnetization** (permanent magnetization acquired when rocks formed). See [Remanent Magnetization](#remanent-magnetization) below.
 
 The induced magnetization vector is:
 
@@ -58,6 +58,34 @@ where:
 - **μ₀**: Permeability of free space (4π × 10⁻⁷ H/m)
 
 The direction of M is parallel to the inducing field B₀.
+
+### Remanent Magnetization
+
+Remanent magnetization is a permanent magnetization vector fixed at the time of rock formation, independent of the present-day ambient field. Many volcanic and intrusive rocks carry significant remanence that can dominate the total magnetization.
+
+The total magnetization is the vector sum of induced and remanent components:
+
+```
+M_total = M_induced + M_remanent
+```
+
+The **Königsberger ratio** Q quantifies the relative importance of remanence:
+
+```
+Q = |M_remanent| / |M_induced|
+```
+
+When Q > 1, remanent magnetization dominates and omitting it leads to significant modeling errors. Volcanic rocks (especially basalts and lava flows) commonly have Q values of 1–10 or higher.
+
+The remanent vector is described by three parameters in the JSON schema:
+
+| Field | Description | Units | Default |
+|-------|-------------|-------|---------|
+| `remanent_intensity` | Magnitude of remanent magnetization | A/m | 0.0 |
+| `remanent_inclination` | Inclination of remanent vector (positive downward) | degrees | 0.0 |
+| `remanent_declination` | Declination of remanent vector from north | degrees | 0.0 |
+
+Setting `remanent_intensity=0.0` (the default) recovers the induced-only behaviour.
 
 ### Earth's Magnetic Field
 
@@ -195,7 +223,7 @@ Observation points are typically along a horizontal line at z = 0 (ground surfac
 ### Assumptions
 
 1. **2D geometry**: Bodies have infinite extent perpendicular to profile
-2. **Induced magnetization only**: No remanent magnetization
+2. **Total magnetization**: Both induced and remanent magnetization are modeled; remanent defaults to zero
 3. **Uniform susceptibility**: Each body has constant susceptibility
 4. **Non-interacting bodies**: Bodies don't affect each other's magnetization
 5. **No demagnetization**: Shape of body doesn't affect its magnetization
@@ -205,7 +233,6 @@ Observation points are typically along a horizontal line at z = 0 (ground surfac
 
 1. **Not suitable for**:
    - 3D bodies (finite strike length)
-   - Strong remanent magnetization
    - Self-demagnetization effects
    - Very high susceptibility contrast (χ > 1)
 

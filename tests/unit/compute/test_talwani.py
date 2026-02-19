@@ -44,6 +44,87 @@ class TestFieldToMagnetization:
         )
         assert np.allclose(mag, [0.0, 0.0])
 
+    def test_zero_remanence_unchanged(self) -> None:
+        """With all remanent params at default, result equals induced-only result."""
+        induced_only = field_to_magnetization(
+            susceptibility=0.05,
+            field_intensity=50000.0,
+            field_inclination=60.0,
+            field_declination=0.0,
+        )
+        with_zero_remanence = field_to_magnetization(
+            susceptibility=0.05,
+            field_intensity=50000.0,
+            field_inclination=60.0,
+            field_declination=0.0,
+            remanent_intensity=0.0,
+            remanent_inclination=0.0,
+            remanent_declination=0.0,
+        )
+        assert np.allclose(induced_only, with_zero_remanence)
+
+    def test_pure_remanent_body(self) -> None:
+        """With susceptibility=0, result equals the projected remanent vector."""
+        rem_intensity = 3.0  # A/m
+        rem_inc = 45.0  # degrees
+        rem_dec = 0.0
+        mag = field_to_magnetization(
+            susceptibility=0.0,
+            field_intensity=50000.0,
+            field_inclination=60.0,
+            field_declination=0.0,
+            remanent_intensity=rem_intensity,
+            remanent_inclination=rem_inc,
+            remanent_declination=rem_dec,
+        )
+        expected_mx = (
+            rem_intensity * np.cos(np.deg2rad(rem_inc)) * np.cos(np.deg2rad(rem_dec))
+        )
+        expected_mz = -rem_intensity * np.sin(np.deg2rad(rem_inc))
+        assert np.allclose(mag, [expected_mx, expected_mz])
+
+    def test_vertical_remanence_adds_correctly(self) -> None:
+        """remanent_inclination=90 gives Mx_rem≈0, Mz_rem<0."""
+        mag = field_to_magnetization(
+            susceptibility=0.0,
+            field_intensity=50000.0,
+            field_inclination=60.0,
+            field_declination=0.0,
+            remanent_intensity=2.0,
+            remanent_inclination=90.0,
+            remanent_declination=0.0,
+        )
+        assert np.abs(mag[0]) < 1e-10  # Mx ~ 0
+        assert mag[1] < 0  # Mz negative (pointing downward)
+        assert np.isclose(mag[1], -2.0)
+
+    def test_antiparallel_remanence_reduces_anomaly(self) -> None:
+        """Remanent vector antiparallel to induced gives total |M| < induced |M|."""
+        inc = 60.0
+        dec = 0.0
+        susceptibility = 0.05
+        intensity = 50000.0
+
+        induced = field_to_magnetization(
+            susceptibility=susceptibility,
+            field_intensity=intensity,
+            field_inclination=inc,
+            field_declination=dec,
+        )
+
+        # Antiparallel remanence: opposite inclination, same declination
+        mag_total = field_to_magnetization(
+            susceptibility=susceptibility,
+            field_intensity=intensity,
+            field_inclination=inc,
+            field_declination=dec,
+            remanent_intensity=0.5,
+            remanent_inclination=-inc,
+            remanent_declination=dec,
+        )
+
+        assert np.linalg.norm(mag_total) < np.linalg.norm(induced)
+
 
 class TestComputePolygonAnomaly:
     """Tests for Talwani polygon anomaly computation."""

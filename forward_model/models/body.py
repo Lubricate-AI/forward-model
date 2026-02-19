@@ -24,6 +24,12 @@ class GeologicBody(BaseModel, frozen=True):
                floats in ``[0.0, 1.0]``. When set, overrides the global colormap.
         hatch: Optional matplotlib hatch pattern string (e.g. ``"///"``,
                ``"\\\\"``) applied as a fill pattern. ``None`` means no hatch.
+        remanent_intensity: Remanent magnetization intensity in A/m. Must be
+                           non-negative and finite. Default is 0.0 (no remanence).
+        remanent_inclination: Inclination of the remanent magnetization vector
+                             in degrees (-90 to 90). Positive downward. Default 0.0.
+        remanent_declination: Declination of the remanent magnetization vector
+                             in degrees (-180 to 180). Default 0.0.
     """
 
     vertices: list[list[float]] = Field(min_length=3)
@@ -32,6 +38,9 @@ class GeologicBody(BaseModel, frozen=True):
     label_loc: list[float] | None = Field(default=None)
     color: str | list[float] | None = Field(default=None)
     hatch: str | None = Field(default=None)
+    remanent_intensity: float = Field(default=0.0, ge=0.0)
+    remanent_inclination: float = Field(default=0.0, ge=-90.0, le=90.0)
+    remanent_declination: float = Field(default=0.0, ge=-180.0, le=180.0)
 
     @field_validator("vertices")
     @classmethod
@@ -70,6 +79,16 @@ class GeologicBody(BaseModel, frozen=True):
             raise ValueError("label_loc must have exactly 2 coordinates [x, z]")
         if not all(math.isfinite(c) for c in v):
             raise ValueError("label_loc contains non-finite values")
+        return v
+
+    @field_validator(
+        "remanent_intensity", "remanent_inclination", "remanent_declination"
+    )
+    @classmethod
+    def validate_remanent_fields(cls, v: float) -> float:
+        """Validate remanent fields are finite."""
+        if not math.isfinite(v):
+            raise ValueError(f"Remanent field must be finite, got {v}")
         return v
 
     @field_validator("color")
