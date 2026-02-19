@@ -21,7 +21,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": ":rocket: New Release: ${{ github.event.release.tag_name }}"
+                    "text": "🚀 New Release: ${{ github.event.release.tag_name }}"
                   }
                 },
                 {
