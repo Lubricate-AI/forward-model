@@ -181,6 +181,28 @@ class TestPlotAnomaly:
 
         # twinx() adds a second axes to the same figure
         assert len(fig.axes) == 2
+
+        # Assert legend contains both labels
+        legend = ax.get_legend()
+        assert legend is not None
+        legend_texts = [t.get_text() for t in legend.get_texts()]
+        assert "ΔT (nT)" in legend_texts
+        assert "d(ΔT)/dx (nT/m)" in legend_texts
+        plt.close()
+
+    def test_plot_anomaly_gradient_overlay_xlim_shared(self) -> None:
+        """When xlim and gradient are both supplied, the twin axis shares xlim."""
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([1.0, 2.0, 3.0])
+        gradient = np.array([0.1, 0.0, -0.1])
+        xlim = (0.0, 20.0)
+
+        fig, ax = plt.subplots()
+        plot_anomaly(obs_x, anomaly, ax=ax, gradient=gradient, xlim=xlim)
+
+        ax_twin = fig.axes[1]  # twinx axes
+        assert ax.get_xlim() == xlim
+        assert ax_twin.get_xlim() == xlim
         plt.close()
 
     def test_plot_anomaly_no_gradient_no_twin_axis(self) -> None:
@@ -387,6 +409,14 @@ class TestPlotCombined:
 
         # Axes: cross-section + anomaly + gradient twin = at least 3
         assert len(fig.axes) >= 3
+
+        # The anomaly panel is axes[1] (axes[0] is the cross-section)
+        anomaly_ax = fig.axes[1]
+        legend = anomaly_ax.get_legend()
+        assert legend is not None
+        legend_texts = [t.get_text() for t in legend.get_texts()]
+        assert "ΔT (nT)" in legend_texts
+        assert "d(ΔT)/dx (nT/m)" in legend_texts
         plt.close()
 
     def test_plot_combined_passes_label_offsets(
