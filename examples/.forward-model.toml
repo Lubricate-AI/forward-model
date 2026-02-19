@@ -1,0 +1,28 @@
+# forward-model configuration — Muskoka Airborne Survey
+# Project-level defaults for an airborne magnetic survey north of Toronto, Ontario.
+# Place this file at the root of your project directory.
+
+[field]
+# IGRF values for Muskoka/Parry Sound region (~45.5°N, 79.5°W), epoch 2024
+intensity   = 56200.0   # nT — typical for mid-latitude Ontario
+inclination = 71.0      # degrees — steeply inclined at this latitude
+declination = -9.5      # degrees — westerly declination for central Ontario
+
+[observation]
+# Survey flown at 100 m terrain clearance (drape survey)
+z = 100.0   # metres above datum
+
+[output]
+# All batch results written to a dedicated directory
+directory = "results/muskoka_airborne"
+format    = "csv"   # csv | json | npy
+
+[plot]
+# Publication-quality figures for report deliverables
+style    = "publication"
+dpi      = 300
+color_by = "susceptibility"   # colour bodies by susceptibility contrast
+
+[app]
+# Local web-app port for interactive model review
+port = 8080

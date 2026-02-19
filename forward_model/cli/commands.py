@@ -21,12 +21,71 @@ from forward_model import (
     write_numpy,
 )
 from forward_model.compute.batch import batch_calculate
+from forward_model.config import (
+    TEMPLATE_TOML,
+    load_config,
+    load_config_with_sources,
+    user_config_path,
+)
 
 app = typer.Typer(
     name="forward-model",
     help="2D forward magnetic modeling using Talwani algorithm",
     add_completion=False,
 )
+
+config_app = typer.Typer(name="config", help="Manage configuration settings")
+app.add_typer(config_app)
+
+
+@config_app.command("show")
+def config_show() -> None:
+    """Show current effective configuration and where each value comes from."""
+    sources = load_config_with_sources()
+    sections = ["field", "observation", "output", "plot", "app"]
+    section_fields: dict[str, list[str]] = {
+        "field": ["intensity", "inclination", "declination"],
+        "observation": ["z"],
+        "output": ["directory", "format"],
+        "plot": ["style", "dpi", "color_by"],
+        "app": ["port"],
+    }
+
+    for section in sections:
+        typer.echo(f"[{section}]")
+        section_data = sources.get(section, {})
+        for field in section_fields[section]:
+            if field in section_data:
+                value, source = section_data[field]
+                typer.echo(f"  {field} = {value}  <- {source}")
+            else:
+                typer.echo(f"  {field} = (not set)")
+        typer.echo("")
+
+
+@config_app.command("init")
+def config_init(
+    user: bool = typer.Option(
+        False,
+        "--user",
+        help="Write to user-level config (~/.forward-model/config.toml)",
+    ),
+) -> None:
+    """Create a commented configuration file with all available settings."""
+    if user:
+        target = user_config_path()
+        target.parent.mkdir(parents=True, exist_ok=True)
+    else:
+        target = Path.cwd() / ".forward-model.toml"
+
+    if target.exists():
+        overwrite = typer.confirm(f"{target} already exists. Overwrite?", default=False)
+        if not overwrite:
+            typer.echo("Aborted.")
+            raise typer.Exit(0)
+
+    target.write_text(TEMPLATE_TOML)
+    typer.echo(typer.style(f"✓ Created {target}", fg=typer.colors.GREEN))
 
 
 @app.command("run")
@@ -56,6 +115,12 @@ def run(
         "--component",
         help="Anomaly component: bz (default), bx, total_field, amplitude, gradient",
     ),
+    plot_style: str | None = typer.Option(
+        None, "--plot-style", help="Plot style (default, publication, presentation)"
+    ),
+    plot_dpi: int | None = typer.Option(
+        None, "--plot-dpi", help="DPI for saved plot figure"
+    ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose output"
     ),
@@ -66,6 +131,10 @@ def run(
     exports results and generates visualizations.
     """
     try:
+        cfg = load_config()
+        effective_style = plot_style or cfg.plot.style or "default"
+        effective_dpi = plot_dpi if plot_dpi is not None else cfg.plot.dpi
+
         # Load model (auto-detect format from extension)
         if verbose:
             typer.echo(f"Loading model from {input_file}...")
@@ -120,6 +189,8 @@ def run(
                 save_path=plot,
                 component="total_field",
                 gradient=all_components.gradient,
+                style=effective_style,
+                dpi=effective_dpi,
             )
             if plot:
                 if verbose:
@@ -197,8 +268,8 @@ def visualize(
     output: Path | None = typer.Option(
         None, "--output", "-o", help="Save plot to file (e.g., output.pdf)"
     ),
-    style: str = typer.Option(
-        "default", "--style", help="Plot style (default, publication)"
+    style: str | None = typer.Option(
+        None, "--style", help="Plot style (default, publication, presentation)"
     ),
     dpi: int | None = typer.Option(None, "--dpi", help="DPI for saved figure"),
     no_show: bool = typer.Option(
@@ -214,6 +285,10 @@ def visualize(
     cross-section and anomaly profile.
     """
     try:
+        cfg = load_config()
+        effective_style = style or cfg.plot.style or "default"
+        effective_dpi = dpi if dpi is not None else cfg.plot.dpi
+
         # Load results JSON
         if verbose:
             typer.echo(f"Loading results from {results_file}...")
@@ -243,10 +318,12 @@ def visualize(
 
         # Generate plot
         if verbose:
-            typer.echo(f"Generating plot with style '{style}'...")
+            typer.echo(f"Generating plot with style '{effective_style}'...")
 
         # Create plot with style and DPI parameters
-        plot_combined(model, anomaly, save_path=output, style=style, dpi=dpi)
+        plot_combined(
+            model, anomaly, save_path=output, style=effective_style, dpi=effective_dpi
+        )
 
         if output:
             if verbose:
@@ -281,11 +358,11 @@ def batch(
         dir_okay=False,
         file_okay=True,
     ),
-    output_dir: Path = typer.Option(
-        Path("results"), "--output-dir", help="Output directory"
+    output_dir: Path | None = typer.Option(
+        None, "--output-dir", help="Output directory"
     ),
-    fmt: Literal["csv", "json", "npy"] = typer.Option(
-        "csv", "--format", help="Output format: csv, json, npy"
+    fmt: Literal["csv", "json", "npy"] | None = typer.Option(
+        None, "--format", help="Output format: csv, json, npy"
     ),
     plot: bool = typer.Option(False, "--plot", help="Save a plot for each model"),
     parallel: bool = typer.Option(
@@ -311,14 +388,23 @@ def batch(
     Processes each model through the full load → compute → export pipeline.
     Results are written to OUTPUT_DIR with filenames matching input stems.
     """
-    if verbose:
-        typer.echo(f"Processing {len(models)} model(s) → {output_dir} ({fmt})")
-
     try:
+        cfg = load_config()
+        effective_output_dir = output_dir or cfg.output.directory or Path("results")
+        effective_fmt: Literal["csv", "json", "npy"] = (
+            fmt or cfg.output.format or "csv"  # type: ignore[assignment]
+        )
+
+        if verbose:
+            typer.echo(
+                f"Processing {len(models)} model(s)"
+                f" → {effective_output_dir} ({effective_fmt})"
+            )
+
         result = batch_calculate(
             model_paths=models,
-            output_dir=output_dir,
-            fmt=fmt,
+            output_dir=effective_output_dir,
+            fmt=effective_fmt,
             parallel=parallel,
             max_workers=workers,
             continue_on_error=continue_on_error,
@@ -340,7 +426,7 @@ def batch(
     typer.echo(f"Batch complete: {n_ok} succeeded, {n_fail} failed")
 
     if result.summary is not None:
-        typer.echo(f"Summary written to {output_dir / 'batch_summary.csv'}")
+        typer.echo(f"Summary written to {effective_output_dir / 'batch_summary.csv'}")
 
     if n_fail > 0:
         sys.exit(1)

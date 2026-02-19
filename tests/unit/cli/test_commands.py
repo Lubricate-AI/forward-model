@@ -378,3 +378,92 @@ class TestVisualizeCommand:
 
         assert result.exit_code == 0
         assert "Visualization complete" in result.stdout
+
+
+class TestConfigCommand:
+    """Tests for the 'config' sub-commands."""
+
+    def test_config_init_creates_project_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """config init writes .forward-model.toml in the CWD."""
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["config", "init"])
+        assert result.exit_code == 0
+        assert (tmp_path / ".forward-model.toml").exists()
+
+    def test_config_init_user_creates_user_file(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """config init --user writes to ~/.forward-model/config.toml."""
+        fake_home = tmp_path / "home"
+        fake_home.mkdir()
+        monkeypatch.setenv("HOME", str(fake_home))
+        result = runner.invoke(app, ["config", "init", "--user"])
+        assert result.exit_code == 0
+        assert (fake_home / ".forward-model" / "config.toml").exists()
+
+    def test_config_show_no_files_exits_ok(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """config show exits 0 and prints section headers even with no config files."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+        # Clear any env vars that could interfere
+        for var in ["FORWARD_MODEL_PLOT_STYLE", "FORWARD_MODEL_PLOT_DPI"]:
+            monkeypatch.delenv(var, raising=False)
+        result = runner.invoke(app, ["config", "show"])
+        assert result.exit_code == 0
+        assert "[plot]" in result.stdout
+        assert "[field]" in result.stdout
+
+    def test_config_show_displays_project_value(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """config show reports values from a project config file."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+        monkeypatch.delenv("FORWARD_MODEL_PLOT_STYLE", raising=False)
+        (tmp_path / ".forward-model.toml").write_text('[plot]\nstyle = "publication"\n')
+        result = runner.invoke(app, ["config", "show"])
+        assert result.exit_code == 0
+        assert "publication" in result.stdout
+        assert "project" in result.stdout
+
+    def test_run_plot_style_from_config(
+        self, model_json_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """run command picks up plot style from config when no CLI flag is given."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+        monkeypatch.delenv("FORWARD_MODEL_PLOT_STYLE", raising=False)
+        (tmp_path / ".forward-model.toml").write_text('[plot]\nstyle = "publication"\n')
+        output_plot = tmp_path / "out.png"
+        result = runner.invoke(
+            app, ["run", str(model_json_file), "--plot", str(output_plot)]
+        )
+        assert result.exit_code == 0
+        assert output_plot.exists()
+
+    def test_run_plot_style_cli_overrides_config(
+        self, model_json_file: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Explicit --plot-style CLI flag overrides the config file value."""
+        monkeypatch.chdir(tmp_path)
+        monkeypatch.setenv("HOME", str(tmp_path / "home"))
+        monkeypatch.delenv("FORWARD_MODEL_PLOT_STYLE", raising=False)
+        (tmp_path / ".forward-model.toml").write_text('[plot]\nstyle = "publication"\n')
+        output_plot = tmp_path / "out.png"
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                str(model_json_file),
+                "--plot",
+                str(output_plot),
+                "--plot-style",
+                "default",
+            ],
+        )
+        assert result.exit_code == 0
+        assert output_plot.exists()

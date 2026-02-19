@@ -9,12 +9,14 @@ Example:
     >>> plot_combined(model, anomaly, save_path="output.png")
 """
 
-# Data models
+# Configuration
 # Computation
 from forward_model.compute import AnomalyComponents as AnomalyComponents
 from forward_model.compute import BatchResult as BatchResult
 from forward_model.compute import batch_calculate as batch_calculate
 from forward_model.compute import calculate_anomaly
+from forward_model.config import Config as Config
+from forward_model.config import load_config as load_config
 
 # I/O
 from forward_model.io import (
@@ -30,6 +32,9 @@ from forward_model.models import ForwardModel, GeologicBody, MagneticField
 from forward_model.viz import plot_anomaly, plot_combined, plot_model
 
 __all__ = [
+    # Configuration
+    "Config",
+    "load_config",
     # Models
     "GeologicBody",
     "MagneticField",
