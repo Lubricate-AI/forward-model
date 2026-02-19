@@ -19,6 +19,7 @@ from forward_model import (
     write_json,
     write_numpy,
 )
+from forward_model.compute.batch import batch_calculate
 
 app = typer.Typer(
     name="forward-model",
@@ -247,4 +248,87 @@ def visualize(
         sys.exit(1)
     except Exception as e:
         typer.echo(typer.style(f"Unexpected error: {e}", fg=typer.colors.RED), err=True)
+        sys.exit(1)
+
+
+@app.command("batch")
+def batch(
+    models: list[Path] = typer.Argument(
+        ...,
+        help="Model file paths (JSON or CSV)",
+        exists=True,
+        dir_okay=False,
+        file_okay=True,
+    ),
+    output_dir: Path = typer.Option(
+        Path("results"), "--output-dir", help="Output directory"
+    ),
+    format: str = typer.Option("csv", "--format", help="Output format: csv, json, npy"),
+    plot: bool = typer.Option(False, "--plot", help="Save a plot for each model"),
+    parallel: bool = typer.Option(
+        False, "--parallel", help="Process models concurrently"
+    ),
+    workers: int | None = typer.Option(
+        None, "--workers", help="Number of parallel workers"
+    ),
+    continue_on_error: bool = typer.Option(
+        True,
+        "--continue-on-error/--no-continue-on-error",
+        help="Continue processing after errors",
+    ),
+    summary: bool = typer.Option(
+        False, "--summary", help="Write batch_summary.csv with cross-model statistics"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose output"
+    ),
+) -> None:
+    """Run forward model calculation on multiple model files.
+
+    Processes each model through the full load → compute → export pipeline.
+    Results are written to OUTPUT_DIR with filenames matching input stems.
+    """
+    valid_formats = {"csv", "json", "npy"}
+    if format not in valid_formats:
+        typer.echo(
+            typer.style(
+                f"Error: Invalid format '{format}'. Choose from: csv, json, npy",
+                fg=typer.colors.RED,
+            ),
+            err=True,
+        )
+        sys.exit(1)
+
+    if verbose:
+        typer.echo(f"Processing {len(models)} model(s) → {output_dir} ({format})")
+
+    try:
+        result = batch_calculate(
+            model_paths=models,
+            output_dir=output_dir,
+            fmt=format,  # type: ignore[reportArgumentType]
+            parallel=parallel,
+            max_workers=workers,
+            continue_on_error=continue_on_error,
+            write_summary=summary,
+            plot=plot,
+        )
+    except Exception as e:
+        typer.echo(typer.style(f"Error: {e}", fg=typer.colors.RED), err=True)
+        sys.exit(1)
+
+    if verbose:
+        for path in result.succeeded:
+            typer.echo(typer.style(f"  ✓ {path}", fg=typer.colors.GREEN))
+        for path, err in result.failed.items():
+            typer.echo(typer.style(f"  ✗ {path}: {err}", fg=typer.colors.RED))
+
+    n_ok = len(result.succeeded)
+    n_fail = len(result.failed)
+    typer.echo(f"Batch complete: {n_ok} succeeded, {n_fail} failed")
+
+    if result.summary is not None:
+        typer.echo(f"Summary written to {output_dir / 'batch_summary.csv'}")
+
+    if n_fail > 0:
         sys.exit(1)
