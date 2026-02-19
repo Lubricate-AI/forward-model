@@ -92,7 +92,7 @@ def run(
         if verbose:
             min_val = float(anomaly.min())
             max_val = float(anomaly.max())
-            typer.echo(f"  Anomaly range: {min_val:.2f} to {max_val:.2f} nT")
+            typer.echo(f"  {component} range: {min_val:.2f} to {max_val:.2f}")
 
         # Export results (uses the selected component)
         if output_csv:

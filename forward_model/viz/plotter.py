@@ -245,7 +245,8 @@ def plot_anomaly(
         ax: Matplotlib axes to plot on. If None, creates new axes.
         xlim: Optional (min, max) x-axis limits in meters.
         component: Which component is being plotted. Controls axis labels.
-                   One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``.
+                   One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
+                   ``"gradient"``.
         gradient: Optional d(ΔT)/dx values (nT/m). When provided, overlaid
                   on a twin y-axis with an orange dashed line.
 

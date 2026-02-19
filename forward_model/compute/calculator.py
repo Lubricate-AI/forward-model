@@ -139,11 +139,13 @@ def calculate_anomaly(
     if component == "gradient":
         return gradient
 
-    # component == "all"
-    return AnomalyComponents(
-        bz=total_bz,
-        bx=total_bx,
-        total_field=total_field,
-        amplitude=amplitude,
-        gradient=gradient,
-    )
+    if component == "all":
+        return AnomalyComponents(
+            bz=total_bz,
+            bx=total_bx,
+            total_field=total_field,
+            amplitude=amplitude,
+            gradient=gradient,
+        )
+
+    raise ValueError(f"Unknown component: {component!r}")  # pragma: no cover
