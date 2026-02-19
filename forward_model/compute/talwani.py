@@ -12,12 +12,21 @@ def field_to_magnetization(
     remanent_intensity: float = 0.0,
     remanent_inclination: float = 0.0,
     remanent_declination: float = 0.0,
+    demagnetization_factor: float = 0.0,
 ) -> NDArray[np.float64]:
     """Convert magnetic field parameters to 2D magnetization vector.
 
     Computes the total magnetization as the sum of the induced component
     (from susceptibility and the ambient field) and the remanent component
     (a permanent vector fixed at rock formation time).
+
+    When ``demagnetization_factor`` (N_d) is non-zero, the induced susceptibility
+    is corrected for the internal demagnetizing field:
+
+        χ_eff = χ / (1 + N_d · χ)
+
+    This correction is only applied to the induced component; the remanent
+    component is unaffected.
 
     Args:
         susceptibility: Magnetic susceptibility (SI units, dimensionless).
@@ -27,11 +36,16 @@ def field_to_magnetization(
         remanent_intensity: Remanent magnetization intensity in A/m. Default 0.0.
         remanent_inclination: Inclination of remanent vector in degrees. Default 0.0.
         remanent_declination: Declination of remanent vector in degrees. Default 0.0.
+        demagnetization_factor: Demagnetization factor N_d in [0.0, 1.0].
+                                Default 0.0 (no correction).
 
     Returns:
         2D magnetization vector [Mx, Mz] in A/m representing total magnetization
         (induced + remanent) projected into the vertical profile plane.
     """
+    # Apply demagnetization correction to effective susceptibility
+    chi_eff = susceptibility / (1.0 + demagnetization_factor * susceptibility)
+
     # Convert nT to Tesla
     field_T = field_intensity * 1e-9
 
@@ -45,11 +59,11 @@ def field_to_magnetization(
     Bx = field_T * np.cos(inc_rad) * np.cos(dec_rad)
     Bz = -field_T * np.sin(inc_rad)  # Negative because z is depth (positive down)
 
-    # Induced magnetization M = χ * H = χ * B/μ₀
+    # Induced magnetization M = χ_eff * H = χ_eff * B/μ₀
     # μ₀ = 4π × 10⁻⁷ H/m
     mu_0 = 4.0 * np.pi * 1e-7
-    Mx = susceptibility * Bx / mu_0
-    Mz = susceptibility * Bz / mu_0
+    Mx = chi_eff * Bx / mu_0
+    Mz = chi_eff * Bz / mu_0
 
     # Remanent component — already in A/m, project into 2D profile plane
     inc_rem = np.deg2rad(remanent_inclination)
@@ -58,6 +72,35 @@ def field_to_magnetization(
     Mz_rem = -remanent_intensity * np.sin(inc_rem)  # negative: z positive-down
 
     return np.array([Mx + Mx_rem, Mz + Mz_rem], dtype=np.float64)
+
+
+def compute_demagnetization_factor(vertices: NDArray[np.float64]) -> float:
+    """Estimate 2D demagnetization factor from polygon geometry.
+
+    Uses the equivalent-ellipse approximation of the polygon's axis-aligned
+    bounding box. For an ellipse with horizontal semi-axis *a* and vertical
+    semi-axis *b*, the 2D demagnetization factor (field applied along *b*) is:
+
+        N_d = b / (a + b)
+
+    The result is clamped to [0.0, 0.5], which is the physically valid range
+    for 2D infinite-strike bodies.
+
+    Args:
+        vertices: Nx2 array of polygon vertices [x, z] in meters.
+
+    Returns:
+        Estimated demagnetization factor N_d in [0.0, 0.5].
+    """
+    x_range = vertices[:, 0].max() - vertices[:, 0].min()
+    z_range = vertices[:, 1].max() - vertices[:, 1].min()
+    a = x_range / 2.0  # horizontal semi-axis
+    b = z_range / 2.0  # vertical semi-axis
+    denom = a + b
+    if denom == 0.0:
+        return 0.0
+    n_d = b / denom
+    return float(np.clip(n_d, 0.0, 0.5))
 
 
 def compute_polygon_anomaly(

@@ -209,7 +209,78 @@ plot_combined(model, anomaly, save_path="volcanic_body.png")
 
 ---
 
-## Example 4: Dipping Dyke
+## Example 4: High-Susceptibility Intrusion (Demagnetization Correction)
+
+Model a magnetite-rich iron-ore intrusion where high susceptibility makes demagnetization correction significant.
+
+### Model Definition
+
+```json
+{
+  "bodies": [
+    {
+      "name": "Iron-Ore Intrusion (χ=1.0 SI, N_d=0.3)",
+      "susceptibility": 1.0,
+      "demagnetization_factor": 0.3,
+      "vertices": [
+        [-250.0, 100.0],
+        [250.0, 100.0],
+        [250.0, 500.0],
+        [-250.0, 500.0]
+      ]
+    }
+  ],
+  "field": {
+    "intensity": 50000.0,
+    "inclination": 60.0,
+    "declination": 0.0
+  },
+  "observation_x": [-1000, -750, -500, -250, 0, 250, 500, 750, 1000],
+  "observation_z": 0.0
+}
+```
+
+### Parameters
+
+- **Body geometry**: 500m wide × 400m tall intrusion, 100–500m depth
+- **Susceptibility**: 1.0 SI (magnetite-rich iron ore)
+- **Demagnetization factor**: N_d = 0.3, giving χ_eff = 1.0 / (1 + 0.3 × 1.0) ≈ 0.769 (a 23% reduction)
+- **Magnetic field**: 50,000 nT at 60° inclination (mid-latitude)
+
+### Running the Model
+
+```bash
+forward-model run examples/high_susceptibility_intrusion.json --plot intrusion.png --verbose
+```
+
+```python
+from forward_model import load_model, calculate_anomaly, plot_combined
+from forward_model.compute import compute_demagnetization_factor
+import numpy as np
+
+model = load_model("examples/high_susceptibility_intrusion.json")
+anomaly = calculate_anomaly(model)
+plot_combined(model, anomaly, save_path="intrusion.png")
+
+# Estimate N_d automatically from geometry
+vertices = np.array(model.bodies[0].vertices)
+n_d = compute_demagnetization_factor(vertices)
+print(f"Estimated N_d from geometry: {n_d:.3f}")
+```
+
+### Key Concepts
+
+- **When demagnetization matters**: For χ > ~0.1 SI the internal demagnetizing field is non-negligible. At χ = 1.0 SI and N_d = 0.3 the anomaly amplitude is ~23% lower than the uncorrected model would predict.
+- **Effective susceptibility**: χ_eff = χ / (1 + N_d · χ). Only the induced component is corrected; remanent magnetization is unaffected.
+- **2D limit**: For infinite-strike bodies N_d is bounded by [0, 0.5]. Wide flat bodies have N_d → 0; a square cross-section gives N_d = 0.5.
+
+![High-Susceptibility Intrusion](../images/high_susceptibility_intrusion.png)
+
+*Figure: Iron-ore intrusion (χ = 1.0 SI) with demagnetization correction (N_d = 0.3). The effective susceptibility is reduced to χ_eff ≈ 0.769, producing a ~23% lower anomaly amplitude than an uncorrected model would predict.*
+
+---
+
+## Example 5: Dipping Dyke
 
 Model a dyke with arbitrary dip angle.
 
@@ -273,7 +344,7 @@ plot_combined(model, anomaly, save_path="dipping_dyke.png")
 
 ---
 
-## Example 4: Sensitivity Analysis
+## Example 6: Sensitivity Analysis
 
 Investigate how anomaly changes with model parameters.
 

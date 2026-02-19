@@ -60,6 +60,21 @@ A high-Q volcanic flow demonstrating remanent magnetization:
 - Königsberger ratio and when remanence matters
 - Effect of reversed polarity on anomaly character
 
+### high_susceptibility_intrusion.json
+
+A magnetite-rich iron-ore intrusion demonstrating demagnetization correction:
+
+- **Single body**: 500m wide × 400m tall intrusion, 100–500m depth
+- **Susceptibility**: 1.0 SI (magnetite-rich — demagnetization is significant)
+- **Demagnetization factor**: N_d = 0.3, giving χ_eff ≈ 0.769 (a 23% reduction)
+
+**Expected result**: A broad positive anomaly with amplitude ~23% lower than an uncorrected model (N_d = 0) would predict. Omitting the correction at this susceptibility would systematically overestimate the anomaly.
+
+**Learning objectives**:
+- Understanding when demagnetization correction matters (χ > ~0.1 SI)
+- Applying the `demagnetization_factor` field
+- Estimating N_d from body geometry with `compute_demagnetization_factor()`
+
 ### multi_body.json
 
 A more complex model with multiple interacting bodies:

@@ -87,6 +87,76 @@ The remanent vector is described by three parameters in the JSON schema:
 
 Setting `remanent_intensity=0.0` (the default) recovers the induced-only behaviour.
 
+### Demagnetization Effects
+
+For most exploration targets (χ < 0.1 SI), the standard formula M = χ · H is an excellent approximation. However, for **high-susceptibility bodies** such as magnetite-rich intrusives or iron-ore deposits (χ > 0.3 SI), the body's own magnetization generates an internal field that opposes the external inducing field — the **demagnetizing field**. Ignoring this effect causes the anomaly amplitude to be systematically overestimated.
+
+The corrected **effective susceptibility** is:
+
+```
+χ_eff = χ / (1 + N_d · χ)
+```
+
+where **N_d** is the **demagnetization factor** (dimensionless). Only the induced component is corrected; the remanent component is unaffected.
+
+#### When does it matter?
+
+| χ (SI) | N_d = 0.3 | χ_eff | Reduction |
+|--------|-----------|-------|-----------|
+| 0.01   | 0.3       | 0.00997 | < 1% |
+| 0.1    | 0.3       | 0.0971  | 3%   |
+| 0.5    | 0.3       | 0.400   | 20%  |
+| 1.0    | 0.3       | 0.769   | 23%  |
+| 2.0    | 0.3       | 1.25    | 38%  |
+
+The correction is negligible for χ < 0.1 and significant for χ > 0.3.
+
+#### Demagnetization factor for 2D bodies
+
+For a 2D infinite-strike body with an elliptical cross-section with horizontal semi-axis *a* and vertical semi-axis *b*, the demagnetization factor (field applied along *b*) is:
+
+```
+N_d = b / (a + b)
+```
+
+The physical range for 2D infinite-strike bodies is **0 ≤ N_d ≤ 0.5**:
+
+- N_d → 0: wide, flat body (horizontal extent >> vertical extent)
+- N_d = 0.5: circular or square cross-section
+
+For arbitrary polygonal cross-sections, `compute_demagnetization_factor(vertices)` estimates N_d using the equivalent ellipse of the bounding box.
+
+Values above 0.5 are only valid for 3D geometries (full 3D spheres have N_d = 1/3 in all directions). Setting `demagnetization_factor` above 0.5 in this 2D tool will trigger a `UserWarning`.
+
+#### Setting the demagnetization factor
+
+The `demagnetization_factor` field on `GeologicBody` defaults to `0.0` (no correction):
+
+```json
+{
+  "name": "Iron-Ore Intrusion",
+  "susceptibility": 1.0,
+  "demagnetization_factor": 0.3,
+  "vertices": [...]
+}
+```
+
+To estimate N_d automatically from body geometry:
+
+```python
+from forward_model.compute import compute_demagnetization_factor
+import numpy as np
+
+vertices = np.array([[-250.0, 100.0], [250.0, 100.0], [250.0, 500.0], [-250.0, 500.0]])
+n_d = compute_demagnetization_factor(vertices)  # → 0.444 for this 500×400 m body
+```
+
+See `examples/high_susceptibility_intrusion.json` for a worked example.
+
+![High-Susceptibility Intrusion](images/high_susceptibility_intrusion.png)
+
+*Figure: Iron-ore intrusion (χ = 1.0 SI) with demagnetization correction (N_d = 0.3). Effective susceptibility is reduced to χ_eff ≈ 0.769, yielding a ~23% lower anomaly amplitude than an uncorrected model.*
+
 ### Earth's Magnetic Field
 
 The Earth's magnetic field is described by three parameters:
@@ -226,15 +296,15 @@ Observation points are typically along a horizontal line at z = 0 (ground surfac
 2. **Total magnetization**: Both induced and remanent magnetization are modeled; remanent defaults to zero
 3. **Uniform susceptibility**: Each body has constant susceptibility
 4. **Non-interacting bodies**: Bodies don't affect each other's magnetization
-5. **No demagnetization**: Shape of body doesn't affect its magnetization
+5. **Optional demagnetization correction**: Self-demagnetization can be applied per-body via `demagnetization_factor` (default 0.0 = no correction)
 6. **Flat observation surface**: All observation points at same elevation
 
 ### Limitations
 
 1. **Not suitable for**:
    - 3D bodies (finite strike length)
-   - Self-demagnetization effects
-   - Very high susceptibility contrast (χ > 1)
+   - Body-to-body demagnetization interactions
+   - Demagnetization factors above 0.5 (3D geometries only)
 
 2. **Accuracy depends on**:
    - Validity of 2D approximation

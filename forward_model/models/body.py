@@ -1,6 +1,7 @@
 """Geologic body data model."""
 
 import math
+import warnings
 from typing import Any
 
 import numpy as np
@@ -30,6 +31,13 @@ class GeologicBody(BaseModel, frozen=True):
                              in degrees (-90 to 90). Positive downward. Default 0.0.
         remanent_declination: Declination of the remanent magnetization vector
                              in degrees (-180 to 180). Default 0.0.
+        demagnetization_factor: Demagnetization factor N_d in [0.0, 1.0]. Controls
+                               the reduction of effective susceptibility for
+                               high-susceptibility bodies via
+                               χ_eff = χ / (1 + N_d·χ). Default is 0.0 (no
+                               correction). For 2D infinite-strike bodies the
+                               physically meaningful range is [0.0, 0.5]; values
+                               above 0.5 are accepted but trigger a UserWarning.
     """
 
     vertices: list[list[float]] = Field(min_length=3)
@@ -41,6 +49,7 @@ class GeologicBody(BaseModel, frozen=True):
     remanent_intensity: float = Field(default=0.0, ge=0.0)
     remanent_inclination: float = Field(default=0.0, ge=-90.0, le=90.0)
     remanent_declination: float = Field(default=0.0, ge=-180.0, le=180.0)
+    demagnetization_factor: float = Field(default=0.0, ge=0.0, le=1.0)
 
     @field_validator("vertices")
     @classmethod
@@ -89,6 +98,22 @@ class GeologicBody(BaseModel, frozen=True):
         """Validate remanent fields are finite."""
         if not math.isfinite(v):
             raise ValueError(f"Remanent field must be finite, got {v}")
+        return v
+
+    @field_validator("demagnetization_factor")
+    @classmethod
+    def validate_demagnetization_factor(cls, v: float) -> float:
+        """Validate demagnetization factor is finite; warn if above 2D limit."""
+        if not math.isfinite(v):
+            raise ValueError(f"demagnetization_factor must be finite, got {v}")
+        if v > 0.5:
+            warnings.warn(
+                f"demagnetization_factor={v} exceeds 0.5, which is the physical "
+                "upper bound for 2D infinite-strike bodies. Values above 0.5 are "
+                "only valid for 3D geometries.",
+                UserWarning,
+                stacklevel=2,
+            )
         return v
 
     @field_validator("color")
