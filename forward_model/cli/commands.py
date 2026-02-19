@@ -284,7 +284,7 @@ def batch(
     output_dir: Path = typer.Option(
         Path("results"), "--output-dir", help="Output directory"
     ),
-    format: str = typer.Option("csv", "--format", help="Output format: csv, json, npy"),
+    fmt: Literal["csv", "json", "npy"] = typer.Option("csv", "--format", help="Output format: csv, json, npy"),
     plot: bool = typer.Option(False, "--plot", help="Save a plot for each model"),
     parallel: bool = typer.Option(
         False, "--parallel", help="Process models concurrently"
@@ -310,10 +310,10 @@ def batch(
     Results are written to OUTPUT_DIR with filenames matching input stems.
     """
     valid_formats = {"csv", "json", "npy"}
-    if format not in valid_formats:
+    if fmt not in valid_formats:
         typer.echo(
             typer.style(
-                f"Error: Invalid format '{format}'. Choose from: csv, json, npy",
+                f"Error: Invalid format '{fmt}'. Choose from: csv, json, npy",
                 fg=typer.colors.RED,
             ),
             err=True,
@@ -321,13 +321,13 @@ def batch(
         sys.exit(1)
 
     if verbose:
-        typer.echo(f"Processing {len(models)} model(s) → {output_dir} ({format})")
+        typer.echo(f"Processing {len(models)} model(s) → {output_dir} ({fmt})")
 
     try:
         result = batch_calculate(
             model_paths=models,
             output_dir=output_dir,
-            fmt=format,  # type: ignore[reportArgumentType]
+            fmt=fmt,
             parallel=parallel,
             max_workers=workers,
             continue_on_error=continue_on_error,
