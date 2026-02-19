@@ -8,6 +8,7 @@ A Python package for 2D forward magnetic modeling using the Talwani algorithm.
 [![CI Status](https://github.com/Lubricate-AI/forward-model/actions/workflows/pull-request.yml/badge.svg)](https://github.com/Lubricate-AI/forward-model/actions/workflows/pull-request.yml)
 [![Ruff](https://img.shields.io/badge/linter-ruff-blue)](https://github.com/astral-sh/ruff)
 [![Type Checking](https://img.shields.io/badge/type%20checking-pyright-blue)](https://github.com/microsoft/pyright)
+[![Security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
 
 Compute magnetic anomalies from geological cross-sections with arbitrary polygonal shapes. Ideal for exploration geophysics, geological modeling, and educational purposes.
 

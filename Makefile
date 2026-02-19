@@ -2,7 +2,7 @@ VENV_PATH ?= .venv
 SOURCE_PATH ?= forward_model
 TEST_PATH ?= tests
 
-.PHONY: help install lint lint-python lint-spellcheck lint-yaml type-checking format test coverage docs-serve docs-build
+.PHONY: help install lint lint-python lint-spellcheck lint-yaml lint-security type-checking format test coverage docs-serve docs-build
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -11,7 +11,7 @@ help: ## Show this help message
 install: ## Create uv environment and install dependencies
 	uv sync --dev
 
-lint: lint-python lint-spellcheck lint-yaml type-checking ## Run all linting checks
+lint: lint-python lint-spellcheck lint-yaml lint-security type-checking ## Run all linting checks
 
 lint-python: ## Run ruff linting and formatting checks (passive)
 	uv run ruff check $(SOURCE_PATH) $(TEST_PATH)
@@ -22,6 +22,9 @@ lint-spellcheck: ## Run typos spellchecker
 
 lint-yaml: ## Run YAML linting
 	uv run yamllint -d "{extends: relaxed, rules: {line-length: {max: 120}}}" .github
+
+lint-security: ## Run bandit security linting
+	uv run bandit -c pyproject.toml -r $(SOURCE_PATH)
 
 type-checking: ## Run pyright type checking
 	uv run pyright $(SOURCE_PATH) $(TEST_PATH)
