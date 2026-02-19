@@ -38,12 +38,13 @@ def _compute_single_body(
     """Compute anomaly components for a single body. Module-level for pickling."""
     vertices, observation_points, magnetization, shl, sf, sb = args
     if sf is not None:
+        assert sb is not None, "strike_backward must be set when strike_forward is set"
         return compute_polygon_anomaly_2_75d(
             vertices,
             observation_points,
             magnetization,
             sf,
-            sb,  # type: ignore[arg-type]
+            sb,
         )
     if shl is not None:
         return compute_polygon_anomaly_2_5d(
@@ -66,12 +67,13 @@ def _compute_body_parallel(
         raise RuntimeError("Worker process not initialized with observation points.")
     vertices, magnetization, shl, sf, sb = args
     if sf is not None:
+        assert sb is not None, "strike_backward must be set when strike_forward is set"
         return compute_polygon_anomaly_2_75d(
             vertices,
             _worker_obs_points,
             magnetization,
             sf,
-            sb,  # type: ignore[arg-type]
+            sb,
         )
     if shl is not None:
         return compute_polygon_anomaly_2_5d(
