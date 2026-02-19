@@ -215,22 +215,39 @@ def plot_model(
     return ax
 
 
+_COMPONENT_LABELS: dict[str, tuple[str, str]] = {
+    "bz": ("Bz (nT)", "Vertical Component (Bz)"),
+    "bx": ("Bx (nT)", "Horizontal Component (Bx)"),
+    "total_field": ("ΔT (nT)", "Total Field Anomaly (ΔT)"),
+    "amplitude": ("|ΔB| (nT)", "Anomaly Amplitude (|ΔB|)"),
+    "gradient": ("d(ΔT)/dx (nT/m)", "Horizontal Gradient d(ΔT)/dx"),
+}
+
+
 def plot_anomaly(
     observation_x: list[float],
     anomaly: NDArray[np.float64],
     ax: Axes | None = None,
     xlim: tuple[float, float] | None = None,
+    component: str = "total_field",
+    gradient: NDArray[np.float64] | None = None,
 ) -> Axes:
     """Plot magnetic anomaly profile.
 
     Creates a line plot showing the magnetic anomaly as a function
-    of position along the profile.
+    of position along the profile. When ``gradient`` is supplied, the
+    horizontal gradient d(ΔT)/dx is overlaid on a secondary y-axis on
+    the right side of the plot.
 
     Args:
         observation_x: X-coordinates of observation points (meters).
         anomaly: Magnetic anomaly values (nanoTesla).
         ax: Matplotlib axes to plot on. If None, creates new axes.
         xlim: Optional (min, max) x-axis limits in meters.
+        component: Which component is being plotted. Controls axis labels.
+                   One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``.
+        gradient: Optional d(ΔT)/dx values (nT/m). When provided, overlaid
+                  on a twin y-axis with an orange dashed line.
 
     Returns:
         The matplotlib Axes object containing the plot.
@@ -243,57 +260,46 @@ def plot_anomaly(
     if ax is None:
         _, ax = plt.subplots()
 
+    ylabel, title = _COMPONENT_LABELS.get(
+        component, ("Anomaly (nT)", "Magnetic Anomaly Profile")
+    )
+
     # Plot anomaly
-    ax.plot(observation_x, anomaly, "b-", linewidth=2, label="Magnetic anomaly")
+    ax.plot(observation_x, anomaly, "b-", linewidth=2, label=ylabel)
 
     # Add zero reference line
     ax.axhline(0, color="gray", linestyle="--", linewidth=1, alpha=0.7)
 
-    # Configure axes
+    # Configure primary axes
     ax.set_xlabel("X (m)", fontsize=11)
-    ax.set_ylabel("Anomaly (nT)", fontsize=11)
-    ax.set_title("Magnetic Anomaly Profile", fontsize=13, fontweight="bold")
+    ax.set_ylabel(ylabel, fontsize=11)
+    ax.set_title(title, fontsize=13, fontweight="bold")
     ax.grid(True, alpha=0.3)
-    ax.legend(loc="best")
 
     if xlim is not None:
         ax.set_xlim(*xlim)
 
+    # Overlay gradient on secondary y-axis
+    if gradient is not None:
+        ax2 = ax.twinx()
+        ax2.plot(
+            observation_x,
+            gradient,
+            color="tab:orange",
+            linestyle="--",
+            linewidth=1.5,
+            label="d(ΔT)/dx (nT/m)",
+        )
+        ax2.set_ylabel("d(ΔT)/dx (nT/m)", fontsize=11, color="tab:orange")
+        ax2.tick_params(axis="y", labelcolor="tab:orange")
+        # Combined legend from both axes
+        lines1, labels1 = ax.get_legend_handles_labels()
+        lines2, labels2 = ax2.get_legend_handles_labels()
+        ax.legend(lines1 + lines2, labels1 + labels2, loc="best")
+    else:
+        ax.legend(loc="best")
+
     return ax
-
-
-def plot_gradient(
-    observation_x: list[float],
-    anomaly: NDArray[np.float64],
-    ax: Axes | None = None,
-) -> Axes:
-    """Plot the horizontal derivative of the magnetic anomaly.
-
-    Computes the first derivative using np.gradient (central differences,
-    one-sided at endpoints) normalized by station spacing.
-
-    Args:
-        observation_x: X-coordinates of observation points (meters).
-        anomaly: Magnetic anomaly values (nanoTesla).
-        ax: Optional matplotlib Axes. Creates new axes if None.
-
-    Returns:
-        Matplotlib Axes with gradient plotted.
-
-    Example:
-        >>> ax = plot_gradient(model.observation_x, anomaly)
-    """
-    if ax is None:
-        _, ax = plt.subplots()
-
-    x = np.asarray(observation_x)
-    gradient = np.gradient(anomaly, x)
-
-    ax.plot(x, gradient, color="red", linewidth=2, label="dT/dx (nT/m)")  # type: ignore[union-attr]
-    ax.set_ylabel("Gradient (nT/m)", color="red")  # type: ignore[union-attr]
-    ax.tick_params(axis="y", labelcolor="red")  # type: ignore[union-attr]
-
-    return ax  # type: ignore[return-value]
 
 
 def plot_combined(
@@ -308,14 +314,17 @@ def plot_combined(
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
     show_colorbar: bool = True,
-    show_gradient: bool = False,
     label_offsets: dict[str, tuple[float, float]] | None = None,
     show_label_arrows: bool | dict[str, bool] = False,
+    component: str = "total_field",
+    gradient: NDArray[np.float64] | None = None,
 ) -> Figure:
     """Create combined plot with cross-section and anomaly profile.
 
     Creates a two-panel figure with the geologic cross-section on top
-    and the magnetic anomaly profile below, with aligned x-axes.
+    and the magnetic anomaly profile below, with aligned x-axes. When
+    ``gradient`` is supplied, d(ΔT)/dx is overlaid on a secondary y-axis
+    in the anomaly panel.
 
     Args:
         model: The forward model to visualize.
@@ -329,10 +338,13 @@ def plot_combined(
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
         show_colorbar: If True, show colorbar when color_by="susceptibility".
-        show_gradient: If True, overlay horizontal magnetic gradient on anomaly panel.
         label_offsets: Optional mapping of body name to (dx, dz) offset from the
                       computed label anchor. Passed through to ``plot_model``.
         show_label_arrows: If True or per-body dict, draw arrows from text to centroid.
+        component: Which anomaly component is being plotted. Controls axis labels.
+                   One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``.
+        gradient: Optional d(ΔT)/dx values (nT/m). When provided, overlaid on a
+                  secondary y-axis in the anomaly panel.
 
     Returns:
         The matplotlib Figure object.
@@ -372,18 +384,14 @@ def plot_combined(
         )
 
         # Plot anomaly below
-        plot_anomaly(model.observation_x, anomaly, ax=ax2, xlim=xlim)
-
-        if show_gradient:
-            ax_grad = ax2.twinx()
-            plot_gradient(model.observation_x, anomaly, ax=ax_grad)
-            handles1, labels1 = ax2.get_legend_handles_labels()
-            handles2, labels2 = ax_grad.get_legend_handles_labels()
-            ax2.legend(handles1 + handles2, labels1 + labels2)
-            if ax_grad.get_legend():
-                ax_grad.get_legend().remove()
-            if xlim is not None:
-                ax_grad.set_xlim(xlim)
+        plot_anomaly(
+            model.observation_x,
+            anomaly,
+            ax=ax2,
+            xlim=xlim,
+            component=component,
+            gradient=gradient,
+        )
 
         if xlim is not None:
             ax1.set_xlim(xlim)
