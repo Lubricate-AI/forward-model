@@ -344,3 +344,55 @@ def compute_polygon_anomaly_2_5d(
     bz *= mu_0_4pi_nT
     bx *= mu_0_4pi_nT
     return PolygonComponents(bz=bz, bx=bx)
+
+
+def compute_polygon_anomaly_2_75d(
+    vertices: NDArray[np.float64],
+    observation_points: NDArray[np.float64],
+    magnetization: NDArray[np.float64],
+    strike_forward: float,
+    strike_backward: float,
+    min_distance: float = 1e-10,
+) -> PolygonComponents:
+    """2.75D Talwani: finite asymmetric strike extent (Won & Bevis 1987).
+
+    Body extends from y = −strike_backward to y = +strike_forward along strike.
+    Implements superposition of two symmetric half-space contributions:
+
+        ΔB_2.75D = (ΔB_2.5D(y₁) + ΔB_2.5D(y₂)) / 2
+
+    where y₁ = strike_forward and y₂ = strike_backward. This formula follows
+    from Won & Bevis (1987): the 2.5D kernel is even in y, so each half-space
+    integral equals half the symmetric 2.5D result.
+
+    Limit cases:
+    - strike_forward == strike_backward == y₀ → ΔB_2.5D(y₀) exactly
+    - both → ∞ → ΔB_2D exactly
+
+    Args:
+        vertices: Nx2 array of polygon vertices [x, z] in meters.
+        observation_points: Mx2 array of observation points [x, z] in meters.
+        magnetization: 2D magnetization vector [Mx, Mz] in A/m.
+        strike_forward: Forward (+y) half-extent in meters. Must be > 0.
+        strike_backward: Backward (−y) half-extent in meters. Must be > 0.
+        min_distance: Minimum distance threshold to avoid singularities (meters).
+
+    Returns:
+        PolygonComponents(bz, bx): Vertical and horizontal anomaly components
+        in nT at each observation point.
+
+    References:
+        Won, I. J., and Bevis, M. (1987). Computing the gravitational and magnetic
+        anomalies due to a polygon: Algorithms and Fortran subroutines.
+        Geophysics, 52(2), 232–238.
+    """
+    fwd = compute_polygon_anomaly_2_5d(
+        vertices, observation_points, magnetization, strike_forward, min_distance
+    )
+    bwd = compute_polygon_anomaly_2_5d(
+        vertices, observation_points, magnetization, strike_backward, min_distance
+    )
+    return PolygonComponents(
+        bz=(fwd.bz + bwd.bz) / 2.0,
+        bx=(fwd.bx + bwd.bx) / 2.0,
+    )

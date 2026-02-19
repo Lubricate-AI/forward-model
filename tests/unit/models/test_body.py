@@ -393,3 +393,67 @@ class TestGeologicBodyStrikeHalfLength:
         d = original.model_dump()
         restored = GeologicBody(**d)
         assert restored.strike_half_length is None
+
+
+class TestGeologicBodyAsymmetricStrike:
+    """Tests for the strike_forward and strike_backward fields on GeologicBody."""
+
+    _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
+
+    def _body(self, **kwargs: object) -> GeologicBody:
+        return GeologicBody(
+            vertices=self._VERTS,
+            susceptibility=0.01,
+            name="Body",
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def test_defaults_are_none(self) -> None:
+        """Both strike_forward and strike_backward default to None."""
+        body = self._body()
+        assert body.strike_forward is None
+        assert body.strike_backward is None
+
+    def test_both_set_accepted(self) -> None:
+        """Setting both strike_forward and strike_backward is accepted."""
+        body = self._body(strike_forward=500.0, strike_backward=200.0)
+        assert body.strike_forward == 500.0
+        assert body.strike_backward == 200.0
+
+    def test_only_forward_raises(self) -> None:
+        """Setting only strike_forward raises ValidationError."""
+        with pytest.raises(ValidationError, match="both be set or both be None"):
+            self._body(strike_forward=500.0)
+
+    def test_only_backward_raises(self) -> None:
+        """Setting only strike_backward raises ValidationError."""
+        with pytest.raises(ValidationError, match="both be set or both be None"):
+            self._body(strike_backward=200.0)
+
+    def test_zero_rejected(self) -> None:
+        """Zero value raises ValidationError (gt=0.0 constraint)."""
+        with pytest.raises(ValidationError):
+            self._body(strike_forward=0.0, strike_backward=200.0)
+
+    def test_negative_rejected(self) -> None:
+        """Negative value raises ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(strike_forward=-100.0, strike_backward=200.0)
+
+    def test_nan_rejected(self) -> None:
+        """NaN raises ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(strike_forward=float("nan"), strike_backward=200.0)
+
+    def test_inf_rejected(self) -> None:
+        """Infinite value raises ValidationError (caught by finiteness validator)."""
+        with pytest.raises(ValidationError, match="finite"):
+            self._body(strike_forward=float("inf"), strike_backward=200.0)
+
+    def test_json_roundtrip(self) -> None:
+        """model_dump() → GeologicBody(**d) round-trip preserves both values."""
+        original = self._body(strike_forward=700.0, strike_backward=200.0)
+        d = original.model_dump()
+        restored = GeologicBody(**d)
+        assert restored.strike_forward == original.strike_forward
+        assert restored.strike_backward == original.strike_backward

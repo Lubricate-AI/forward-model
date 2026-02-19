@@ -253,6 +253,43 @@ Typical applications:
 - Short intrusive plugs or ore pods
 - Fault blocks with constrained strike length from seismic or drilling
 
+### 2.75D Modeling (Asymmetric Strike)
+
+Real geological bodies — paleochannels, ore pods, fault blocks — often extend unequal distances forward and backward along strike. The **2.75D** formulation allows the body to extend from y = −y₂ to y = +y₁ where y₁ ≠ y₂.
+
+**Formula:**
+
+```
+ΔB_2.75D = (ΔB_2.5D(y₁) + ΔB_2.5D(y₂)) / 2
+```
+
+where y₁ = `strike_forward` and y₂ = `strike_backward`. This follows directly from Won & Bevis (1987): the 2.5D integrand kernel f(y) is **even** in y, so each half-space integral equals half the symmetric 2.5D result:
+
+```
+ΔB_2.75D = ∫₋y₂⁰ f dy + ∫₀^y₁ f dy
+          = ½ · ΔB_2.5D(y₂) + ½ · ΔB_2.5D(y₁)
+          = (ΔB_2.5D(y₁) + ΔB_2.5D(y₂)) / 2
+```
+
+**Limit cases:**
+
+- y₁ = y₂ = y₀ → `(ΔB_2.5D(y₀) + ΔB_2.5D(y₀)) / 2 = ΔB_2.5D(y₀)` — recovers 2.5D exactly
+- y₁ = y₂ → ∞  → `(ΔB_2D + ΔB_2D) / 2 = ΔB_2D` — recovers 2D exactly
+
+**Using 2.75D in practice**: set `strike_forward` and `strike_backward` together on any `GeologicBody`. Both fields must be specified (or both left as `null`). When set, 2.75D takes precedence over `strike_half_length`.
+
+```json
+{
+  "name": "Asymmetric Paleochannel",
+  "susceptibility": -0.001,
+  "strike_forward": 700.0,
+  "strike_backward": 200.0,
+  "vertices": [...]
+}
+```
+
+See `examples/asymmetric_paleochannel.json` for a worked example.
+
 ### Edge Contributions
 
 For each edge defined by vertices (x₁, z₁) and (x₂, z₂), the algorithm accumulates two geometric integrals per observation point (Talwani, 1965):

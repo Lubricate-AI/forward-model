@@ -11,6 +11,7 @@ from forward_model.compute.talwani import (
     PolygonComponents,
     compute_polygon_anomaly,
     compute_polygon_anomaly_2_5d,
+    compute_polygon_anomaly_2_75d,
     field_to_magnetization,
 )
 from forward_model.models.model import ForwardModel
@@ -26,11 +27,26 @@ def _init_worker(obs_points: NDArray[np.float64]) -> None:
 
 def _compute_single_body(
     args: tuple[
-        NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], float | None
+        NDArray[np.float64],
+        NDArray[np.float64],
+        NDArray[np.float64],
+        float | None,
+        float | None,
+        float | None,
     ],
 ) -> PolygonComponents:
     """Compute anomaly components for a single body. Module-level for pickling."""
-    vertices, observation_points, magnetization, shl = args
+    vertices, observation_points, magnetization, shl, sf, sb = args
+    if sf is not None:
+        if sb is None:  # pragma: no cover
+            raise ValueError("strike_backward must be set when strike_forward is set")
+        return compute_polygon_anomaly_2_75d(
+            vertices,
+            observation_points,
+            magnetization,
+            sf,
+            sb,
+        )
     if shl is not None:
         return compute_polygon_anomaly_2_5d(
             vertices, observation_points, magnetization, shl
@@ -39,12 +55,28 @@ def _compute_single_body(
 
 
 def _compute_body_parallel(
-    args: tuple[NDArray[np.float64], NDArray[np.float64], float | None],
+    args: tuple[
+        NDArray[np.float64],
+        NDArray[np.float64],
+        float | None,
+        float | None,
+        float | None,
+    ],
 ) -> PolygonComponents:
     """Compute anomaly for one body using the worker-local observation points."""
     if _worker_obs_points is None:  # pragma: no cover
         raise RuntimeError("Worker process not initialized with observation points.")
-    vertices, magnetization, shl = args
+    vertices, magnetization, shl, sf, sb = args
+    if sf is not None:
+        if sb is None:  # pragma: no cover
+            raise ValueError("strike_backward must be set when strike_forward is set")
+        return compute_polygon_anomaly_2_75d(
+            vertices,
+            _worker_obs_points,
+            magnetization,
+            sf,
+            sb,
+        )
     if shl is not None:
         return compute_polygon_anomaly_2_5d(
             vertices, _worker_obs_points, magnetization, shl
@@ -113,7 +145,15 @@ def calculate_anomaly(
     """
     observation_points = model.get_observation_points()
 
-    per_body: list[tuple[NDArray[np.float64], NDArray[np.float64], float | None]] = []
+    per_body: list[
+        tuple[
+            NDArray[np.float64],
+            NDArray[np.float64],
+            float | None,
+            float | None,
+            float | None,
+        ]
+    ] = []
     for body in model.bodies:
         magnetization = field_to_magnetization(
             susceptibility=body.susceptibility,
@@ -125,7 +165,15 @@ def calculate_anomaly(
             remanent_declination=body.remanent_declination,
             demagnetization_factor=body.demagnetization_factor,
         )
-        per_body.append((body.to_numpy(), magnetization, body.strike_half_length))
+        per_body.append(
+            (
+                body.to_numpy(),
+                magnetization,
+                body.strike_half_length,
+                body.strike_forward,
+                body.strike_backward,
+            )
+        )
 
     if parallel:
         with ProcessPoolExecutor(
@@ -134,8 +182,8 @@ def calculate_anomaly(
             body_components = list(executor.map(_compute_body_parallel, per_body))
     else:
         body_components = [
-            _compute_single_body((v, observation_points, m, shl))
-            for v, m, shl in per_body
+            _compute_single_body((v, observation_points, m, shl, sf, sb))
+            for v, m, shl, sf, sb in per_body
         ]
 
     # Sum Bz and Bx separately via superposition

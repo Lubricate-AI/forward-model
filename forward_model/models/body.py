@@ -6,7 +6,7 @@ from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class GeologicBody(BaseModel, frozen=True):
@@ -46,6 +46,15 @@ class GeologicBody(BaseModel, frozen=True):
                            with modified versions (Θₖ, Λₖ) that account for finite
                            strike, attenuating the anomaly for bodies with limited
                            lateral extent. Must be strictly positive and finite.
+        strike_forward: Forward (+y) half-extent of the body along strike (m).
+                       Must be set together with ``strike_backward``; both ``None``
+                       or both positive finite values. When set, the Won & Bevis
+                       (1987) 2.75D asymmetric formulation is used:
+                       ``ΔB = (ΔB_2.5D(y₁) + ΔB_2.5D(y₂)) / 2``. Must be
+                       strictly positive and finite.
+        strike_backward: Backward (−y) half-extent of the body along strike (m).
+                        Must be set together with ``strike_forward``. See
+                        ``strike_forward`` for details.
     """
 
     vertices: list[list[float]] = Field(min_length=3)
@@ -59,6 +68,8 @@ class GeologicBody(BaseModel, frozen=True):
     remanent_declination: float = Field(default=0.0, ge=-180.0, le=180.0)
     demagnetization_factor: float = Field(default=0.0, ge=0.0, le=1.0)
     strike_half_length: float | None = Field(default=None, gt=0.0)
+    strike_forward: float | None = Field(default=None, gt=0.0)
+    strike_backward: float | None = Field(default=None, gt=0.0)
 
     @field_validator("vertices")
     @classmethod
@@ -134,6 +145,25 @@ class GeologicBody(BaseModel, frozen=True):
         if not math.isfinite(v):
             raise ValueError(f"strike_half_length must be finite, got {v}")
         return v
+
+    @field_validator("strike_forward", "strike_backward")
+    @classmethod
+    def validate_strike_asymmetric_fields(cls, v: float | None) -> float | None:
+        """Validate strike_forward and strike_backward are finite."""
+        if v is None:
+            return v
+        if not math.isfinite(v):
+            raise ValueError(f"strike field must be finite, got {v}")
+        return v
+
+    @model_validator(mode="after")
+    def validate_strike_fields(self) -> "GeologicBody":
+        """Validate that strike_forward and strike_backward are paired."""
+        if (self.strike_forward is None) != (self.strike_backward is None):
+            raise ValueError(
+                "strike_forward and strike_backward must both be set or both be None"
+            )
+        return self
 
     @field_validator("color")
     @classmethod
