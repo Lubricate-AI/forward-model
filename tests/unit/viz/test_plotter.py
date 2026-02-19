@@ -378,7 +378,8 @@ class TestPlotCombined:
     def test_plot_combined_gradient_overlay_adds_twin_axis(
         self, simple_model: ForwardModel
     ) -> None:
-        """Supplying gradient to plot_combined adds a secondary axis in the anomaly panel."""
+        """Supplying gradient to plot_combined adds a secondary axis
+        in the anomaly panel."""
         anomaly = np.random.randn(len(simple_model.observation_x))
         gradient = np.random.randn(len(simple_model.observation_x))
 
