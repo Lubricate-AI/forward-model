@@ -15,6 +15,10 @@ A repo for conducting Talwani-style 2D forward magnetic models
 - Types: `feat`, `fix`, `docs`, `ci`, `refactor`, `test`, `chore`
 - Auto-include attribution footer when making commits
 
+### GitHub Repository
+- GitHub repo: `Lubricate-AI/forward-model`
+- Always use `--repo Lubricate-AI/forward-model` when running `gh` CLI commands for issues, PRs, etc.
+
 ### GitHub Issues
 - When creating issues, structure them using the templates in `.github/ISSUE_TEMPLATE/`
 - Include Overview (brief description)
