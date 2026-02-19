@@ -313,29 +313,29 @@ def compute_polygon_anomaly_2_5d(
         # Reduces to arctan2(zk, xk) = θk as y0 → ∞.
         sr1 = np.sqrt(r1**2 + y0**2)  # sqrt(r1²+y0²), shape (M,)
         sr2 = np.sqrt(r2**2 + y0**2)
-        Theta1: NDArray[np.float64] = np.arctan2(z1 * y0, x1 * sr1)
-        Theta2: NDArray[np.float64] = np.arctan2(z2 * y0, x2 * sr2)
-        dTheta: NDArray[np.float64] = Theta2 - Theta1
-        dTheta = np.where(dTheta > np.pi, dTheta - 2 * np.pi, dTheta)
-        dTheta = np.where(dTheta < -np.pi, dTheta + 2 * np.pi, dTheta)
+        theta1: NDArray[np.float64] = np.arctan2(z1 * y0, x1 * sr1)
+        theta2: NDArray[np.float64] = np.arctan2(z2 * y0, x2 * sr2)
+        dtheta: NDArray[np.float64] = theta2 - theta1
+        dtheta = np.where(dtheta > np.pi, dtheta - 2 * np.pi, dtheta)
+        dtheta = np.where(dtheta < -np.pi, dtheta + 2 * np.pi, dtheta)
 
         # Won & Bevis (1987) modified log function:
         #   Λk = log(rk / (sqrt(rk²+y0²) + y0))
         # Difference Λ2-Λ1 reduces to log(r2/r1) as y0 → ∞.
-        Lambda1 = np.zeros_like(r1)
-        np.log(r1 / (sr1 + y0), out=Lambda1, where=valid)
-        Lambda2 = np.zeros_like(r2)
-        np.log(r2 / (sr2 + y0), out=Lambda2, where=valid)
-        dLambda: NDArray[np.float64] = Lambda2 - Lambda1
+        lambda1 = np.zeros_like(r1)
+        np.log(r1 / (sr1 + y0), out=lambda1, where=valid)
+        lambda2 = np.zeros_like(r2)
+        np.log(r2 / (sr2 + y0), out=lambda2, where=valid)
+        dlambda: NDArray[np.float64] = lambda2 - lambda1
 
         bz_contrib = np.where(
             valid,
-            Mx * (dTheta * tz - dLambda * tx) + Mz * (-dTheta * tx - dLambda * tz),
+            Mx * (dtheta * tz - dlambda * tx) + Mz * (-dtheta * tx - dlambda * tz),
             0.0,
         )
         bx_contrib = np.where(
             valid,
-            Mx * (dTheta * tx + dLambda * tz) + Mz * (-dTheta * tz + dLambda * tx),
+            Mx * (dtheta * tx + dlambda * tz) + Mz * (-dtheta * tz + dlambda * tx),
             0.0,
         )
         bz += bz_contrib

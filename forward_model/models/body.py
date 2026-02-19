@@ -41,10 +41,11 @@ class GeologicBody(BaseModel, frozen=True):
         strike_half_length: Half-length of the body in the strike direction (m).
                            When ``None`` (default), the standard 2D (infinite-strike)
                            Talwani (1965) algorithm is used. When a positive finite
-                           value is provided, the Won & Bevis (1987) 2.5D correction
-                           factor ``y0 / sqrt(r² + y0²)`` is applied per edge,
-                           attenuating the anomaly for bodies with limited lateral
-                           extent. Must be strictly positive and finite.
+                           value is provided, the Won & Bevis (1987) 2.5D formulation
+                           is used: the standard Talwani vertex functions are replaced
+                           with modified versions (Θₖ, Λₖ) that account for finite
+                           strike, attenuating the anomaly for bodies with limited
+                           lateral extent. Must be strictly positive and finite.
     """
 
     vertices: list[list[float]] = Field(min_length=3)

@@ -194,7 +194,7 @@ This implementation computes five output components from the forward model:
 | Amplitude | \|ΔB\| | nT | Vector magnitude of anomaly field |
 | Horizontal gradient | d(ΔT)/dx | nT/m | Spatial derivative of total field along profile |
 
-**Note on By:** In 2D modeling, bodies have infinite extent along the strike direction (y-axis), so the y-component of the anomaly field is identically zero by symmetry. Only Bx and Bz are non-zero.
+**Note on By:** The strike direction (y-axis) is not explicitly sampled. For 2D bodies (the default), infinite extent is assumed and By is identically zero by symmetry. For 2.5D bodies (`strike_half_length` set), the finite-strike integral also produces zero By at the profile plane by the symmetric ±y₀ integration bounds. In both cases only Bx and Bz are non-zero.
 
 ## Mathematical Formulation
 
@@ -324,8 +324,8 @@ This linearity arises from the linear relationship between magnetization and sus
   - Bodies are at positive z values (below surface)
 
 - **Y-axis**: Perpendicular to profile (into the page)
-  - Assumed infinite extent
-  - Not explicitly modeled
+  - Not explicitly sampled; treated as infinite (2D default) or finite symmetric
+    ±`strike_half_length` (2.5D) depending on the body
 
 ### Observation Points
 
