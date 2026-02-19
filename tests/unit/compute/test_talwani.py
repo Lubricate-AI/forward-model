@@ -2,7 +2,11 @@
 
 import numpy as np
 
-from forward_model.compute import compute_polygon_anomaly, field_to_magnetization
+from forward_model.compute import (
+    compute_demagnetization_factor,
+    compute_polygon_anomaly,
+    field_to_magnetization,
+)
 
 
 class TestFieldToMagnetization:
@@ -357,3 +361,107 @@ class TestVectorizedVsScalar:
         obs = np.array([[25.0, 0.0], [-50.0, 0.0], [200.0, 0.0]], dtype=np.float64)
         mag = np.array([0.0, -1000.0], dtype=np.float64)
         self._assert_close(vertices, obs, mag)
+
+
+class TestDemagnetizationCorrection:
+    """Tests for demagnetization factor correction in field_to_magnetization
+    and compute_demagnetization_factor utility."""
+
+    _COMMON = {
+        "field_intensity": 50000.0,
+        "field_inclination": 60.0,
+        "field_declination": 0.0,
+    }
+
+    def test_zero_nd_matches_uncorrected(self) -> None:
+        """N_d=0.0 produces identical result to default (no demagnetization)."""
+        uncorrected = field_to_magnetization(susceptibility=0.5, **self._COMMON)
+        corrected = field_to_magnetization(
+            susceptibility=0.5, demagnetization_factor=0.0, **self._COMMON
+        )
+        assert np.allclose(uncorrected, corrected)
+
+    def test_chi_eff_value(self) -> None:
+        """χ=1.0, N_d=0.3 → χ_eff ≈ 0.769 (within 1e-6)."""
+        chi = 1.0
+        n_d = 0.3
+        chi_eff_expected = chi / (1.0 + n_d * chi)  # ≈ 0.769230...
+
+        mag_corrected = field_to_magnetization(
+            susceptibility=chi, demagnetization_factor=n_d, **self._COMMON
+        )
+        mag_reference = field_to_magnetization(
+            susceptibility=chi_eff_expected, demagnetization_factor=0.0, **self._COMMON
+        )
+        assert np.allclose(mag_corrected, mag_reference, atol=1e-6)
+
+    def test_nd_reduces_magnetization_magnitude(self) -> None:
+        """N_d > 0 produces strictly smaller magnetization magnitude than N_d=0."""
+        mag_no_correction = field_to_magnetization(
+            susceptibility=1.0, demagnetization_factor=0.0, **self._COMMON
+        )
+        mag_corrected = field_to_magnetization(
+            susceptibility=1.0, demagnetization_factor=0.3, **self._COMMON
+        )
+        assert np.linalg.norm(mag_corrected) < np.linalg.norm(mag_no_correction)
+
+    def test_remanent_unaffected_by_nd(self) -> None:
+        """Remanent component is not altered by demagnetization_factor."""
+        # With zero susceptibility, only remanence contributes; N_d has no effect.
+        mag_nd0 = field_to_magnetization(
+            susceptibility=0.0,
+            demagnetization_factor=0.0,
+            remanent_intensity=2.0,
+            remanent_inclination=45.0,
+            remanent_declination=0.0,
+            **self._COMMON,
+        )
+        mag_nd_high = field_to_magnetization(
+            susceptibility=0.0,
+            demagnetization_factor=0.5,
+            remanent_intensity=2.0,
+            remanent_inclination=45.0,
+            remanent_declination=0.0,
+            **self._COMMON,
+        )
+        assert np.allclose(mag_nd0, mag_nd_high)
+
+    def test_compute_demagnetization_factor_2to1_rectangle(self) -> None:
+        """2:1 wide rectangle (width=200, height=100) → N_d = 100/300 ≈ 0.333."""
+        # width=200 → a=100; height=100 → b=50; N_d = 50/150 = 1/3
+        vertices = np.array(
+            [[-100.0, 0.0], [100.0, 0.0], [100.0, 100.0], [-100.0, 100.0]],
+            dtype=np.float64,
+        )
+        n_d = compute_demagnetization_factor(vertices)
+        assert np.isclose(n_d, 1.0 / 3.0, atol=1e-10)
+
+    def test_compute_demagnetization_factor_square(self) -> None:
+        """Square cross-section → N_d = 0.5 (maximum for 2D bodies)."""
+        vertices = np.array(
+            [[0.0, 0.0], [100.0, 0.0], [100.0, 100.0], [0.0, 100.0]],
+            dtype=np.float64,
+        )
+        n_d = compute_demagnetization_factor(vertices)
+        assert np.isclose(n_d, 0.5, atol=1e-10)
+
+    def test_compute_demagnetization_factor_wide_flat_body(self) -> None:
+        """Wide flat body (width >> height) → N_d close to 0."""
+        vertices = np.array(
+            [[-500.0, 0.0], [500.0, 0.0], [500.0, 10.0], [-500.0, 10.0]],
+            dtype=np.float64,
+        )
+        n_d = compute_demagnetization_factor(vertices)
+        # a=500, b=5 → N_d = 5/505 ≈ 0.0099
+        assert n_d < 0.02
+        assert n_d >= 0.0
+
+    def test_compute_demagnetization_factor_clamped_to_half(self) -> None:
+        """Result is always ≤ 0.5 regardless of geometry."""
+        # Tall narrow body: height >> width
+        vertices = np.array(
+            [[0.0, 0.0], [10.0, 0.0], [10.0, 1000.0], [0.0, 1000.0]],
+            dtype=np.float64,
+        )
+        n_d = compute_demagnetization_factor(vertices)
+        assert n_d <= 0.5

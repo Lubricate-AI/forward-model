@@ -1,5 +1,7 @@
 """Tests for GeologicBody model."""
 
+import warnings
+
 import numpy as np
 import pytest
 from pydantic import ValidationError
@@ -253,3 +255,78 @@ class TestGeologicBodyRemanentMagnetization:
         assert restored.remanent_intensity == original.remanent_intensity
         assert restored.remanent_inclination == original.remanent_inclination
         assert restored.remanent_declination == original.remanent_declination
+
+
+class TestGeologicBodyDemagnetization:
+    """Tests for the demagnetization_factor field on GeologicBody."""
+
+    _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
+
+    def _body(self, **kwargs: object) -> GeologicBody:
+        return GeologicBody(
+            vertices=self._VERTS,
+            susceptibility=0.01,
+            name="Body",
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def test_default_is_zero(self) -> None:
+        """demagnetization_factor defaults to 0.0."""
+        body = self._body()
+        assert body.demagnetization_factor == 0.0
+
+    def test_valid_lower_bound(self) -> None:
+        """0.0 is accepted without warning."""
+        body = self._body(demagnetization_factor=0.0)
+        assert body.demagnetization_factor == 0.0
+
+    def test_valid_2d_upper_bound(self) -> None:
+        """0.5 is accepted without warning (physical 2D upper limit)."""
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            body = self._body(demagnetization_factor=0.5)
+        assert body.demagnetization_factor == 0.5
+
+    def test_valid_mid_range(self) -> None:
+        """Values in (0.0, 0.5] are accepted silently."""
+        body = self._body(demagnetization_factor=0.3)
+        assert body.demagnetization_factor == 0.3
+
+    def test_above_half_emits_warning(self) -> None:
+        """Values in (0.5, 1.0] are accepted but emit a UserWarning."""
+        with pytest.warns(UserWarning, match="exceeds 0.5"):
+            body = self._body(demagnetization_factor=0.7)
+        assert body.demagnetization_factor == 0.7
+
+    def test_exactly_one_emits_warning(self) -> None:
+        """The maximum value 1.0 still emits a UserWarning."""
+        with pytest.warns(UserWarning, match="exceeds 0.5"):
+            body = self._body(demagnetization_factor=1.0)
+        assert body.demagnetization_factor == 1.0
+
+    def test_negative_rejected(self) -> None:
+        """Values below 0.0 raise ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(demagnetization_factor=-0.1)
+
+    def test_above_one_rejected(self) -> None:
+        """Values above 1.0 raise ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(demagnetization_factor=1.1)
+
+    def test_non_finite_inf_rejected(self) -> None:
+        """Infinite value raises ValidationError (caught by le=1.0 constraint)."""
+        with pytest.raises(ValidationError):
+            self._body(demagnetization_factor=float("inf"))
+
+    def test_non_finite_nan_rejected(self) -> None:
+        """NaN raises ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(demagnetization_factor=float("nan"))
+
+    def test_json_roundtrip(self) -> None:
+        """model_dump() round-trip preserves demagnetization_factor."""
+        original = self._body(demagnetization_factor=0.3)
+        d = original.model_dump()
+        restored = GeologicBody(**d)
+        assert restored.demagnetization_factor == original.demagnetization_factor
