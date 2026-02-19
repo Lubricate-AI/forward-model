@@ -311,17 +311,6 @@ def batch(
     Processes each model through the full load → compute → export pipeline.
     Results are written to OUTPUT_DIR with filenames matching input stems.
     """
-    valid_formats = {"csv", "json", "npy"}
-    if fmt not in valid_formats:
-        typer.echo(
-            typer.style(
-                f"Error: Invalid format '{fmt}'. Choose from: csv, json, npy",
-                fg=typer.colors.RED,
-            ),
-            err=True,
-        )
-        sys.exit(1)
-
     if verbose:
         typer.echo(f"Processing {len(models)} model(s) → {output_dir} ({fmt})")
 

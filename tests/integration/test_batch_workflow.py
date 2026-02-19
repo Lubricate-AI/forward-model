@@ -103,7 +103,7 @@ class TestBatchWorkflow:
         assert "succeeded" in result.stdout
 
     def test_batch_cli_invalid_format(self, tmp_path: Path) -> None:
-        """CLI exits 1 with error when format is invalid."""
+        """CLI exits 2 with error when format is invalid (Typer rejects non-Literal value)."""
         m = tmp_path / "m.json"
         m.write_text(json.dumps(_make_model_dict([-100.0, 0.0, 100.0])))
 
@@ -119,7 +119,7 @@ class TestBatchWorkflow:
             ],
         )
 
-        assert result.exit_code == 1
+        assert result.exit_code == 2
         assert "Error" in result.output
 
     def test_batch_cli_missing_file(self, tmp_path: Path) -> None:
