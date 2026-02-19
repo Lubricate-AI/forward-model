@@ -234,3 +234,113 @@ def compute_polygon_anomaly(
     bz *= mu_0_4pi_nT
     bx *= mu_0_4pi_nT
     return PolygonComponents(bz=bz, bx=bx)
+
+
+def compute_polygon_anomaly_2_5d(
+    vertices: NDArray[np.float64],
+    observation_points: NDArray[np.float64],
+    magnetization: NDArray[np.float64],
+    strike_half_length: float,
+    min_distance: float = 1e-10,
+) -> PolygonComponents:
+    """2.5D Talwani computation with finite symmetric strike extent (Won & Bevis 1987).
+
+    Replaces the standard 2D Talwani vertex functions with Won & Bevis (1987)
+    modified functions that account for finite strike extent:
+
+    - Modified angle:  Θk = arctan2(zk·y0,  xk·sqrt(rk²+y0²))
+    - Modified log:    Λk = log(rk / (sqrt(rk²+y0²) + y0))
+
+    Both functions reduce to the 2D Talwani values (arctan2(z,x) and log(r)) as
+    y0 → ∞, so the formula is exactly backwards-compatible in the limiting case.
+
+    Args:
+        vertices: Nx2 array of polygon vertices [x, z] in meters.
+        observation_points: Mx2 array of observation points [x, z] in meters.
+        magnetization: 2D magnetization vector [Mx, Mz] in A/m.
+        strike_half_length: Half-length of the body in the strike direction (m).
+                           Must be strictly positive and finite.
+        min_distance: Minimum distance threshold to avoid singularities (meters).
+
+    Returns:
+        PolygonComponents(bz, bx): Vertical and horizontal anomaly components
+        in nT at each observation point, attenuated for finite strike extent.
+
+    References:
+        Won, I. J., and Bevis, M. (1987). Computing the gravitational and magnetic
+        anomalies due to a polygon: Algorithms and Fortran subroutines.
+        Geophysics, 52(2), 232–238.
+    """
+    n_vertices = len(vertices)
+    n_obs = len(observation_points)
+    bz = np.zeros(n_obs, dtype=np.float64)
+    bx = np.zeros(n_obs, dtype=np.float64)
+
+    mu_0_4pi = 1e-7  # T·m/A in SI
+    mu_0_4pi_nT = mu_0_4pi * 1e9  # nT·m/A
+
+    Mx, Mz = magnetization
+
+    obs_x = observation_points[:, 0]  # (M,)
+    obs_z = observation_points[:, 1]  # (M,)
+
+    y0 = strike_half_length
+
+    for j in range(n_vertices):
+        j_next = (j + 1) % n_vertices
+
+        dx = vertices[j_next, 0] - vertices[j, 0]
+        dz = vertices[j_next, 1] - vertices[j, 1]
+        edge_length = np.sqrt(dx**2 + dz**2)
+
+        if np.abs(dx) < min_distance and np.abs(dz) < min_distance:
+            continue
+
+        tx = dx / edge_length
+        tz = dz / edge_length
+
+        x1 = vertices[j, 0] - obs_x
+        z1 = vertices[j, 1] - obs_z
+        x2 = vertices[j_next, 0] - obs_x
+        z2 = vertices[j_next, 1] - obs_z
+
+        r1 = np.sqrt(x1**2 + z1**2)
+        r2 = np.sqrt(x2**2 + z2**2)
+        valid = (r1 >= min_distance) & (r2 >= min_distance)
+
+        # Won & Bevis (1987) modified angle function:
+        #   Θk = arctan2(zk·y0, xk·sqrt(rk²+y0²))
+        # Reduces to arctan2(zk, xk) = θk as y0 → ∞.
+        sr1 = np.sqrt(r1**2 + y0**2)  # sqrt(r1²+y0²), shape (M,)
+        sr2 = np.sqrt(r2**2 + y0**2)
+        theta1: NDArray[np.float64] = np.arctan2(z1 * y0, x1 * sr1)
+        theta2: NDArray[np.float64] = np.arctan2(z2 * y0, x2 * sr2)
+        dtheta: NDArray[np.float64] = theta2 - theta1
+        dtheta = np.where(dtheta > np.pi, dtheta - 2 * np.pi, dtheta)
+        dtheta = np.where(dtheta < -np.pi, dtheta + 2 * np.pi, dtheta)
+
+        # Won & Bevis (1987) modified log function:
+        #   Λk = log(rk / (sqrt(rk²+y0²) + y0))
+        # Difference Λ2-Λ1 reduces to log(r2/r1) as y0 → ∞.
+        lambda1 = np.zeros_like(r1)
+        np.log(r1 / (sr1 + y0), out=lambda1, where=valid)
+        lambda2 = np.zeros_like(r2)
+        np.log(r2 / (sr2 + y0), out=lambda2, where=valid)
+        dlambda: NDArray[np.float64] = lambda2 - lambda1
+
+        bz_contrib = np.where(
+            valid,
+            Mx * (dtheta * tz - dlambda * tx) + Mz * (-dtheta * tx - dlambda * tz),
+            0.0,
+        )
+        bx_contrib = np.where(
+            valid,
+            Mx * (dtheta * tx + dlambda * tz) + Mz * (-dtheta * tz + dlambda * tx),
+            0.0,
+        )
+        bz += bz_contrib
+        bx += bx_contrib
+
+    bz *= mu_0_4pi_nT
+    bx *= mu_0_4pi_nT
+    return PolygonComponents(bz=bz, bx=bx)

@@ -280,7 +280,82 @@ print(f"Estimated N_d from geometry: {n_d:.3f}")
 
 ---
 
-## Example 5: Dipping Dyke
+## Example 5: Muskoka Paleochannel (Finite Strike Length, 2.5D)
+
+Model a shallow conductive paleochannel with limited along-strike extent. In a pure 2D model the channel is assumed to extend infinitely, overestimating the anomaly. Setting `strike_half_length` applies the Won & Bevis (1987) 2.5D correction.
+
+### Model Definition
+
+```json
+{
+  "bodies": [
+    {
+      "name": "Muskoka Paleochannel",
+      "susceptibility": -0.001,
+      "strike_half_length": 500.0,
+      "vertices": [
+        [-75.0, 80.0],
+        [ 75.0, 80.0],
+        [ 75.0, 150.0],
+        [-75.0, 150.0]
+      ]
+    }
+  ],
+  "field": {
+    "intensity": 56200.0,
+    "inclination": 71.0,
+    "declination": -9.5
+  },
+  "observation_x": [-500, -400, -300, -200, -100, -75, -50, -25, 0,
+                     25,   50,   75,  100,  200,  300, 400, 500],
+  "observation_z": 0.0
+}
+```
+
+### Parameters
+
+- **Body geometry**: 150 m wide × 70 m thick paleochannel, 80–150 m depth
+- **Susceptibility**: −0.001 SI (slight negative contrast — channel fill less magnetic than host)
+- **`strike_half_length`**: 500 m — the channel terminates 500 m either side of the profile
+- **Magnetic field**: Muskoka/Parry Sound IGRF values (56,200 nT, I = 71°, D = −9.5°)
+
+### Running the Model
+
+```bash
+forward-model run examples/muskoka_paleochannel.json --no-plot
+```
+
+```python
+from forward_model import load_model, calculate_anomaly
+
+model = load_model("examples/muskoka_paleochannel.json")
+
+# 2.5D result (strike_half_length = 500 m)
+anomaly_25d = calculate_anomaly(model, component="bz")
+
+# Compare to pure 2D (override strike_half_length to None for all bodies)
+from forward_model.models import GeologicBody
+bodies_2d = [b.model_copy(update={"strike_half_length": None}) for b in model.bodies]
+model_2d = model.model_copy(update={"bodies": bodies_2d})
+anomaly_2d = calculate_anomaly(model_2d, component="bz")
+
+import numpy as np
+peak_2d  = np.max(np.abs(anomaly_2d))
+peak_25d = np.max(np.abs(anomaly_25d))
+print(f"2D peak:   {peak_2d:.2f} nT")
+print(f"2.5D peak: {peak_25d:.2f} nT  ({100*(1 - peak_25d/peak_2d):.1f}% attenuation)")
+```
+
+### Key Concepts
+
+- **`strike_half_length`**: Half the body's total along-strike length (metres). A body 1 km long uses `strike_half_length: 500.0`. Must be strictly positive; `null` (the default) selects the standard 2D code path.
+- **Attenuation factor**: For a characteristic 2D distance *r* from profile to body, the peak amplitude is attenuated roughly as y₀ / √(r² + y₀²) relative to the 2D value.
+- **Mixed models**: Individual bodies in the same `ForwardModel` can independently be 2D (no `strike_half_length`) or 2.5D (with `strike_half_length`), so only the bodies whose limited extent matters need the correction.
+- **Limiting behaviour**: As `strike_half_length` → ∞ the result converges to the 2D anomaly to within numerical precision.
+
+---
+
+## Example 6: Dipping Dyke
 
 Model a dyke with arbitrary dip angle.
 
@@ -344,7 +419,7 @@ plot_combined(model, anomaly, save_path="dipping_dyke.png")
 
 ---
 
-## Example 6: Sensitivity Analysis
+## Example 7: Sensitivity Analysis
 
 Investigate how anomaly changes with model parameters.
 
@@ -433,7 +508,7 @@ plt.savefig("sensitivity_inclination.png", dpi=150)
 
 ---
 
-## Example 5: Exporting Results
+## Example 8: Exporting Results
 
 Export results in various formats for further analysis.
 
@@ -482,7 +557,7 @@ plot_combined(model, anomaly, save_path="replot.pdf", style="publication", dpi=3
 
 ---
 
-## Example 6: Batch Processing
+## Example 9: Batch Processing
 
 Process multiple models efficiently.
 
@@ -528,7 +603,7 @@ print("✓ Batch processing complete")
 
 ---
 
-## Example 7: Integration with Other Tools
+## Example 10: Integration with Other Tools
 
 ### Export to GMT (Generic Mapping Tools)
 

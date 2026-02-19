@@ -330,3 +330,66 @@ class TestGeologicBodyDemagnetization:
         d = original.model_dump()
         restored = GeologicBody(**d)
         assert restored.demagnetization_factor == original.demagnetization_factor
+
+
+class TestGeologicBodyStrikeHalfLength:
+    """Tests for the strike_half_length field on GeologicBody."""
+
+    _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
+
+    def _body(self, **kwargs: object) -> GeologicBody:
+        return GeologicBody(
+            vertices=self._VERTS,
+            susceptibility=0.01,
+            name="Body",
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def test_default_is_none(self) -> None:
+        """strike_half_length defaults to None."""
+        body = self._body()
+        assert body.strike_half_length is None
+
+    def test_positive_float_accepted(self) -> None:
+        """A strictly positive finite float is accepted."""
+        body = self._body(strike_half_length=500.0)
+        assert body.strike_half_length == 500.0
+
+    def test_zero_rejected(self) -> None:
+        """strike_half_length=0 raises ValidationError (gt=0.0 constraint)."""
+        with pytest.raises(ValidationError):
+            self._body(strike_half_length=0.0)
+
+    def test_negative_rejected(self) -> None:
+        """Negative value raises ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(strike_half_length=-100.0)
+
+    def test_nan_rejected(self) -> None:
+        """NaN raises ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(strike_half_length=float("nan"))
+
+    def test_inf_rejected(self) -> None:
+        """Infinite value raises ValidationError (caught by finiteness validator)."""
+        with pytest.raises(ValidationError, match="finite"):
+            self._body(strike_half_length=float("inf"))
+
+    def test_none_accepted(self) -> None:
+        """Explicitly passing None is accepted."""
+        body = self._body(strike_half_length=None)
+        assert body.strike_half_length is None
+
+    def test_json_roundtrip_preserves_value(self) -> None:
+        """model_dump() → GeologicBody(**d) round-trip preserves strike_half_length."""
+        original = self._body(strike_half_length=750.0)
+        d = original.model_dump()
+        restored = GeologicBody(**d)
+        assert restored.strike_half_length == original.strike_half_length
+
+    def test_json_roundtrip_none(self) -> None:
+        """Round-trip with None preserves None."""
+        original = self._body()
+        d = original.model_dump()
+        restored = GeologicBody(**d)
+        assert restored.strike_half_length is None
