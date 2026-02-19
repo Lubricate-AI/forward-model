@@ -56,6 +56,9 @@ def calculate_anomaly(
             field_intensity=model.field.intensity,
             field_inclination=model.field.inclination,
             field_declination=model.field.declination,
+            remanent_intensity=body.remanent_intensity,
+            remanent_inclination=body.remanent_inclination,
+            remanent_declination=body.remanent_declination,
         )
         vertices = body.to_numpy()
         body_args.append((vertices, observation_points, magnetization))

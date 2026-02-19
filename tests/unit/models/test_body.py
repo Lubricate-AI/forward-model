@@ -178,3 +178,78 @@ class TestGeologicBodyVisualProperties:
         """Backslash hatch pattern is accepted."""
         body = self._body(hatch="\\\\")
         assert body.hatch == "\\\\"
+
+
+class TestGeologicBodyRemanentMagnetization:
+    """Tests for remanent magnetization fields on GeologicBody."""
+
+    _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
+
+    def _body(self, **kwargs: object) -> GeologicBody:
+        return GeologicBody(
+            vertices=self._VERTS,
+            susceptibility=0.01,
+            name="Body",
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def test_remanent_defaults_to_zero(self) -> None:
+        """All three remanent fields default to 0.0."""
+        body = self._body()
+        assert body.remanent_intensity == 0.0
+        assert body.remanent_inclination == 0.0
+        assert body.remanent_declination == 0.0
+
+    def test_remanent_intensity_valid(self) -> None:
+        """Positive remanent intensity is accepted."""
+        body = self._body(remanent_intensity=2.5)
+        assert body.remanent_intensity == 2.5
+
+    def test_remanent_intensity_negative_rejected(self) -> None:
+        """Negative remanent intensity is rejected (ge=0.0 constraint)."""
+        with pytest.raises(ValidationError):
+            self._body(remanent_intensity=-0.1)
+
+    def test_remanent_intensity_non_finite_rejected(self) -> None:
+        """Non-finite remanent intensity (inf, nan) raises ValidationError."""
+        # inf passes ge=0.0 but is caught by the finiteness validator
+        with pytest.raises(ValidationError, match="finite"):
+            self._body(remanent_intensity=float("inf"))
+        # nan fails ge=0.0 directly (nan >= 0 is False); still rejected
+        with pytest.raises(ValidationError):
+            self._body(remanent_intensity=float("nan"))
+
+    def test_remanent_inclination_bounds(self) -> None:
+        """±90° inclination is accepted; ±91° is rejected."""
+        body_pos = self._body(remanent_inclination=90.0)
+        assert body_pos.remanent_inclination == 90.0
+        body_neg = self._body(remanent_inclination=-90.0)
+        assert body_neg.remanent_inclination == -90.0
+        with pytest.raises(ValidationError):
+            self._body(remanent_inclination=91.0)
+        with pytest.raises(ValidationError):
+            self._body(remanent_inclination=-91.0)
+
+    def test_remanent_declination_bounds(self) -> None:
+        """±180° declination is accepted; ±181° is rejected."""
+        body_pos = self._body(remanent_declination=180.0)
+        assert body_pos.remanent_declination == 180.0
+        body_neg = self._body(remanent_declination=-180.0)
+        assert body_neg.remanent_declination == -180.0
+        with pytest.raises(ValidationError):
+            self._body(remanent_declination=181.0)
+        with pytest.raises(ValidationError):
+            self._body(remanent_declination=-181.0)
+
+    def test_json_roundtrip_preserves_remanent_fields(self) -> None:
+        """model_dump() → GeologicBody(**d) round-trip preserves remanent values."""
+        original = self._body(
+            remanent_intensity=1.5,
+            remanent_inclination=45.0,
+            remanent_declination=-30.0,
+        )
+        d = original.model_dump()
+        restored = GeologicBody(**d)
+        assert restored.remanent_intensity == original.remanent_intensity
+        assert restored.remanent_inclination == original.remanent_inclination
+        assert restored.remanent_declination == original.remanent_declination

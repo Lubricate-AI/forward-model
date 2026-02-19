@@ -43,6 +43,23 @@ A basic vertical dyke model demonstrating fundamental concepts:
 - Observing the relationship between body geometry and anomaly shape
 - Introduction to susceptibility values
 
+### volcanic_body.json
+
+A high-Q volcanic flow demonstrating remanent magnetization:
+
+- **Single body**: Wide horizontal lava sheet (1000m × 150m), 50–200m depth
+- **Susceptibility**: 0.01 SI (low induced component)
+- **Remanent intensity**: 2.0 A/m — strong remanence from past eruption
+- **Remanent inclination / declination**: −45° / 10° (reversed polarity, offset from present field)
+- **Königsberger ratio Q ≈ 5**: Remanent magnetization dominates over induced
+
+**Expected result**: A negative anomaly driven by the reversed remanent vector, opposite in sign to what the small induced component alone would produce.
+
+**Learning objectives**:
+- Understanding remanent vs. induced magnetization
+- Königsberger ratio and when remanence matters
+- Effect of reversed polarity on anomaly character
+
 ### multi_body.json
 
 A more complex model with multiple interacting bodies:

@@ -48,6 +48,9 @@ def run(
     no_plot: bool = typer.Option(
         False, "--no-plot", help="Skip plot generation entirely"
     ),
+    show_gradient: bool = typer.Option(
+        False, "--show-gradient", help="Overlay magnetic gradient on anomaly panel"
+    ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose output"
     ),
@@ -99,7 +102,7 @@ def run(
         if not no_plot:
             if verbose:
                 typer.echo("Generating plot...")
-            plot_combined(model, anomaly, save_path=plot)
+            plot_combined(model, anomaly, save_path=plot, show_gradient=show_gradient)
             if plot:
                 if verbose:
                     typer.echo(f"  Plot saved to {plot}")

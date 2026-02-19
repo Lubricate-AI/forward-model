@@ -141,7 +141,75 @@ plot_combined(model, total_anomaly, save_path="multi_body.png")
 
 ---
 
-## Example 3: Dipping Dyke
+## Example 3: High-Q Volcanic Body (Remanent Magnetization)
+
+Model a reversely-magnetized lava flow where remanent magnetization dominates over induced magnetization (Königsberger ratio Q ≈ 5).
+
+### Model Definition
+
+```json
+{
+  "bodies": [
+    {
+      "name": "Volcanic Flow (High-Q, Q≈5)",
+      "susceptibility": 0.01,
+      "remanent_intensity": 2.0,
+      "remanent_inclination": -45.0,
+      "remanent_declination": 10.0,
+      "vertices": [
+        [-500.0, 50.0],
+        [500.0, 50.0],
+        [500.0, 200.0],
+        [-500.0, 200.0]
+      ]
+    }
+  ],
+  "field": {
+    "intensity": 50000.0,
+    "inclination": 60.0,
+    "declination": 0.0
+  },
+  "observation_x": [-1000, -750, -500, -250, 0, 250, 500, 750, 1000],
+  "observation_z": 0.0
+}
+```
+
+### Parameters
+
+- **Body geometry**: Wide horizontal sheet (1000m × 150m), 50–200m depth
+- **Susceptibility**: 0.01 SI (low induced component)
+- **Remanent intensity**: 2.0 A/m — strong remanence from past eruption
+- **Remanent inclination**: −45° (reversed polarity, steeply inclined downward in opposite hemisphere sense)
+- **Remanent declination**: 10° (slightly off north)
+- **Q ratio**: ≈ 5 (remanence dominates over induced magnetization)
+
+### Key Concepts
+
+- **Königsberger ratio**: Q = |M\_rem| / |M\_ind|. When Q > 1, remanence dominates.
+- **Reversed polarity**: Negative inclination means the remanent vector dips upward in the northern hemisphere sense — the body was magnetized during a geomagnetic reversal.
+- **Anomaly character**: The reversed remanent vector produces a negative anomaly signature, opposite to what a purely induced body of the same susceptibility would produce.
+
+### Running the Model
+
+```bash
+forward-model run examples/volcanic_body.json --plot volcanic_body.png --verbose
+```
+
+```python
+from forward_model import load_model, calculate_anomaly, plot_combined
+
+model = load_model("examples/volcanic_body.json")
+anomaly = calculate_anomaly(model)
+plot_combined(model, anomaly, save_path="volcanic_body.png")
+```
+
+![Volcanic Body Model](../images/volcanic_body.png)
+
+*Figure: High-Q volcanic flow with reversed remanent magnetization. The anomaly is dominated by the remanent component and is negative in sign, contrasting with the positive anomaly expected from induced magnetization alone.*
+
+---
+
+## Example 4: Dipping Dyke
 
 Model a dyke with arbitrary dip angle.
 

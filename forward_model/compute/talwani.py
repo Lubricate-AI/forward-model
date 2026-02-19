@@ -9,18 +9,28 @@ def field_to_magnetization(
     field_intensity: float,
     field_inclination: float,
     field_declination: float,
+    remanent_intensity: float = 0.0,
+    remanent_inclination: float = 0.0,
+    remanent_declination: float = 0.0,
 ) -> NDArray[np.float64]:
     """Convert magnetic field parameters to 2D magnetization vector.
+
+    Computes the total magnetization as the sum of the induced component
+    (from susceptibility and the ambient field) and the remanent component
+    (a permanent vector fixed at rock formation time).
 
     Args:
         susceptibility: Magnetic susceptibility (SI units, dimensionless).
         field_intensity: Inducing field intensity in nanoTesla (nT).
         field_inclination: Field inclination in degrees (-90 to 90).
         field_declination: Field declination in degrees (-180 to 180).
+        remanent_intensity: Remanent magnetization intensity in A/m. Default 0.0.
+        remanent_inclination: Inclination of remanent vector in degrees. Default 0.0.
+        remanent_declination: Declination of remanent vector in degrees. Default 0.0.
 
     Returns:
-        2D magnetization vector [Mx, Mz] in A/m.
-        For 2D models, we project the field into the vertical plane.
+        2D magnetization vector [Mx, Mz] in A/m representing total magnetization
+        (induced + remanent) projected into the vertical profile plane.
     """
     # Convert nT to Tesla
     field_T = field_intensity * 1e-9
@@ -35,13 +45,19 @@ def field_to_magnetization(
     Bx = field_T * np.cos(inc_rad) * np.cos(dec_rad)
     Bz = -field_T * np.sin(inc_rad)  # Negative because z is depth (positive down)
 
-    # Magnetization M = χ * H = χ * B/μ₀
+    # Induced magnetization M = χ * H = χ * B/μ₀
     # μ₀ = 4π × 10⁻⁷ H/m
     mu_0 = 4.0 * np.pi * 1e-7
     Mx = susceptibility * Bx / mu_0
     Mz = susceptibility * Bz / mu_0
 
-    return np.array([Mx, Mz], dtype=np.float64)
+    # Remanent component — already in A/m, project into 2D profile plane
+    inc_rem = np.deg2rad(remanent_inclination)
+    dec_rem = np.deg2rad(remanent_declination)
+    Mx_rem = remanent_intensity * np.cos(inc_rem) * np.cos(dec_rem)
+    Mz_rem = -remanent_intensity * np.sin(inc_rem)  # negative: z positive-down
+
+    return np.array([Mx + Mx_rem, Mz + Mz_rem], dtype=np.float64)
 
 
 def compute_polygon_anomaly(
