@@ -6,6 +6,7 @@
 import json
 import sys
 from pathlib import Path
+from typing import Literal
 
 import typer
 from pydantic import ValidationError
@@ -48,8 +49,12 @@ def run(
     no_plot: bool = typer.Option(
         False, "--no-plot", help="Skip plot generation entirely"
     ),
-    show_gradient: bool = typer.Option(
-        False, "--show-gradient", help="Overlay magnetic gradient on anomaly panel"
+    component: Literal[
+        "bz", "bx", "total_field", "amplitude", "gradient"
+    ] = typer.Option(
+        "bz",
+        "--component",
+        help="Anomaly component: bz (default), bx, total_field, amplitude, gradient",
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose output"
@@ -73,16 +78,23 @@ def run(
             typer.echo(f"  Loaded {len(model.bodies)} bodies")
             typer.echo(f"  {len(model.observation_x)} observation points")
 
-        # Calculate anomaly
+        # Calculate all anomaly components in one pass
         if verbose:
             typer.echo("Calculating magnetic anomaly...")
-        anomaly = calculate_anomaly(model)
+        all_components = calculate_anomaly(model, component="all")
+        anomaly = {
+            "bz": all_components.bz,
+            "bx": all_components.bx,
+            "total_field": all_components.total_field,
+            "amplitude": all_components.amplitude,
+            "gradient": all_components.gradient,
+        }[component]
         if verbose:
-            min_val = anomaly.min()
-            max_val = anomaly.max()
-            typer.echo(f"  Anomaly range: {min_val:.2f} to {max_val:.2f} nT")
+            min_val = float(anomaly.min())
+            max_val = float(anomaly.max())
+            typer.echo(f"  {component} range: {min_val:.2f} to {max_val:.2f}")
 
-        # Export results
+        # Export results (uses the selected component)
         if output_csv:
             if verbose:
                 typer.echo(f"Writing CSV to {output_csv}...")
@@ -98,11 +110,17 @@ def run(
                 typer.echo(f"Writing NumPy to {output_npy}...")
             write_numpy(output_npy, model.observation_x, anomaly)
 
-        # Generate plot
+        # Generate plot — always shows TMI on primary axis with gradient overlay
         if not no_plot:
             if verbose:
                 typer.echo("Generating plot...")
-            plot_combined(model, anomaly, save_path=plot, show_gradient=show_gradient)
+            plot_combined(
+                model,
+                all_components.total_field,
+                save_path=plot,
+                component="total_field",
+                gradient=all_components.gradient,
+            )
             if plot:
                 if verbose:
                     typer.echo(f"  Plot saved to {plot}")

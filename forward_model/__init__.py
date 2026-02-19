@@ -11,6 +11,7 @@ Example:
 
 # Data models
 # Computation
+from forward_model.compute import AnomalyComponents as AnomalyComponents
 from forward_model.compute import BatchResult as BatchResult
 from forward_model.compute import batch_calculate as batch_calculate
 from forward_model.compute import calculate_anomaly
@@ -34,6 +35,7 @@ __all__ = [
     "MagneticField",
     "ForwardModel",
     # Computation
+    "AnomalyComponents",
     "BatchResult",
     "batch_calculate",
     "calculate_anomaly",

@@ -1,7 +1,39 @@
 """Talwani (1965) algorithm for 2D magnetic anomalies."""
 
+from dataclasses import dataclass
+from typing import NamedTuple
+
 import numpy as np
 from numpy.typing import NDArray
+
+
+@dataclass
+class AnomalyComponents:
+    """All magnetic anomaly components at each observation point.
+
+    Attributes:
+        bz: Vertical component of the magnetic anomaly (nT).
+        bx: Horizontal component of the magnetic anomaly (nT).
+        total_field: Total field anomaly ΔT (nT), the projection of the anomaly
+                     vector onto the inducing field direction.
+        amplitude: Vector amplitude |ΔB| = sqrt(Bx² + Bz²) in nT.
+        gradient: Horizontal gradient of the total field anomaly d(ΔT)/dx
+                  (nT/m). Forward model of what a total-field gradiometer
+                  measures along the profile.
+    """
+
+    bz: NDArray[np.float64]
+    bx: NDArray[np.float64]
+    total_field: NDArray[np.float64]
+    amplitude: NDArray[np.float64]
+    gradient: NDArray[np.float64]
+
+
+class PolygonComponents(NamedTuple):
+    """Per-polygon Bz and Bx contributions before superposition."""
+
+    bz: NDArray[np.float64]
+    bx: NDArray[np.float64]
 
 
 def field_to_magnetization(
@@ -108,11 +140,13 @@ def compute_polygon_anomaly(
     observation_points: NDArray[np.float64],
     magnetization: NDArray[np.float64],
     min_distance: float = 1e-10,
-) -> NDArray[np.float64]:
-    """Compute magnetic anomaly from a 2D polygon using Talwani algorithm.
+) -> PolygonComponents:
+    """Compute magnetic anomaly components from a 2D polygon using Talwani algorithm.
 
-    Implements the Talwani (1965) algorithm for computing the vertical
-    component of the magnetic anomaly from a 2D polygonal body.
+    Implements the Talwani (1965) algorithm for computing the vertical (Bz) and
+    horizontal (Bx) components of the magnetic anomaly from a 2D polygonal body.
+    Both components are computed in the same edge loop, reusing all intermediate
+    variables (r1, r2, dθ, log term, tx, tz) for efficiency.
 
     Args:
         vertices: Nx2 array of polygon vertices [x, z] in meters.
@@ -121,8 +155,8 @@ def compute_polygon_anomaly(
         min_distance: Minimum distance threshold to avoid singularities (meters).
 
     Returns:
-        Array of length M containing the vertical magnetic anomaly in nT
-        at each observation point.
+        PolygonComponents(bz, bx): Vertical and horizontal anomaly components
+        in nT at each observation point.
 
     References:
         Talwani, M., and Heirtzler, J. R. (1965). Computation of magnetic
@@ -130,7 +164,8 @@ def compute_polygon_anomaly(
     """
     n_vertices = len(vertices)
     n_obs = len(observation_points)
-    anomaly = np.zeros(n_obs, dtype=np.float64)
+    bz = np.zeros(n_obs, dtype=np.float64)
+    bx = np.zeros(n_obs, dtype=np.float64)
 
     # Magnetic constant: μ₀/(4π) in SI units
     # Convert to nT: multiply by 10⁹
@@ -181,12 +216,21 @@ def compute_polygon_anomaly(
         log_term = np.zeros_like(r1)
         np.log(r_ratio, out=log_term, where=valid)
 
-        contrib = np.where(
+        # Bz (vertical): Talwani (1965)
+        bz_contrib = np.where(
             valid,
             Mx * (dtheta * tz - log_term * tx) + Mz * (-dtheta * tx - log_term * tz),
             0.0,
         )
-        anomaly += contrib
+        # Bx (horizontal): Talwani (1965)
+        bx_contrib = np.where(
+            valid,
+            Mx * (dtheta * tx + log_term * tz) + Mz * (-dtheta * tz + log_term * tx),
+            0.0,
+        )
+        bz += bz_contrib
+        bx += bx_contrib
 
-    anomaly *= mu_0_4pi_nT
-    return anomaly
+    bz *= mu_0_4pi_nT
+    bx *= mu_0_4pi_nT
+    return PolygonComponents(bz=bz, bx=bx)

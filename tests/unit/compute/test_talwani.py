@@ -3,10 +3,13 @@
 import numpy as np
 
 from forward_model.compute import (
+    AnomalyComponents,
+    calculate_anomaly,
     compute_demagnetization_factor,
     compute_polygon_anomaly,
     field_to_magnetization,
 )
+from forward_model.models import ForwardModel, GeologicBody, MagneticField
 
 
 class TestFieldToMagnetization:
@@ -150,16 +153,16 @@ class TestComputePolygonAnomaly:
         # Vertical magnetization (simple case)
         mag = np.array([0.0, -1000.0], dtype=np.float64)  # A/m
 
-        anomaly = compute_polygon_anomaly(vertices, obs, mag)
+        result = compute_polygon_anomaly(vertices, obs, mag)
 
         # Basic checks
-        assert anomaly.shape == (5,)
-        assert np.all(np.isfinite(anomaly))
+        assert result.bz.shape == (5,)
+        assert np.all(np.isfinite(result.bz))
 
         # Anomaly should be largest near center of body
         center_idx = 2  # x=25, directly above center
         # Greater than far field
-        assert np.abs(anomaly[center_idx]) > np.abs(anomaly[0])
+        assert np.abs(result.bz[center_idx]) > np.abs(result.bz[0])
 
     def test_symmetry(self) -> None:
         """Test that symmetric body produces symmetric anomaly."""
@@ -178,11 +181,11 @@ class TestComputePolygonAnomaly:
         # Vertical magnetization
         mag = np.array([0.0, -1000.0], dtype=np.float64)
 
-        anomaly = compute_polygon_anomaly(vertices, obs, mag)
+        result = compute_polygon_anomaly(vertices, obs, mag)
 
-        # Check symmetry: anomaly[-100] ≈ anomaly[100], etc.
-        assert np.allclose(anomaly[0], anomaly[4], rtol=1e-10)  # x=-100 vs x=100
-        assert np.allclose(anomaly[1], anomaly[3], rtol=1e-10)  # x=-50 vs x=50
+        # Check symmetry: bz[-100] ≈ bz[100], etc.
+        assert np.allclose(result.bz[0], result.bz[4], rtol=1e-10)  # x=-100 vs x=100
+        assert np.allclose(result.bz[1], result.bz[3], rtol=1e-10)  # x=-50 vs x=50
 
     def test_zero_magnetization(self) -> None:
         """Test that zero magnetization gives zero anomaly."""
@@ -193,8 +196,9 @@ class TestComputePolygonAnomaly:
         obs = np.array([[0.0, 0.0], [50.0, 0.0]], dtype=np.float64)
         mag = np.array([0.0, 0.0], dtype=np.float64)
 
-        anomaly = compute_polygon_anomaly(vertices, obs, mag)
-        assert np.allclose(anomaly, 0.0)
+        result = compute_polygon_anomaly(vertices, obs, mag)
+        assert np.allclose(result.bz, 0.0)
+        assert np.allclose(result.bx, 0.0)
 
     def test_far_field_decay(self) -> None:
         """Test that anomaly decreases with distance."""
@@ -210,12 +214,12 @@ class TestComputePolygonAnomaly:
         )
         mag = np.array([0.0, -1000.0], dtype=np.float64)
 
-        anomaly = compute_polygon_anomaly(vertices, obs, mag)
+        result = compute_polygon_anomaly(vertices, obs, mag)
 
         # Anomaly should decay with distance
-        assert np.abs(anomaly[0]) > np.abs(anomaly[1])
-        assert np.abs(anomaly[1]) > np.abs(anomaly[2])
-        assert np.abs(anomaly[2]) > np.abs(anomaly[3])
+        assert np.abs(result.bz[0]) > np.abs(result.bz[1])
+        assert np.abs(result.bz[1]) > np.abs(result.bz[2])
+        assert np.abs(result.bz[2]) > np.abs(result.bz[3])
 
     def test_degenerate_edge(self) -> None:
         """Test handling of degenerate edges (same vertex repeated)."""
@@ -234,8 +238,8 @@ class TestComputePolygonAnomaly:
         mag = np.array([0.0, -1000.0], dtype=np.float64)
 
         # Should not raise an error
-        anomaly = compute_polygon_anomaly(vertices, obs, mag)
-        assert np.isfinite(anomaly[0])
+        result = compute_polygon_anomaly(vertices, obs, mag)
+        assert np.isfinite(result.bz[0])
 
 
 class TestVectorizedVsScalar:
@@ -305,7 +309,7 @@ class TestVectorizedVsScalar:
         mag: np.ndarray,
     ) -> None:
         scalar = self._scalar_compute(vertices, obs, mag)
-        vectorized = compute_polygon_anomaly(vertices, obs, mag)
+        vectorized = compute_polygon_anomaly(vertices, obs, mag).bz
         max_diff = float(np.max(np.abs(vectorized - scalar)))
         assert max_diff < 1e-10, f"Max abs diff {max_diff} >= 1e-10"
 
@@ -465,3 +469,125 @@ class TestDemagnetizationCorrection:
         )
         n_d = compute_demagnetization_factor(vertices)
         assert n_d <= 0.5
+
+
+class TestAnomalyComponents:
+    """Tests for multi-component anomaly output (Bx, ΔT, amplitude)."""
+
+    # Symmetric rectangle centred at the origin
+    _VERTICES = np.array(
+        [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
+        dtype=np.float64,
+    )
+    _OBS_POS = np.array(
+        [[-100.0, 0.0], [-50.0, 0.0], [50.0, 0.0], [100.0, 0.0]], dtype=np.float64
+    )
+    _OBS_NEG = np.array(
+        [[100.0, 0.0], [50.0, 0.0], [-50.0, 0.0], [-100.0, 0.0]], dtype=np.float64
+    )
+
+    def _simple_model(self, inclination: float = 60.0) -> ForwardModel:
+        """Build a minimal ForwardModel for calculate_anomaly tests."""
+        body = GeologicBody(
+            vertices=[[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
+            susceptibility=0.05,
+            name="Block",
+        )
+        field = MagneticField(
+            intensity=50000.0, inclination=inclination, declination=0.0
+        )
+        return ForwardModel(
+            bodies=[body],
+            field=field,
+            observation_x=[-100.0, -50.0, 0.0, 50.0, 100.0],
+            observation_z=0.0,
+        )
+
+    def test_bx_antisymmetric_for_symmetric_body_vertical_mag(self) -> None:
+        """Bx is antisymmetric: bx(-x) == -bx(+x) for vertical magnetization.
+
+        With purely vertical magnetization (Mx=0, Mz≠0) and a symmetric body,
+        the horizontal component is an odd function of position.
+        """
+        mag = np.array([0.0, -1000.0], dtype=np.float64)  # purely vertical
+
+        # Symmetric pairs at indices (0,3) and (1,2)
+        sym_obs = np.array(
+            [[-100.0, 0.0], [-50.0, 0.0], [50.0, 0.0], [100.0, 0.0]],
+            dtype=np.float64,
+        )
+        result = compute_polygon_anomaly(self._VERTICES, sym_obs, mag)
+        # Antisymmetry: bx(-x) == -bx(x)
+        np.testing.assert_allclose(result.bx[0], -result.bx[3], atol=1e-10)
+        np.testing.assert_allclose(result.bx[1], -result.bx[2], atol=1e-10)
+
+    def test_total_field_equals_bz_at_vertical_inclination(self) -> None:
+        """ΔT == Bz when inclination=90° and declination=0°.
+
+        At vertical inclination: ΔT = Bx·cos(90°)·cos(0°) + Bz·sin(90°) = Bz.
+        """
+        model = self._simple_model(inclination=90.0)
+        bz_array = calculate_anomaly(model, component="bz")
+        tf_array = calculate_anomaly(model, component="total_field")
+        assert isinstance(bz_array, np.ndarray)
+        assert isinstance(tf_array, np.ndarray)
+        np.testing.assert_allclose(tf_array, bz_array, rtol=1e-10)
+
+    def test_amplitude_non_negative(self) -> None:
+        """Amplitude |ΔB| = sqrt(Bx²+Bz²) is always ≥ 0."""
+        model = self._simple_model(inclination=60.0)
+        amplitude = calculate_anomaly(model, component="amplitude")
+        assert isinstance(amplitude, np.ndarray)
+        assert np.all(amplitude >= 0.0)
+
+    def test_calculate_anomaly_all_returns_dataclass(self) -> None:
+        """component='all' returns an AnomalyComponents instance."""
+        model = self._simple_model()
+        result = calculate_anomaly(model, component="all")
+        assert isinstance(result, AnomalyComponents)
+        n = len(model.observation_x)
+        assert result.bz.shape == (n,)
+        assert result.bx.shape == (n,)
+        assert result.total_field.shape == (n,)
+        assert result.amplitude.shape == (n,)
+        assert result.gradient.shape == (n,)
+
+    def test_calculate_anomaly_bz_default_backward_compat(self) -> None:
+        """Default component='bz' returns same array as before."""
+        model = self._simple_model()
+        result_default = calculate_anomaly(model)
+        result_bz = calculate_anomaly(model, component="bz")
+        assert isinstance(result_default, np.ndarray)
+        assert isinstance(result_bz, np.ndarray)
+        np.testing.assert_array_equal(result_default, result_bz)
+
+    def test_gradient_antisymmetric_for_symmetric_body(self) -> None:
+        """d(ΔT)/dx is antisymmetric for a symmetric body at vertical inclination.
+
+        At I=90°, ΔT = Bz. Bz is symmetric about x=0 for a centered body, so
+        its derivative d(ΔT)/dx is antisymmetric: gradient(-x) == -gradient(x).
+        """
+        body = GeologicBody(
+            vertices=[
+                [-25.0, 100.0],
+                [25.0, 100.0],
+                [25.0, 200.0],
+                [-25.0, 200.0],
+            ],
+            susceptibility=0.05,
+            name="Block",
+        )
+        field = MagneticField(intensity=50000.0, inclination=90.0, declination=0.0)
+        model = ForwardModel(
+            bodies=[body],
+            field=field,
+            observation_x=[-200.0, -100.0, 0.0, 100.0, 200.0],
+            observation_z=0.0,
+        )
+        gradient = calculate_anomaly(model, component="gradient")
+        assert isinstance(gradient, np.ndarray)
+        # Antisymmetry: gradient(-x) == -gradient(x)
+        np.testing.assert_allclose(gradient[0], -gradient[4], atol=1e-6)
+        np.testing.assert_allclose(gradient[1], -gradient[3], atol=1e-6)
+        # At x=0, gradient should be ~0 (peak of symmetric anomaly)
+        assert abs(gradient[2]) < 1e-6
