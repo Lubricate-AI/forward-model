@@ -191,7 +191,7 @@ class TestPlotAnomaly:
         plt.close()
 
     def test_plot_anomaly_gradient_overlay_xlim_shared(self) -> None:
-        """When xlim and gradient are both supplied, the twin axis shares the same xlim."""
+        """When xlim and gradient are both supplied, the twin axis shares xlim."""
         obs_x = [0.0, 10.0, 20.0]
         anomaly = np.array([1.0, 2.0, 3.0])
         gradient = np.array([0.1, 0.0, -0.1])
