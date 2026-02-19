@@ -49,6 +49,12 @@ A repo for conducting Talwani-style 2D forward magnetic models
 - `make format` - Auto-format code
 - `make test` - Run pytest
 
+## Versioning
+
+- `python-semantic-release` automatically bumps the version on merge to `main` based on commit types
+- `refactor`, `fix`, `perf` → patch bump; `feat` → minor bump; `BREAKING CHANGE` → major bump
+- ❌ DON'T manually bump the version in `pyproject.toml` or `forward_model/__init__.py`
+
 ## Common Pitfalls & Anti-patterns
 
 ### Package Management
