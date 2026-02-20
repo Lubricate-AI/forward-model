@@ -251,6 +251,92 @@ The combined plot shows:
 
 ---
 
+## 3D Visualization
+
+`plot_model_3d()` extrudes each body's 2D polygon along the y-axis (strike direction)
+to give an intuitive 3D view of the cross-section. The y-extent of each body is taken
+directly from its strike fields, so 2D, 2.5D, and 2.75D bodies all render correctly
+in the same scene.
+
+![3D visualization of a mixed 2D/2.5D/2.75D model](../images/3d_visualization.png)
+
+*Three bodies with different strike configurations — a 2D dyke (blue, full default
+extent), a 2.5D sill (orange, symmetric ±3 000 m), and a 2.75D intrusion (green,
+5 000 m forward / 2 000 m backward). Red dots mark the observation profile at the
+surface.*
+
+### Standalone 3D plot
+
+```python
+from forward_model import load_model
+from forward_model.viz import plot_model_3d
+import matplotlib.pyplot as plt
+
+model = load_model("model.json")
+
+fig = plot_model_3d(model)
+fig.savefig("model_3d.png", dpi=150, bbox_inches="tight")
+plt.show()
+```
+
+### Strike extent rules
+
+| Body type | Fields set | y-extent |
+|-----------|-----------|----------|
+| 2D (infinite strike) | none | `±default_strike / 2` |
+| 2.5D (symmetric) | `strike_half_length` | `±strike_half_length` |
+| 2.75D (asymmetric) | `strike_forward` + `strike_backward` | `−strike_backward … +strike_forward` |
+
+The `default_strike` parameter controls how far 2D bodies are extruded when no strike
+fields are set. It has no effect on 2.5D or 2.75D bodies.
+
+```python
+# 2D bodies extruded ±5 000 m; 2.5D/2.75D bodies use their own fields
+fig = plot_model_3d(model, default_strike=10_000.0)
+```
+
+### Viewing angle
+
+Adjust the elevation and azimuth to find the best perspective for your geometry:
+
+```python
+fig = plot_model_3d(
+    model,
+    elev=30,    # degrees above horizon
+    azim=-45,   # degrees around z-axis
+    alpha=0.6,  # face transparency
+)
+```
+
+### Adding a 3D panel to the combined plot
+
+Pass `show_3d=True` to `plot_combined()` to append a 3D panel below the standard
+two-panel figure:
+
+```python
+from forward_model import load_model, calculate_anomaly
+from forward_model.viz import plot_combined
+
+model = load_model("model.json")
+anomaly = calculate_anomaly(model)
+
+fig = plot_combined(
+    model,
+    anomaly,
+    show_3d=True,
+    default_strike=10_000.0,   # used only for 2D bodies
+    figsize=(12, 12),
+    save_path="combined_3d.png",
+)
+```
+
+!!! note
+    `tight_layout()` is skipped when `show_3d=True` because matplotlib's automatic
+    layout engine does not support mixed 2D/3D axes. Adjust `figsize` manually if
+    panels appear cramped.
+
+---
+
 ## Advanced Customization
 
 For maximum control, access the Matplotlib figure and axes:

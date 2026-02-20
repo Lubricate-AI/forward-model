@@ -4,15 +4,18 @@
 # pyright: reportUnknownArgumentType=false, reportArgumentType=false
 
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.patches import Polygon
+from mpl_toolkits.mplot3d import Axes3D
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from numpy.typing import NDArray
 
+from forward_model.models.body import GeologicBody
 from forward_model.models.model import ForwardModel
 
 
@@ -44,6 +47,22 @@ def _clamp_to_limits(
     if zlim is not None:
         z = max(min(zlim), min(max(zlim), z))
     return x, z
+
+
+def _resolve_strike_extents(
+    body: GeologicBody, default_strike: float
+) -> tuple[float, float]:
+    """Return (y_back, y_front) extrusion limits for a body.
+
+    - 2.75D asymmetric: uses strike_backward / strike_forward fields
+    - 2.5D symmetric: uses strike_half_length field
+    - 2D infinite: splits default_strike symmetrically
+    """
+    if body.strike_forward is not None and body.strike_backward is not None:
+        return -body.strike_backward, body.strike_forward
+    if body.strike_half_length is not None:
+        return -body.strike_half_length, body.strike_half_length
+    return -default_strike / 2.0, default_strike / 2.0
 
 
 def plot_model(
@@ -215,6 +234,111 @@ def plot_model(
     return ax
 
 
+def plot_model_3d(
+    model: ForwardModel,
+    default_strike: float = 10_000.0,
+    ax: Axes3D | None = None,
+    elev: float = 25.0,
+    azim: float = -60.0,
+    alpha: float = 0.7,
+    color_by: Literal["index", "susceptibility"] = "susceptibility",
+) -> Figure:
+    """Plot a 3D extruded view of the geologic bodies in the model.
+
+    Each body's polygon is extruded along the y-axis (strike direction) using
+    the body's own strike fields to determine extent, providing a 3D view of
+    the 2D/2.5D/2.75D cross-sections.
+
+    Args:
+        model: The forward model to visualize.
+        default_strike: Total strike length (m) used when a body has no strike
+                       fields set (2D infinite-strike bodies). Split symmetrically
+                       as ±default_strike/2. Default: 10 000 m.
+        ax: 3D axes to plot on. If None, creates a new figure and 3D axes.
+        elev: Elevation angle (degrees) for the 3D viewing angle.
+        azim: Azimuth angle (degrees) for the 3D viewing angle.
+        alpha: Transparency of polygon faces.
+        color_by: How to color bodies. "index" uses different colors for each
+                 body, "susceptibility" uses a colormap based on susceptibility.
+
+    Returns:
+        The matplotlib Figure object.
+    """
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection="3d")
+    else:
+        fig = cast(Figure, ax.figure)
+
+    # Determine colors based on color_by parameter
+    cmap = plt.cm.viridis  # type: ignore
+    if color_by == "susceptibility":
+        susc_values = [body.susceptibility for body in model.bodies]
+        susc_set = set(susc_values)
+        if len(susc_set) == 1:
+            colors = [cmap(0.5)] * len(model.bodies)
+        else:
+            norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
+            colors = [cmap(norm(body.susceptibility)) for body in model.bodies]  # type: ignore
+    else:
+        colors = plt.cm.tab10(np.linspace(0, 1, max(len(model.bodies), 10)))  # type: ignore
+
+    # Plot each body as an extruded 3D polygon
+    for i, body in enumerate(model.bodies):
+        verts = body.to_numpy()  # shape (N, 2) — columns are [x, z]
+        n = len(verts)
+        color = colors[i % len(colors)] if color_by == "index" else colors[i]
+        face_color = body.color if body.color is not None else color
+
+        y_back, y_front = _resolve_strike_extents(body, default_strike)
+
+        faces: list[list[tuple[float, float, float]]] = []
+        # Front face (y = y_front)
+        faces.append([(float(x), y_front, float(z)) for x, z in verts])
+        # Back face (y = y_back)
+        faces.append([(float(x), y_back, float(z)) for x, z in verts])
+        # Side walls — one quad per edge
+        for j in range(n):
+            j1 = (j + 1) % n
+            xi, zi = float(verts[j, 0]), float(verts[j, 1])
+            xi1, zi1 = float(verts[j1, 0]), float(verts[j1, 1])
+            faces.append(
+                [
+                    (xi, y_back, zi),
+                    (xi1, y_back, zi1),
+                    (xi1, y_front, zi1),
+                    (xi, y_front, zi),
+                ]
+            )
+
+        poly = Poly3DCollection(
+            faces, alpha=alpha, facecolor=face_color, edgecolor="k", linewidth=0.5
+        )
+        ax.add_collection3d(poly)
+
+    # Plot observation line in the profile plane (y = 0)
+    obs_x = list(model.observation_x)
+    obs_z = model.observation_z
+    ax.plot3D(
+        obs_x,
+        [0.0] * len(obs_x),
+        [obs_z] * len(obs_x),
+        "ro-",
+        markersize=4,
+        label="Observation points",
+    )
+
+    ax.set_xlabel("X (m)")
+    ax.set_ylabel("Y / Strike (m)")
+    ax.set_zlabel("Depth (m)")
+    ax.set_title("3D Cross-Section View", fontsize=13, fontweight="bold")
+    ax.view_init(elev=elev, azim=azim)
+    ax.invert_zaxis()
+    ax.legend(loc="upper left")
+
+    return fig
+
+
 _COMPONENT_LABELS: dict[str, tuple[str, str]] = {
     "bz": ("Bz (nT)", "Vertical Component (Bz)"),
     "bx": ("Bx (nT)", "Horizontal Component (Bx)"),
@@ -319,13 +443,16 @@ def plot_combined(
     show_label_arrows: bool | dict[str, bool] = False,
     component: str = "total_field",
     gradient: NDArray[np.float64] | None = None,
+    show_3d: bool = False,
+    default_strike: float = 10_000.0,
 ) -> Figure:
     """Create combined plot with cross-section and anomaly profile.
 
     Creates a two-panel figure with the geologic cross-section on top
     and the magnetic anomaly profile below, with aligned x-axes. When
     ``gradient`` is supplied, d(ΔT)/dx is overlaid on a secondary y-axis
-    in the anomaly panel.
+    in the anomaly panel. When ``show_3d`` is True, a third panel with a
+    3D extruded view is added below the anomaly panel.
 
     Args:
         model: The forward model to visualize.
@@ -346,6 +473,9 @@ def plot_combined(
                    One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``.
         gradient: Optional d(ΔT)/dx values (nT/m). When provided, overlaid on a
                   secondary y-axis in the anomaly panel.
+        show_3d: If True, add a third panel with a 3D extruded view.
+        default_strike: Total strike length (m) used for 2D (infinite-strike) bodies
+                       when ``show_3d=True``. Passed through to ``plot_model_3d``.
 
     Returns:
         The matplotlib Figure object.
@@ -366,9 +496,17 @@ def plot_combined(
         if figsize is None:
             figsize = (12, 8)
 
-        fig, (ax1, ax2) = plt.subplots(
-            2, 1, figsize=figsize, sharex=True, gridspec_kw={"hspace": 0.15}
-        )
+        ax3d: Axes3D | None = None
+        if show_3d:
+            fig = plt.figure(figsize=figsize)
+            gs = fig.add_gridspec(3, 1, hspace=0.15)
+            ax1 = fig.add_subplot(gs[0])
+            ax2 = fig.add_subplot(gs[1], sharex=ax1)
+            ax3d = fig.add_subplot(gs[2], projection="3d")
+        else:
+            fig, (ax1, ax2) = plt.subplots(
+                2, 1, figsize=figsize, sharex=True, gridspec_kw={"hspace": 0.15}
+            )
 
         # Plot cross-section on top
         plot_model(
@@ -394,12 +532,17 @@ def plot_combined(
             gradient=gradient,
         )
 
+        # Plot 3D view if requested
+        if show_3d:
+            plot_model_3d(model, default_strike=default_strike, ax=ax3d)
+
         if xlim is not None:
             ax1.set_xlim(xlim)
             ax2.set_xlim(xlim)
 
-        # Adjust layout
-        fig.tight_layout()
+        # Adjust layout (tight_layout is incompatible with 3D axes)
+        if not show_3d:
+            fig.tight_layout()
 
         # Save if requested
         if save_path is not None:

@@ -36,3 +36,48 @@ def simple_model(
         observation_x=[-100.0, -50.0, 0.0, 25.0, 50.0, 100.0, 150.0],
         observation_z=0.0,
     )
+
+
+@pytest.fixture
+def body_2_5d() -> GeologicBody:
+    """2.5D body with strike_half_length=5000 m."""
+    return GeologicBody(
+        vertices=[[0, 100], [50, 100], [50, 200], [0, 200]],
+        susceptibility=0.05,
+        name="Body2_5D",
+        strike_half_length=5000.0,
+    )
+
+
+@pytest.fixture
+def body_2_75d() -> GeologicBody:
+    """2.75D body with asymmetric strike (forward=8000, backward=3000)."""
+    return GeologicBody(
+        vertices=[[0, 100], [50, 100], [50, 200], [0, 200]],
+        susceptibility=0.08,
+        name="Body2_75D",
+        strike_forward=8000.0,
+        strike_backward=3000.0,
+    )
+
+
+@pytest.fixture
+def model_2_5d(body_2_5d: GeologicBody, earth_field: MagneticField) -> ForwardModel:
+    """Forward model with a 2.5D body."""
+    return ForwardModel(
+        bodies=[body_2_5d],
+        field=earth_field,
+        observation_x=[-100.0, 0.0, 100.0],
+        observation_z=0.0,
+    )
+
+
+@pytest.fixture
+def model_2_75d(body_2_75d: GeologicBody, earth_field: MagneticField) -> ForwardModel:
+    """Forward model with a 2.75D body."""
+    return ForwardModel(
+        bodies=[body_2_75d],
+        field=earth_field,
+        observation_x=[-100.0, 0.0, 100.0],
+        observation_z=0.0,
+    )
