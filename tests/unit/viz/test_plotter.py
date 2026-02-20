@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from forward_model.models import ForwardModel
-from forward_model.viz import plot_anomaly, plot_combined, plot_model
+from forward_model.viz import plot_anomaly, plot_combined, plot_model, plot_model_3d
 from forward_model.viz.plotter import _polygon_centroid
 
 
@@ -441,6 +441,20 @@ class TestPlotCombined:
         assert len(annotations) > 0
         plt.close(fig)
 
+    def test_show_3d_adds_third_panel(self, simple_model: ForwardModel) -> None:
+        """show_3d=True adds a third (3D) panel to the combined figure."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+        fig = plot_combined(simple_model, anomaly, show_3d=True)
+        assert len(fig.axes) >= 3
+        plt.close(fig)
+
+    def test_show_3d_false_keeps_two_panels(self, simple_model: ForwardModel) -> None:
+        """show_3d=False (default) keeps the original two-panel layout."""
+        anomaly = np.random.randn(len(simple_model.observation_x))
+        fig = plot_combined(simple_model, anomaly, show_3d=False)
+        assert len(fig.axes) == 2
+        plt.close(fig)
+
 
 class TestPlotModelBodyVisualProperties:
     """Tests verifying plot_model respects body-level color and hatch."""
@@ -599,3 +613,69 @@ class TestPlotModelLabelFeatures:
         assert len(annotations) == 1
         assert annotations[0].arrow_patch is None
         plt.close()
+
+
+class TestPlotModel3D:
+    """Tests for plot_model_3d function."""
+
+    def test_returns_figure(self, simple_model: ForwardModel) -> None:
+        """Smoke test: plot_model_3d returns a Figure without errors."""
+        from matplotlib.figure import Figure
+
+        fig = plot_model_3d(simple_model)
+        assert isinstance(fig, Figure)
+        plt.close(fig)
+
+    def test_returns_figure_2_5d(self, model_2_5d: ForwardModel) -> None:
+        """Smoke test: 2.5D model renders without errors."""
+        from matplotlib.figure import Figure
+
+        fig = plot_model_3d(model_2_5d)
+        assert isinstance(fig, Figure)
+        plt.close(fig)
+
+    def test_returns_figure_2_75d(self, model_2_75d: ForwardModel) -> None:
+        """Smoke test: 2.75D model renders without errors."""
+        from matplotlib.figure import Figure
+
+        fig = plot_model_3d(model_2_75d)
+        assert isinstance(fig, Figure)
+        plt.close(fig)
+
+    def test_default_strike_fallback(self, simple_model: ForwardModel) -> None:
+        """2D body (no strike fields) renders using default_strike without errors."""
+        from matplotlib.figure import Figure
+
+        fig = plot_model_3d(simple_model, default_strike=20_000.0)
+        assert isinstance(fig, Figure)
+        plt.close(fig)
+
+    def test_custom_default_strike(self, simple_model: ForwardModel) -> None:
+        """Different default_strike values produce a valid Figure."""
+        from matplotlib.figure import Figure
+
+        fig = plot_model_3d(simple_model, default_strike=500.0)
+        assert isinstance(fig, Figure)
+        plt.close(fig)
+
+    def test_accepts_existing_ax(self, simple_model: ForwardModel) -> None:
+        """Passing an existing Axes3D reuses it and returns its figure."""
+        from mpl_toolkits.mplot3d import Axes3D
+
+        fig_pre = plt.figure()
+        ax3d = fig_pre.add_subplot(111, projection="3d")
+        assert isinstance(ax3d, Axes3D)
+        fig_result = plot_model_3d(simple_model, ax=ax3d)
+        assert fig_result is fig_pre
+        plt.close(fig_pre)
+
+    def test_viewing_angle(self, simple_model: ForwardModel) -> None:
+        """Custom elev/azim are applied to the 3D axes."""
+        from mpl_toolkits.mplot3d import Axes3D
+
+        fig = plot_model_3d(simple_model, elev=30.0, azim=-45.0)
+        ax3d = fig.axes[0]
+        assert isinstance(ax3d, Axes3D)
+        assert abs(ax3d.elev - 30.0) < 1e-6
+        assert abs(ax3d.azim - (-45.0)) < 1e-6
+        plt.close(fig)
