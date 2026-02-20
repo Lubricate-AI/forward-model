@@ -11,7 +11,7 @@ import numpy as np
 
 from forward_model.models import ForwardModel
 from forward_model.viz import plot_anomaly, plot_combined, plot_model, plot_model_3d
-from forward_model.viz.plotter import _polygon_centroid
+from forward_model.viz.plotter import _polygon_centroid, _resolve_strike_extents
 
 
 class TestPlotModel:
@@ -613,6 +613,49 @@ class TestPlotModelLabelFeatures:
         assert len(annotations) == 1
         assert annotations[0].arrow_patch is None
         plt.close()
+
+
+class TestResolveStrikeExtents:
+    """Unit tests for the _resolve_strike_extents helper."""
+
+    def _body(self, **kwargs: object) -> "object":
+        from forward_model.models import GeologicBody
+
+        return GeologicBody(
+            vertices=[[0, 100], [50, 100], [50, 200], [0, 200]],
+            susceptibility=0.05,
+            name="Test",
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def test_2d_uses_default_strike_symmetrically(self) -> None:
+        """2D body (no strike fields) splits default_strike symmetrically."""
+        body = self._body()
+        y_back, y_front = _resolve_strike_extents(body, default_strike=10_000.0)  # type: ignore[arg-type]
+        assert y_back == -5_000.0
+        assert y_front == 5_000.0
+
+    def test_2_5d_uses_strike_half_length(self) -> None:
+        """2.5D body uses ±strike_half_length."""
+        body = self._body(strike_half_length=3_000.0)
+        y_back, y_front = _resolve_strike_extents(body, default_strike=10_000.0)  # type: ignore[arg-type]
+        assert y_back == -3_000.0
+        assert y_front == 3_000.0
+
+    def test_2_75d_uses_asymmetric_fields(self) -> None:
+        """2.75D body uses −strike_backward … +strike_forward."""
+        body = self._body(strike_forward=8_000.0, strike_backward=3_000.0)
+        y_back, y_front = _resolve_strike_extents(body, default_strike=10_000.0)  # type: ignore[arg-type]
+        assert y_back == -3_000.0
+        assert y_front == 8_000.0
+
+    def test_2_5d_ignores_default_strike(self) -> None:
+        """2.5D body extent is independent of default_strike."""
+        body = self._body(strike_half_length=500.0)
+        y_back1, y_front1 = _resolve_strike_extents(body, default_strike=1_000.0)  # type: ignore[arg-type]
+        y_back2, y_front2 = _resolve_strike_extents(body, default_strike=50_000.0)  # type: ignore[arg-type]
+        assert y_back1 == y_back2
+        assert y_front1 == y_front2
 
 
 class TestPlotModel3D:

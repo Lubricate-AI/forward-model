@@ -330,9 +330,11 @@ def plot_model_3d(
 
     ax.set_xlabel("X (m)")
     ax.set_ylabel("Y / Strike (m)")
-    ax.set_zlabel("Z (m)")
+    ax.set_zlabel("Depth (m)")
     ax.set_title("3D Cross-Section View", fontsize=13, fontweight="bold")
     ax.view_init(elev=elev, azim=azim)
+    ax.invert_zaxis()
+    ax.legend(loc="upper left")
 
     return fig
 
