@@ -2,7 +2,7 @@
 
 # pyright: reportUnknownMemberType=false, reportPrivateUsage=false
 # pyright: reportOperatorIssue=false, reportUnknownArgumentType=false
-# pyright: reportGeneralTypeIssues=false, reportAttributeAccessIssue=false
+# pyright: reportGeneralTypeIssues=false
 
 from pathlib import Path
 
@@ -463,7 +463,7 @@ class TestPlotCombined:
         xlim = (-50.0, 75.0)
         fig = plot_combined(simple_model, anomaly, show_3d=True, xlim=xlim)
         ax3d = fig.axes[2]
-        assert ax3d.get_xlim() == xlim
+        assert ax3d.get_xlim() == xlim  # pyright: ignore[reportAttributeAccessIssue]
         plt.close(fig)
 
     def test_show_3d_with_zlim_applies_to_3d_panel(
@@ -474,7 +474,8 @@ class TestPlotCombined:
         zlim = (50.0, 250.0)
         fig = plot_combined(simple_model, anomaly, show_3d=True, zlim=zlim)
         ax3d = fig.axes[2]
-        assert ax3d.get_zlim() == zlim
+        # Z-axis is inverted by plot_model_3d, so limits are stored reversed
+        assert sorted(ax3d.get_zlim()) == sorted(zlim)  # pyright: ignore[reportAttributeAccessIssue]
         plt.close(fig)
 
 
