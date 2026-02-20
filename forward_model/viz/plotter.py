@@ -540,6 +540,16 @@ def plot_combined(
             ax1.set_xlim(xlim)
             ax2.set_xlim(xlim)
 
+        if show_3d and ax3d is not None:
+            if xlim is not None:
+                ax3d.set_xlim(xlim)
+            if zlim is not None:
+                # Preserve the Z-axis inversion applied by plot_model_3d
+                if ax3d.zaxis_inverted():  # pyright: ignore[reportCallIssue]
+                    ax3d.set_zlim(zlim[1], zlim[0])
+                else:
+                    ax3d.set_zlim(zlim)
+
         # Adjust layout (tight_layout is incompatible with 3D axes)
         if not show_3d:
             fig.tight_layout()

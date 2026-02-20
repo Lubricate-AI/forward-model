@@ -455,6 +455,29 @@ class TestPlotCombined:
         assert len(fig.axes) == 2
         plt.close(fig)
 
+    def test_show_3d_with_xlim_applies_to_3d_panel(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """When show_3d=True and xlim is supplied, xlim is applied to the 3D axes."""
+        anomaly = np.zeros(len(simple_model.observation_x))
+        xlim = (-50.0, 75.0)
+        fig = plot_combined(simple_model, anomaly, show_3d=True, xlim=xlim)
+        ax3d = fig.axes[2]
+        assert ax3d.get_xlim() == xlim  # pyright: ignore[reportAttributeAccessIssue]
+        plt.close(fig)
+
+    def test_show_3d_with_zlim_applies_to_3d_panel(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """When show_3d=True and zlim is supplied, zlim is applied to the 3D axes."""
+        anomaly = np.zeros(len(simple_model.observation_x))
+        zlim = (50.0, 250.0)
+        fig = plot_combined(simple_model, anomaly, show_3d=True, zlim=zlim)
+        ax3d = fig.axes[2]
+        # Z-axis is inverted by plot_model_3d, so limits are stored reversed
+        assert sorted(ax3d.get_zlim()) == sorted(zlim)  # pyright: ignore[reportAttributeAccessIssue]
+        plt.close(fig)
+
 
 class TestPlotModelBodyVisualProperties:
     """Tests verifying plot_model respects body-level color and hatch."""
