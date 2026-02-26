@@ -174,24 +174,14 @@ class GeologicBody(BaseModel, frozen=True):
             )
         return self
 
-    @field_validator("thermal_conductivity")
+    @field_validator("thermal_conductivity", "heat_generation")
     @classmethod
-    def validate_thermal_conductivity(cls, v: float | None) -> float | None:
-        """Validate thermal_conductivity is finite."""
+    def validate_thermal_fields(cls, v: float | None) -> float | None:
+        """Validate thermal_conductivity and heat_generation are finite."""
         if v is None:
             return v
         if not math.isfinite(v):
-            raise ValueError(f"thermal_conductivity must be finite, got {v}")
-        return v
-
-    @field_validator("heat_generation")
-    @classmethod
-    def validate_heat_generation(cls, v: float | None) -> float | None:
-        """Validate heat_generation is finite."""
-        if v is None:
-            return v
-        if not math.isfinite(v):
-            raise ValueError(f"heat_generation must be finite, got {v}")
+            raise ValueError(f"Thermal field must be finite, got {v}")
         return v
 
     @field_validator("color")

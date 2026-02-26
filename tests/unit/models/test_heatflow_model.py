@@ -17,7 +17,7 @@ class TestHeatFlowModel:
         assert heat_flow_model.observation_z == 0.0
         assert heat_flow_model.background_heat_flow == 65.0
 
-    def test_empty_bodies_list_rejected(self) -> None:
+    def test_empty_bodies_list(self) -> None:
         """Test that empty bodies list is rejected."""
         with pytest.raises(ValidationError, match="at least 1 item"):
             HeatFlowModel(
@@ -26,9 +26,7 @@ class TestHeatFlowModel:
                 observation_z=0.0,
             )
 
-    def test_non_finite_observation_x_rejected(
-        self, thermal_body: GeologicBody
-    ) -> None:
+    def test_non_finite_observation_x(self, thermal_body: GeologicBody) -> None:
         """Test that non-finite observation x coordinates are rejected."""
         with pytest.raises(ValidationError, match="must be finite"):
             HeatFlowModel(
@@ -37,9 +35,7 @@ class TestHeatFlowModel:
                 observation_z=0.0,
             )
 
-    def test_non_finite_observation_z_rejected(
-        self, thermal_body: GeologicBody
-    ) -> None:
+    def test_non_finite_observation_z(self, thermal_body: GeologicBody) -> None:
         """Test that non-finite observation z is rejected."""
         with pytest.raises(ValidationError, match="must be finite"):
             HeatFlowModel(
@@ -67,9 +63,7 @@ class TestHeatFlowModel:
         )
         assert model.background_heat_flow == 80.0
 
-    def test_background_heat_flow_non_finite_rejected(
-        self, thermal_body: GeologicBody
-    ) -> None:
+    def test_background_heat_flow_non_finite(self, thermal_body: GeologicBody) -> None:
         """Non-finite background_heat_flow is rejected."""
         with pytest.raises(ValidationError, match="must be finite"):
             HeatFlowModel(
