@@ -114,17 +114,32 @@ def plot_model(
     cmap = plt.cm.viridis  # type: ignore
     if color_by == "susceptibility":
         # Use susceptibility-based colormap
-        susc_values = [body.susceptibility for body in model.bodies]
+        _FALLBACK_COLOR = (0.5, 0.5, 0.5, 1.0)
+        susc_values = [
+            body.susceptibility
+            for body in model.bodies
+            if body.susceptibility is not None
+        ]
         susc_set = set(susc_values)
 
-        if len(susc_set) == 1:
-            # All susceptibilities are the same - use single color
-            colors = [cmap(0.5)] * len(model.bodies)
+        if not susc_values or len(susc_set) == 1:
+            # All susceptibilities are the same or none present - use single/fallback
+            colors = [
+                cmap(0.5) if body.susceptibility is not None else _FALLBACK_COLOR
+                for body in model.bodies
+            ]
             _auto_colorbar = False
         else:
             # Multiple susceptibilities - use colormap
             norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
-            colors = [cmap(norm(body.susceptibility)) for body in model.bodies]  # type: ignore
+            colors = [
+                (
+                    cmap(norm(body.susceptibility))
+                    if body.susceptibility is not None
+                    else _FALLBACK_COLOR
+                )
+                for body in model.bodies
+            ]  # type: ignore
             _auto_colorbar = True
     else:
         # Use index-based colors
@@ -156,7 +171,10 @@ def plot_model(
             lx, lz = _polygon_centroid(vertices)
             lx, lz = _clamp_to_limits(lx, lz, xlim, zlim)
 
-        label = f"{body.name}\n(χ={body.susceptibility:.3f})"
+        if body.susceptibility is not None:
+            label = f"{body.name}\n(χ={body.susceptibility:.3f})"
+        else:
+            label = body.name
 
         if label_offsets and body.name in label_offsets:
             dx, dz = label_offsets[body.name]
@@ -188,7 +206,11 @@ def plot_model(
 
     # Add colorbar if using susceptibility coloring with multiple values
     if color_by == "susceptibility" and _auto_colorbar and show_colorbar:
-        susc_values = [body.susceptibility for body in model.bodies]
+        susc_values = [
+            body.susceptibility
+            for body in model.bodies
+            if body.susceptibility is not None
+        ]
         sm = plt.cm.ScalarMappable(  # type: ignore
             cmap=cmap,
             norm=plt.Normalize(vmin=min(susc_values), vmax=max(susc_values)),  # type: ignore
@@ -273,13 +295,28 @@ def plot_model_3d(
     # Determine colors based on color_by parameter
     cmap = plt.cm.viridis  # type: ignore
     if color_by == "susceptibility":
-        susc_values = [body.susceptibility for body in model.bodies]
+        _FALLBACK_COLOR = (0.5, 0.5, 0.5, 1.0)
+        susc_values = [
+            body.susceptibility
+            for body in model.bodies
+            if body.susceptibility is not None
+        ]
         susc_set = set(susc_values)
-        if len(susc_set) == 1:
-            colors = [cmap(0.5)] * len(model.bodies)
+        if not susc_values or len(susc_set) == 1:
+            colors = [
+                cmap(0.5) if body.susceptibility is not None else _FALLBACK_COLOR
+                for body in model.bodies
+            ]
         else:
             norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
-            colors = [cmap(norm(body.susceptibility)) for body in model.bodies]  # type: ignore
+            colors = [
+                (
+                    cmap(norm(body.susceptibility))
+                    if body.susceptibility is not None
+                    else _FALLBACK_COLOR
+                )
+                for body in model.bodies
+            ]  # type: ignore
     else:
         colors = plt.cm.tab10(np.linspace(0, 1, max(len(model.bodies), 10)))  # type: ignore
 

@@ -29,6 +29,7 @@ from forward_model.io import (
 from forward_model.models import (
     ForwardModel,
     GeologicBody,
+    GravityModel,
     HeatFlowModel,
     MagneticField,
 )
@@ -44,6 +45,7 @@ __all__ = [
     "GeologicBody",
     "MagneticField",
     "ForwardModel",
+    "GravityModel",
     "HeatFlowModel",
     # Computation
     "AnomalyComponents",

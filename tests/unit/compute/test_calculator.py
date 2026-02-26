@@ -1,6 +1,7 @@
 """Tests for high-level anomaly calculator."""
 
 import numpy as np
+import pytest
 
 from forward_model.compute import calculate_anomaly
 from forward_model.models import ForwardModel, GeologicBody, MagneticField
@@ -125,3 +126,19 @@ class TestCalculateAnomaly:
             anomaly = calculate_anomaly(model)
             assert anomaly.shape == (n_points,)
             assert np.all(np.isfinite(anomaly))
+
+    def test_no_susceptibility_raises(self, earth_field: MagneticField) -> None:
+        """ValueError is raised when a body has no susceptibility set."""
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            density=2670.0,
+            name="DensityOnly",
+        )
+        model = ForwardModel(
+            bodies=[body],
+            field=earth_field,
+            observation_x=[0.0, 50.0, 100.0],
+            observation_z=0.0,
+        )
+        with pytest.raises(ValueError, match="DensityOnly"):
+            calculate_anomaly(model)
