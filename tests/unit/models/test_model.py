@@ -83,3 +83,79 @@ class TestForwardModel:
         assert len(model.bodies) == 2
         assert model.bodies[0].name == "Rectangle"
         assert model.bodies[1].name == "Body2"
+
+
+class TestForwardModelOverlapValidation:
+    """Tests for the body overlap model_validator on ForwardModel."""
+
+    def _make_model(
+        self,
+        bodies: list[GeologicBody],
+        earth_field: MagneticField,
+    ) -> ForwardModel:
+        return ForwardModel(
+            bodies=bodies,
+            field=earth_field,
+            observation_x=[0.0, 50.0],
+            observation_z=0.0,
+        )
+
+    def test_partial_overlap_raises(
+        self, simple_rectangle: GeologicBody, earth_field: MagneticField
+    ) -> None:
+        """Partially overlapping rectangles raise ValidationError."""
+        body_b = GeologicBody(
+            vertices=[[25.0, 50.0], [75.0, 50.0], [75.0, 150.0], [25.0, 150.0]],
+            susceptibility=0.05,
+            name="PartialOverlap",
+        )
+        with pytest.raises(ValidationError, match="overlap"):
+            self._make_model([simple_rectangle, body_b], earth_field)
+
+    def test_full_containment_raises(
+        self, simple_rectangle: GeologicBody, earth_field: MagneticField
+    ) -> None:
+        """A body fully containing another raises ValidationError."""
+        outer = GeologicBody(
+            vertices=[[-50.0, 50.0], [150.0, 50.0], [150.0, 300.0], [-50.0, 300.0]],
+            susceptibility=0.02,
+            name="Outer",
+        )
+        with pytest.raises(ValidationError, match="overlap"):
+            self._make_model([simple_rectangle, outer], earth_field)
+
+    def test_adjacent_shared_edge_does_not_raise(
+        self, simple_rectangle: GeologicBody, earth_field: MagneticField
+    ) -> None:
+        """Bodies sharing only an edge are accepted (valid geological contact)."""
+        adjacent = GeologicBody(
+            vertices=[[50.0, 100.0], [100.0, 100.0], [100.0, 200.0], [50.0, 200.0]],
+            susceptibility=0.03,
+            name="Adjacent",
+        )
+        model = self._make_model([simple_rectangle, adjacent], earth_field)
+        assert len(model.bodies) == 2
+
+    def test_corner_touch_does_not_raise(
+        self, simple_rectangle: GeologicBody, earth_field: MagneticField
+    ) -> None:
+        """Bodies touching only at a single corner are accepted."""
+        corner = GeologicBody(
+            vertices=[[50.0, 200.0], [100.0, 200.0], [100.0, 300.0], [50.0, 300.0]],
+            susceptibility=0.04,
+            name="CornerTouch",
+        )
+        model = self._make_model([simple_rectangle, corner], earth_field)
+        assert len(model.bodies) == 2
+
+    def test_non_overlapping_multiple_bodies_passes(
+        self, simple_rectangle: GeologicBody, earth_field: MagneticField
+    ) -> None:
+        """Non-overlapping bodies pass validation."""
+        body2 = GeologicBody(
+            vertices=[[100.0, 50.0], [150.0, 50.0], [150.0, 100.0], [100.0, 100.0]],
+            susceptibility=0.1,
+            name="Body2",
+        )
+        model = self._make_model([simple_rectangle, body2], earth_field)
+        assert len(model.bodies) == 2
