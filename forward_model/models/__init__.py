@@ -6,4 +6,10 @@ from forward_model.models.gravity_model import GravityModel
 from forward_model.models.heatflow_model import HeatFlowModel
 from forward_model.models.model import ForwardModel
 
-__all__ = ["GeologicBody", "MagneticField", "ForwardModel", "GravityModel", "HeatFlowModel"]
+__all__ = [
+    "GeologicBody",
+    "MagneticField",
+    "ForwardModel",
+    "GravityModel",
+    "HeatFlowModel",
+]
