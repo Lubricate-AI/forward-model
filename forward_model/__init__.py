@@ -26,7 +26,7 @@ from forward_model.io import (
     write_json,
     write_numpy,
 )
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import ForwardModel, GeologicBody, GravityModel, MagneticField
 
 # Visualization
 from forward_model.viz import plot_anomaly, plot_combined, plot_model
@@ -39,6 +39,7 @@ __all__ = [
     "GeologicBody",
     "MagneticField",
     "ForwardModel",
+    "GravityModel",
     # Computation
     "AnomalyComponents",
     "BatchResult",

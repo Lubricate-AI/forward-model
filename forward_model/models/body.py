@@ -10,13 +10,19 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class GeologicBody(BaseModel, frozen=True):
-    """A 2D polygonal geologic body with magnetic susceptibility.
+    """A 2D polygonal geologic body with physical properties for forward modeling.
 
     Attributes:
         vertices: List of [x, z] coordinate pairs defining the polygon boundary.
                  Minimum 3 vertices required. Coordinates in meters.
         susceptibility: Magnetic susceptibility (SI units, dimensionless).
-                       Must be finite.
+                       Must be finite. Optional; defaults to None.
+                       At least one of ``susceptibility`` or ``density`` must
+                       be provided.
+        density: Density contrast in kg/m³ for gravity modeling. Accepts any
+                finite value (positive, negative, or zero — density contrasts
+                can be signed). Optional; defaults to None. At least one of
+                ``susceptibility`` or ``density`` must be provided.
         name: Human-readable identifier for this body.
         label_loc: Optional [x, z] override for the label position. When set,
                   the plotter uses this location directly (no clamping applied).
@@ -58,7 +64,8 @@ class GeologicBody(BaseModel, frozen=True):
     """
 
     vertices: list[list[float]] = Field(min_length=3)
-    susceptibility: float
+    susceptibility: float | None = None
+    density: float | None = Field(default=None)
     name: str
     label_loc: list[float] | None = Field(default=None)
     color: str | list[float] | None = Field(default=None)
@@ -92,10 +99,22 @@ class GeologicBody(BaseModel, frozen=True):
 
     @field_validator("susceptibility")
     @classmethod
-    def validate_susceptibility(cls, v: float) -> float:
-        """Validate susceptibility is finite."""
+    def validate_susceptibility(cls, v: float | None) -> float | None:
+        """Validate susceptibility is finite when provided."""
+        if v is None:
+            return v
         if not math.isfinite(v):
             raise ValueError(f"Susceptibility must be finite, got {v}")
+        return v
+
+    @field_validator("density")
+    @classmethod
+    def validate_density(cls, v: float | None) -> float | None:
+        """Validate density is finite when provided."""
+        if v is None:
+            return v
+        if not math.isfinite(v):
+            raise ValueError(f"Density must be finite, got {v}")
         return v
 
     @field_validator("label_loc")
@@ -162,6 +181,15 @@ class GeologicBody(BaseModel, frozen=True):
         if (self.strike_forward is None) != (self.strike_backward is None):
             raise ValueError(
                 "strike_forward and strike_backward must both be set or both be None"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_physical_property(self) -> "GeologicBody":
+        """Validate that at least one of susceptibility or density is provided."""
+        if self.susceptibility is None and self.density is None:
+            raise ValueError(
+                "At least one of 'susceptibility' or 'density' must be provided"
             )
         return self
 

@@ -155,6 +155,11 @@ def calculate_anomaly(
         ]
     ] = []
     for body in model.bodies:
+        if body.susceptibility is None:
+            raise ValueError(
+                f"Body '{body.name}' has no susceptibility; "
+                "magnetic calculation requires susceptibility to be set"
+            )
         magnetization = field_to_magnetization(
             susceptibility=body.susceptibility,
             field_intensity=model.field.intensity,

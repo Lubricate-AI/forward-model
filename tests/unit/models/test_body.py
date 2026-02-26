@@ -457,3 +457,111 @@ class TestGeologicBodyAsymmetricStrike:
         restored = GeologicBody(**d)
         assert restored.strike_forward == original.strike_forward
         assert restored.strike_backward == original.strike_backward
+
+
+class TestGeologicBodyDensity:
+    """Tests for the density field on GeologicBody."""
+
+    _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
+
+    def _body(self, **kwargs: object) -> GeologicBody:
+        return GeologicBody(
+            vertices=self._VERTS,
+            name="Body",
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    def test_density_only_accepted(self) -> None:
+        """Body with only density (no susceptibility) is valid."""
+        body = self._body(density=2670.0)
+        assert body.density == 2670.0
+        assert body.susceptibility is None
+
+    def test_density_default_is_none(self) -> None:
+        """density defaults to None when not provided (susceptibility must be set)."""
+        body = self._body(susceptibility=0.01)
+        assert body.density is None
+
+    def test_density_positive(self) -> None:
+        """Positive density contrast is accepted."""
+        body = self._body(density=500.0)
+        assert body.density == 500.0
+
+    def test_density_negative(self) -> None:
+        """Negative density contrast is accepted (lighter body than host)."""
+        body = self._body(density=-300.0)
+        assert body.density == -300.0
+
+    def test_density_zero(self) -> None:
+        """Zero density contrast is accepted."""
+        body = self._body(density=0.0)
+        assert body.density == 0.0
+
+    def test_density_non_finite_inf_rejected(self) -> None:
+        """Infinite density raises ValidationError."""
+        with pytest.raises(ValidationError, match="finite"):
+            self._body(density=float("inf"))
+
+    def test_density_non_finite_nan_rejected(self) -> None:
+        """NaN density raises ValidationError."""
+        with pytest.raises(ValidationError, match="finite"):
+            self._body(density=float("nan"))
+
+    def test_both_susceptibility_and_density_accepted(self) -> None:
+        """Body with both susceptibility and density is valid."""
+        body = self._body(susceptibility=0.05, density=2670.0)
+        assert body.susceptibility == 0.05
+        assert body.density == 2670.0
+
+    def test_json_roundtrip_density_only(self) -> None:
+        """model_dump() round-trip preserves density-only body."""
+        original = self._body(density=1500.0)
+        d = original.model_dump()
+        restored = GeologicBody(**d)
+        assert restored.density == original.density
+        assert restored.susceptibility is None
+
+
+class TestGeologicBodyPhysicalPropertyValidation:
+    """Tests for the at-least-one-of susceptibility/density model validator."""
+
+    _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
+
+    def test_neither_susceptibility_nor_density_raises(self) -> None:
+        """Omitting both susceptibility and density raises ValidationError."""
+        with pytest.raises(ValidationError, match="At least one of"):
+            GeologicBody(
+                vertices=self._VERTS,
+                name="Body",
+            )
+
+    def test_susceptibility_only_accepted(self) -> None:
+        """Providing only susceptibility satisfies the validator."""
+        body = GeologicBody(
+            vertices=self._VERTS,
+            susceptibility=0.01,
+            name="Body",
+        )
+        assert body.susceptibility == 0.01
+        assert body.density is None
+
+    def test_density_only_accepted(self) -> None:
+        """Providing only density satisfies the validator."""
+        body = GeologicBody(
+            vertices=self._VERTS,
+            density=2670.0,
+            name="Body",
+        )
+        assert body.density == 2670.0
+        assert body.susceptibility is None
+
+    def test_both_accepted(self) -> None:
+        """Providing both susceptibility and density is valid."""
+        body = GeologicBody(
+            vertices=self._VERTS,
+            susceptibility=0.05,
+            density=2670.0,
+            name="Body",
+        )
+        assert body.susceptibility == 0.05
+        assert body.density == 2670.0
