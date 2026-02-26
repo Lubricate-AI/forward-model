@@ -55,6 +55,13 @@ class GeologicBody(BaseModel, frozen=True):
         strike_backward: Backward (−y) half-extent of the body along strike (m).
                         Must be set together with ``strike_forward``. See
                         ``strike_forward`` for details.
+        thermal_conductivity: Optional thermal conductivity (W/m·K). Must be
+                             strictly positive and finite. Used for heat flow
+                             modeling. ``None`` means the body has no thermal
+                             conductivity contrast.
+        heat_generation: Optional radiogenic heat generation (µW/m³). Must be
+                        non-negative and finite. ``None`` means no radiogenic
+                        contribution.
     """
 
     vertices: list[list[float]] = Field(min_length=3)
@@ -70,6 +77,8 @@ class GeologicBody(BaseModel, frozen=True):
     strike_half_length: float | None = Field(default=None, gt=0.0)
     strike_forward: float | None = Field(default=None, gt=0.0)
     strike_backward: float | None = Field(default=None, gt=0.0)
+    thermal_conductivity: float | None = Field(default=None, gt=0.0)
+    heat_generation: float | None = Field(default=None, ge=0.0)
 
     @field_validator("vertices")
     @classmethod
@@ -164,6 +173,26 @@ class GeologicBody(BaseModel, frozen=True):
                 "strike_forward and strike_backward must both be set or both be None"
             )
         return self
+
+    @field_validator("thermal_conductivity")
+    @classmethod
+    def validate_thermal_conductivity(cls, v: float | None) -> float | None:
+        """Validate thermal_conductivity is finite."""
+        if v is None:
+            return v
+        if not math.isfinite(v):
+            raise ValueError(f"thermal_conductivity must be finite, got {v}")
+        return v
+
+    @field_validator("heat_generation")
+    @classmethod
+    def validate_heat_generation(cls, v: float | None) -> float | None:
+        """Validate heat_generation is finite."""
+        if v is None:
+            return v
+        if not math.isfinite(v):
+            raise ValueError(f"heat_generation must be finite, got {v}")
+        return v
 
     @field_validator("color")
     @classmethod
