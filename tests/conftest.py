@@ -2,7 +2,12 @@
 
 import pytest
 
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import (
+    ForwardModel,
+    GeologicBody,
+    HeatFlowModel,
+    MagneticField,
+)
 
 
 @pytest.fixture
@@ -79,5 +84,27 @@ def model_2_75d(body_2_75d: GeologicBody, earth_field: MagneticField) -> Forward
         bodies=[body_2_75d],
         field=earth_field,
         observation_x=[-100.0, 0.0, 100.0],
+        observation_z=0.0,
+    )
+
+
+@pytest.fixture
+def thermal_body() -> GeologicBody:
+    """A body with thermal properties set (granite-like: 3.3 W/m·K, 2.5 µW/m³)."""
+    return GeologicBody(
+        vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+        susceptibility=0.0,
+        thermal_conductivity=3.3,
+        heat_generation=2.5,
+        name="Granite",
+    )
+
+
+@pytest.fixture
+def heat_flow_model(thermal_body: GeologicBody) -> HeatFlowModel:
+    """A minimal HeatFlowModel with one thermal body."""
+    return HeatFlowModel(
+        bodies=[thermal_body],
+        observation_x=[-100.0, -50.0, 0.0, 25.0, 50.0, 100.0, 150.0],
         observation_z=0.0,
     )
