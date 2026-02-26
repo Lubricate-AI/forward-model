@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 from forward_model.models.body import GeologicBody
 from forward_model.models.field import MagneticField
 
+_EPS = 1e-9
+
 
 def _cross_2d(o: list[float], a: list[float], b: list[float]) -> float:
     """Return the 2D cross product of vectors OA and OB."""
@@ -58,14 +60,13 @@ def _point_on_segment(
     cross = (point[0] - seg_a[0]) * (seg_b[1] - seg_a[1]) - (point[1] - seg_a[1]) * (
         seg_b[0] - seg_a[0]
     )
-    if abs(cross) > 1e-12:
+    seg_len_sq = (seg_b[0] - seg_a[0]) ** 2 + (seg_b[1] - seg_a[1]) ** 2
+    if cross * cross > seg_len_sq * _EPS * _EPS:
         return False
     # Check bounding-box containment
     return (
-        min(seg_a[0], seg_b[0]) - 1e-12 <= point[0] <= max(seg_a[0], seg_b[0]) + 1e-12
-        and min(seg_a[1], seg_b[1]) - 1e-12
-        <= point[1]
-        <= max(seg_a[1], seg_b[1]) + 1e-12
+        min(seg_a[0], seg_b[0]) - _EPS <= point[0] <= max(seg_a[0], seg_b[0]) + _EPS
+        and min(seg_a[1], seg_b[1]) - _EPS <= point[1] <= max(seg_a[1], seg_b[1]) + _EPS
     )
 
 
@@ -76,6 +77,30 @@ def _point_on_polygon_boundary(point: list[float], polygon: list[list[float]]) -
         if _point_on_segment(point, polygon[i], polygon[(i + 1) % n]):
             return True
     return False
+
+
+def _polygon_centroid(polygon: list[list[float]]) -> list[float]:
+    """Return the area-weighted centroid [x, z] via the shoelace formula.
+
+    Falls back to vertex mean for degenerate (zero-area) polygons.
+    """
+    n = len(polygon)
+    area = 0.0
+    cx = 0.0
+    cz = 0.0
+    for i in range(n):
+        x0, z0 = polygon[i]
+        x1, z1 = polygon[(i + 1) % n]
+        cross = x0 * z1 - x1 * z0
+        area += cross
+        cx += (x0 + x1) * cross
+        cz += (z0 + z1) * cross
+    area /= 2.0
+    if abs(area) < 1e-15:
+        return [sum(v[0] for v in polygon) / n, sum(v[1] for v in polygon) / n]
+    cx /= 6.0 * area
+    cz /= 6.0 * area
+    return [cx, cz]
 
 
 def _polygons_overlap(poly1: list[list[float]], poly2: list[list[float]]) -> bool:
@@ -103,6 +128,15 @@ def _polygons_overlap(poly1: list[list[float]], poly2: list[list[float]]) -> boo
             vertex, poly1
         ):
             return True
+
+    # Check centroid containment to catch coincident polygons and collinear-edge
+    # overlaps where all vertices land on the other polygon's boundary.
+    c1 = _polygon_centroid(poly1)
+    if _point_in_polygon(c1, poly2):
+        return True
+    c2 = _polygon_centroid(poly2)
+    if _point_in_polygon(c2, poly1):
+        return True
 
     return False
 

@@ -148,6 +148,39 @@ class TestForwardModelOverlapValidation:
         model = self._make_model([simple_rectangle, corner], earth_field)
         assert len(model.bodies) == 2
 
+    def test_coincident_polygons_raise(
+        self, simple_rectangle: GeologicBody, earth_field: MagneticField
+    ) -> None:
+        """Two bodies with exactly the same footprint raise ValidationError."""
+        coincident = GeologicBody(
+            vertices=list(simple_rectangle.vertices),
+            susceptibility=0.07,
+            name="Coincident",
+        )
+        with pytest.raises(ValidationError, match="overlap"):
+            self._make_model([simple_rectangle, coincident], earth_field)
+
+    def test_boundary_overlap_with_collinear_vertices_raises(
+        self, simple_rectangle: GeologicBody, earth_field: MagneticField
+    ) -> None:
+        """Same footprint with extra collinear vertices raises ValidationError."""
+        boundary_overlap = GeologicBody(
+            vertices=[
+                [0.0, 100.0],
+                [25.0, 100.0],
+                [50.0, 100.0],
+                [50.0, 150.0],
+                [50.0, 200.0],
+                [25.0, 200.0],
+                [0.0, 200.0],
+                [0.0, 150.0],
+            ],
+            susceptibility=0.08,
+            name="BoundaryOverlap",
+        )
+        with pytest.raises(ValidationError, match="overlap"):
+            self._make_model([simple_rectangle, boundary_overlap], earth_field)
+
     def test_non_overlapping_multiple_bodies_passes(
         self, simple_rectangle: GeologicBody, earth_field: MagneticField
     ) -> None:
