@@ -181,6 +181,31 @@ class TestForwardModelOverlapValidation:
         with pytest.raises(ValidationError, match="overlap"):
             self._make_model([simple_rectangle, boundary_overlap], earth_field)
 
+    def test_concave_coincident_polygons_raise(
+        self, earth_field: MagneticField
+    ) -> None:
+        """Two concave bodies with identical footprint raise ValidationError."""
+        concave_vertices = [
+            [0.0, 0.0],
+            [100.0, 0.0],
+            [100.0, 50.0],
+            [50.0, 50.0],
+            [50.0, 100.0],
+            [0.0, 100.0],
+        ]
+        concave1 = GeologicBody(
+            vertices=concave_vertices,
+            susceptibility=0.05,
+            name="Concave1",
+        )
+        concave2 = GeologicBody(
+            vertices=list(concave_vertices),
+            susceptibility=0.06,
+            name="Concave2",
+        )
+        with pytest.raises(ValidationError, match="overlap"):
+            self._make_model([concave1, concave2], earth_field)
+
     def test_non_overlapping_multiple_bodies_passes(
         self, simple_rectangle: GeologicBody, earth_field: MagneticField
     ) -> None:
