@@ -395,6 +395,100 @@ class TestGeologicBodyStrikeHalfLength:
         assert restored.strike_half_length is None
 
 
+class TestGeologicBodyThermalProperties:
+    """Tests for the thermal_conductivity and heat_generation fields on GeologicBody."""
+
+    _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
+
+    def _body(self, **kwargs: object) -> GeologicBody:
+        return GeologicBody(
+            vertices=self._VERTS,
+            susceptibility=0.01,
+            name="Body",
+            **kwargs,  # type: ignore[arg-type]
+        )
+
+    # --- thermal_conductivity ---
+
+    def test_thermal_conductivity_default_is_none(self) -> None:
+        """thermal_conductivity defaults to None."""
+        assert self._body().thermal_conductivity is None
+
+    def test_thermal_conductivity_valid(self) -> None:
+        """A positive finite value (granite ~3.3 W/m·K) is accepted."""
+        body = self._body(thermal_conductivity=3.3)
+        assert body.thermal_conductivity == 3.3
+
+    def test_thermal_conductivity_zero_rejected(self) -> None:
+        """Zero raises ValidationError (gt=0.0 constraint)."""
+        with pytest.raises(ValidationError):
+            self._body(thermal_conductivity=0.0)
+
+    def test_thermal_conductivity_negative_rejected(self) -> None:
+        """Negative value raises ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(thermal_conductivity=-1.0)
+
+    def test_thermal_conductivity_inf_rejected(self) -> None:
+        """Infinite value raises ValidationError (finiteness validator)."""
+        with pytest.raises(ValidationError, match="finite"):
+            self._body(thermal_conductivity=float("inf"))
+
+    def test_thermal_conductivity_nan_rejected(self) -> None:
+        """NaN raises ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(thermal_conductivity=float("nan"))
+
+    # --- heat_generation ---
+
+    def test_heat_generation_default_is_none(self) -> None:
+        """heat_generation defaults to None."""
+        assert self._body().heat_generation is None
+
+    def test_heat_generation_zero_accepted(self) -> None:
+        """Zero is accepted (ge=0.0 allows zero)."""
+        body = self._body(heat_generation=0.0)
+        assert body.heat_generation == 0.0
+
+    def test_heat_generation_valid(self) -> None:
+        """A positive finite value (2.5 µW/m³) is accepted."""
+        body = self._body(heat_generation=2.5)
+        assert body.heat_generation == 2.5
+
+    def test_heat_generation_negative_rejected(self) -> None:
+        """Negative value raises ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(heat_generation=-0.1)
+
+    def test_heat_generation_inf_rejected(self) -> None:
+        """Infinite value raises ValidationError (finiteness validator)."""
+        with pytest.raises(ValidationError, match="finite"):
+            self._body(heat_generation=float("inf"))
+
+    def test_heat_generation_nan_rejected(self) -> None:
+        """NaN raises ValidationError."""
+        with pytest.raises(ValidationError):
+            self._body(heat_generation=float("nan"))
+
+    # --- roundtrip ---
+
+    def test_json_roundtrip_thermal_fields(self) -> None:
+        """model_dump() → GeologicBody(**d) round-trip preserves thermal values."""
+        original = self._body(thermal_conductivity=3.3, heat_generation=2.5)
+        d = original.model_dump()
+        restored = GeologicBody(**d)
+        assert restored.thermal_conductivity == original.thermal_conductivity
+        assert restored.heat_generation == original.heat_generation
+
+    def test_json_roundtrip_none(self) -> None:
+        """Round-trip with None preserves None for both fields."""
+        original = self._body()
+        d = original.model_dump()
+        restored = GeologicBody(**d)
+        assert restored.thermal_conductivity is None
+        assert restored.heat_generation is None
+
+
 class TestGeologicBodyAsymmetricStrike:
     """Tests for the strike_forward and strike_backward fields on GeologicBody."""
 
