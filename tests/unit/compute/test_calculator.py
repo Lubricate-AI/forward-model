@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from forward_model.compute import calculate_anomaly
+from forward_model.compute.talwani import MagneticComponents
 from forward_model.models import (
     ForwardModel,
     GeologicBody,
@@ -135,7 +136,6 @@ class TestCalculateAnomaly:
 
     def test_calculate_anomaly_all_returns_magnetic_components(self, simple_model: ForwardModel) -> None:
         """calculate_anomaly(..., component='all') returns a MagneticComponents instance."""
-        from forward_model.compute.talwani import MagneticComponents
         result = calculate_anomaly(simple_model, component="all")
         assert isinstance(result, MagneticComponents)
 
