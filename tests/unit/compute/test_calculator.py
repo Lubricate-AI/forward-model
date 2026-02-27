@@ -208,3 +208,8 @@ class TestCalculateAnomalyDispatch:
 def test_magnetic_components_exported_from_compute() -> None:
     """MagneticComponents is importable from forward_model.compute."""
     from forward_model.compute import MagneticComponents  # noqa: F401
+
+
+def test_top_level_exports_magnetic_and_gravity_components() -> None:
+    """MagneticComponents and GravityComponents are importable from forward_model."""
+    from forward_model import GravityComponents, MagneticComponents  # noqa: F401
