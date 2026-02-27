@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from forward_model.compute.batch import BatchResult, batch_calculate
+from forward_model.models import ForwardModel
 
 
 def _make_model_dict(
@@ -15,6 +16,7 @@ def _make_model_dict(
 ) -> dict[str, object]:
     """Create a minimal model JSON dict."""
     return {
+        "model_type": "magnetic",
         "bodies": [
             {
                 "name": "Test Body",
@@ -109,8 +111,12 @@ class TestBatchCalculate:
         from forward_model.compute import calculate_anomaly
         from forward_model.io import load_model
 
-        a1 = calculate_anomaly(load_model(m1))
-        a2 = calculate_anomaly(load_model(m2))
+        model1 = load_model(m1)
+        model2 = load_model(m2)
+        assert isinstance(model1, ForwardModel)
+        assert isinstance(model2, ForwardModel)
+        a1 = calculate_anomaly(model1)
+        a2 = calculate_anomaly(model2)
         expected_mean = (a1 + a2) / 2
 
         means = result.summary[:, 1]

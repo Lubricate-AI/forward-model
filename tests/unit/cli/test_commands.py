@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from forward_model.cli.commands import app
-from forward_model.models import ForwardModel
+from forward_model.models import ForwardModel, GravityModel, HeatFlowModel
 
 runner = CliRunner()
 
@@ -18,6 +18,24 @@ def model_json_file(tmp_path: Path, simple_model: ForwardModel) -> Path:
     model_file = tmp_path / "test_model.json"
     with open(model_file, "w") as f:
         json.dump(simple_model.model_dump(), f)
+    return model_file
+
+
+@pytest.fixture
+def gravity_model_json_file(tmp_path: Path, gravity_model: GravityModel) -> Path:
+    """Create a temporary gravity model JSON file."""
+    model_file = tmp_path / "test_gravity_model.json"
+    with open(model_file, "w") as f:
+        json.dump(gravity_model.model_dump(), f)
+    return model_file
+
+
+@pytest.fixture
+def heat_flow_model_json_file(tmp_path: Path, heat_flow_model: HeatFlowModel) -> Path:
+    """Create a temporary heat flow model JSON file."""
+    model_file = tmp_path / "test_heat_flow_model.json"
+    with open(model_file, "w") as f:
+        json.dump(heat_flow_model.model_dump(), f)
     return model_file
 
 
@@ -267,6 +285,71 @@ Rectangle,0.05,0.0,100.0,50.0,100.0,50.0,200.0,0.0,200.0
 
         assert result.exit_code == 1
         assert "Error" in result.output
+
+    def test_validate_gravity_model(self, gravity_model_json_file: Path) -> None:
+        """Test validate command with gravity model."""
+        result = runner.invoke(app, ["validate", str(gravity_model_json_file)])
+
+        assert result.exit_code == 0
+        assert "Model is valid" in result.stdout
+
+    def test_validate_gravity_model_verbose(
+        self, gravity_model_json_file: Path
+    ) -> None:
+        """Test validate gravity model with verbose output."""
+        result = runner.invoke(
+            app, ["validate", str(gravity_model_json_file), "--verbose"]
+        )
+
+        assert result.exit_code == 0
+        assert "bodies defined" in result.stdout
+        assert "observation points" in result.stdout
+        assert "Gravity" in result.stdout
+
+    def test_validate_heat_flow_model(self, heat_flow_model_json_file: Path) -> None:
+        """Test validate command with heat flow model."""
+        result = runner.invoke(app, ["validate", str(heat_flow_model_json_file)])
+
+        assert result.exit_code == 0
+        assert "Model is valid" in result.stdout
+
+    def test_validate_heat_flow_model_verbose(
+        self, heat_flow_model_json_file: Path
+    ) -> None:
+        """Test validate heat flow model with verbose output."""
+        result = runner.invoke(
+            app, ["validate", str(heat_flow_model_json_file), "--verbose"]
+        )
+
+        assert result.exit_code == 0
+        assert "bodies defined" in result.stdout
+        assert "observation points" in result.stdout
+        assert "Heat Flow" in result.stdout
+        assert "Background heat flow" in result.stdout
+
+
+class TestRunNonMagneticModels:
+    """Tests for run command with non-magnetic models."""
+
+    def test_run_gravity_model_not_implemented(
+        self, gravity_model_json_file: Path
+    ) -> None:
+        """Test that gravity model run raises NotImplementedError."""
+        result = runner.invoke(app, ["run", str(gravity_model_json_file), "--no-plot"])
+
+        assert result.exit_code != 0
+        assert "not yet implemented" in result.output.lower()
+
+    def test_run_heat_flow_model_not_implemented(
+        self, heat_flow_model_json_file: Path
+    ) -> None:
+        """Test that heat flow model run raises NotImplementedError."""
+        result = runner.invoke(
+            app, ["run", str(heat_flow_model_json_file), "--no-plot"]
+        )
+
+        assert result.exit_code != 0
+        assert "not yet implemented" in result.output.lower()
 
 
 class TestVisualizeCommand:

@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
-from forward_model.models.model import ForwardModel
+from forward_model.models import AnyForwardModel
 
 
 def write_csv(
@@ -39,18 +39,19 @@ def write_csv(
 
 def write_json(
     filepath: str | Path,
-    model: ForwardModel,
+    model: AnyForwardModel,
     anomaly: NDArray[np.float64],
 ) -> None:
     """Write model and anomaly results to JSON file.
 
     Creates a JSON file containing both the model definition and
-    the computed anomaly results.
+    the computed anomaly results. Supports all model types
+    (magnetic, gravity, heat flow).
 
     Args:
         filepath: Output file path. Can be a string or Path object.
         model: The forward model that was used for computation.
-        anomaly: Array of magnetic anomaly values (nanoTesla).
+        anomaly: Array of anomaly values (units depend on model type).
 
     Example:
         >>> write_json("results.json", model, anomaly)

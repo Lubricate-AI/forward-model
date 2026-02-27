@@ -27,6 +27,7 @@ from forward_model.config import (
     load_config_with_sources,
     user_config_path,
 )
+from forward_model.models import ForwardModel, GravityModel, HeatFlowModel
 
 app = typer.Typer(
     name="forward-model",
@@ -147,6 +148,18 @@ def run(
             typer.echo(f"  Loaded {len(model.bodies)} bodies")
             typer.echo(f"  {len(model.observation_x)} observation points")
 
+        # Dispatch by model type
+        if isinstance(model, GravityModel):
+            raise NotImplementedError(
+                "Gravity calculation not yet implemented. Tracked in future issues."
+            )
+        elif isinstance(model, HeatFlowModel):
+            raise NotImplementedError(
+                "Heat flow calculation not yet implemented. Tracked in future issues."
+            )
+        elif not isinstance(model, ForwardModel):  # type: ignore[reportUnnecessaryIsInstance]
+            raise ValueError(f"Unexpected model type: {type(model).__name__}")
+
         # Calculate all anomaly components in one pass
         if verbose:
             typer.echo("Calculating magnetic anomaly...")
@@ -243,9 +256,22 @@ def validate(
         if verbose:
             typer.echo(f"  {len(model.bodies)} bodies defined")
             typer.echo(f"  {len(model.observation_x)} observation points")
-            typer.echo(f"  Field intensity: {model.field.intensity:.1f} nT")
-            typer.echo(f"  Field inclination: {model.field.inclination:.1f}°")
-            typer.echo(f"  Field declination: {model.field.declination:.1f}°")
+
+            # Print type-specific information
+            if isinstance(model, ForwardModel):
+                typer.echo(f"  Field intensity: {model.field.intensity:.1f} nT")
+                typer.echo(f"  Field inclination: {model.field.inclination:.1f}°")
+                typer.echo(f"  Field declination: {model.field.declination:.1f}°")
+            elif isinstance(model, GravityModel):
+                typer.echo("  Model type: Gravity")
+            elif isinstance(model, HeatFlowModel):  # pyright: ignore[reportUnnecessaryIsInstance]
+                typer.echo("  Model type: Heat Flow")
+                typer.echo(
+                    f"  Background heat flow: {model.background_heat_flow:.1f} mW/m²"
+                )
+            else:
+                # Fallback for future/unknown model types
+                typer.echo(f"  Model type: {type(model).__name__}")
 
         sys.exit(0)
 

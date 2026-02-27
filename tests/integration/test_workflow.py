@@ -162,6 +162,7 @@ class TestJSONRoundtrip:
 
         # Load and verify
         loaded = load_model(json_file)
+        assert isinstance(loaded, ForwardModel)
         assert len(loaded.bodies) == 1
         assert loaded.bodies[0].name == "Triangle"
         assert loaded.field.intensity == 50000.0

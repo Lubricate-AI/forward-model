@@ -27,6 +27,7 @@ from forward_model.io import (
     write_numpy,
 )
 from forward_model.models import (
+    AnyForwardModel,
     ForwardModel,
     GeologicBody,
     GravityModel,
@@ -50,6 +51,7 @@ __all__ = [
     "ForwardModel",
     "GravityModel",
     "HeatFlowModel",
+    "AnyForwardModel",
     "MagneticProperties",
     "GravityProperties",
     "ThermalProperties",
