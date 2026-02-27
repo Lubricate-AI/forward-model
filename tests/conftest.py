@@ -5,6 +5,8 @@ import pytest
 from forward_model.models import (
     ForwardModel,
     GeologicBody,
+    GravityModel,
+    GravityProperties,
     HeatFlowModel,
     MagneticField,
     MagneticProperties,
@@ -40,6 +42,26 @@ def simple_model(
     return ForwardModel(
         bodies=[simple_rectangle],
         field=earth_field,
+        observation_x=[-100.0, -50.0, 0.0, 25.0, 50.0, 100.0, 150.0],
+        observation_z=0.0,
+    )
+
+
+@pytest.fixture
+def gravity_body() -> GeologicBody:
+    """A simple rectangular gravity body."""
+    return GeologicBody(
+        vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+        gravity=GravityProperties(density_contrast=300.0),
+        name="GravityBody",
+    )
+
+
+@pytest.fixture
+def gravity_model(gravity_body: GeologicBody) -> GravityModel:
+    """A simple gravity model with one body."""
+    return GravityModel(
+        bodies=[gravity_body],
         observation_x=[-100.0, -50.0, 0.0, 25.0, 50.0, 100.0, 150.0],
         observation_z=0.0,
     )

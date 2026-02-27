@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from forward_model.io import load_model
-from forward_model.models import ForwardModel
+from forward_model.models import ForwardModel, GravityModel, HeatFlowModel
 
 
 class TestLoadModel:
@@ -59,6 +59,61 @@ class TestLoadModel:
             json.dump(
                 {
                     "bodies": [],  # Empty bodies list (invalid)
+                    "field": {
+                        "intensity": 50000.0,
+                        "inclination": 60.0,
+                        "declination": 0.0,
+                    },
+                    "observation_x": [0.0, 10.0],
+                    "observation_z": 0.0,
+                },
+                f,
+            )
+
+        with pytest.raises(ValueError, match="validation failed"):
+            load_model(model_file)
+
+    def test_load_gravity_model(
+        self, tmp_path: Path, gravity_model: GravityModel
+    ) -> None:
+        """Test loading a gravity model from JSON."""
+        model_file = tmp_path / "gravity_model.json"
+        with open(model_file, "w") as f:
+            json.dump(gravity_model.model_dump(), f)
+
+        loaded = load_model(model_file)
+        assert isinstance(loaded, GravityModel)
+        assert len(loaded.bodies) == len(gravity_model.bodies)
+        assert loaded.observation_x == gravity_model.observation_x
+
+    def test_load_heat_flow_model(
+        self, tmp_path: Path, heat_flow_model: HeatFlowModel
+    ) -> None:
+        """Test loading a heat flow model from JSON."""
+        model_file = tmp_path / "heat_flow_model.json"
+        with open(model_file, "w") as f:
+            json.dump(heat_flow_model.model_dump(), f)
+
+        loaded = load_model(model_file)
+        assert isinstance(loaded, HeatFlowModel)
+        assert len(loaded.bodies) == len(heat_flow_model.bodies)
+        assert loaded.observation_x == heat_flow_model.observation_x
+        assert loaded.background_heat_flow == heat_flow_model.background_heat_flow
+
+    def test_load_missing_model_type(self, tmp_path: Path) -> None:
+        """Test that missing model_type raises validation error."""
+        model_file = tmp_path / "no_model_type.json"
+        # Missing model_type field
+        with open(model_file, "w") as f:
+            json.dump(
+                {
+                    "bodies": [
+                        {
+                            "name": "Test",
+                            "magnetic": {"susceptibility": 0.05},
+                            "vertices": [[0, 100], [50, 100], [50, 200], [0, 200]],
+                        }
+                    ],
                     "field": {
                         "intensity": 50000.0,
                         "inclination": 60.0,

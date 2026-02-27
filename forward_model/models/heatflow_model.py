@@ -1,6 +1,7 @@
 """Heat flow model container."""
 
 import math
+from typing import Literal
 
 from pydantic import Field, field_validator
 
@@ -11,6 +12,7 @@ class HeatFlowModel(ObservationModel, frozen=True):
     """Complete heat flow model specification.
 
     Attributes:
+        model_type: Literal discriminator field. Always "heat_flow".
         bodies: List of geologic bodies to include in the model.
                 Must contain at least one body.
         observation_x: List of x-coordinates for observation points (meters).
@@ -21,6 +23,7 @@ class HeatFlowModel(ObservationModel, frozen=True):
                              Default is 65.0 (continental average).
     """
 
+    model_type: Literal["heat_flow"] = "heat_flow"
     background_heat_flow: float = Field(default=65.0)
 
     @field_validator("background_heat_flow")

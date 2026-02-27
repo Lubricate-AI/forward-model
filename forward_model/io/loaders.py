@@ -4,20 +4,28 @@ import csv
 import json
 from pathlib import Path
 
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 
+from forward_model.models import AnyForwardModel
 from forward_model.models.model import ForwardModel
 
+# Type adapter for discriminated union
+_model_adapter = TypeAdapter(AnyForwardModel)
 
-def load_model(filepath: str | Path) -> ForwardModel:
+
+def load_model(filepath: str | Path) -> AnyForwardModel:
     """Load a forward model from a JSON file.
+
+    Supports magnetic, gravity, and heat flow models. Model type is
+    automatically detected from the 'model_type' discriminator field in JSON.
 
     Args:
         filepath: Path to JSON file containing model definition.
                  Can be a string or Path object.
 
     Returns:
-        Validated ForwardModel instance.
+        Validated AnyForwardModel instance (ForwardModel, GravityModel, or
+            HeatFlowModel).
 
     Raises:
         FileNotFoundError: If the specified file does not exist.
@@ -39,7 +47,7 @@ def load_model(filepath: str | Path) -> ForwardModel:
         raise ValueError(f"Invalid JSON in {filepath}: {e}") from e
 
     try:
-        model = ForwardModel.model_validate(data)
+        model = _model_adapter.validate_python(data)
     except ValidationError as e:
         raise ValueError(f"Model validation failed for {filepath}: {e}") from e
 
@@ -48,6 +56,9 @@ def load_model(filepath: str | Path) -> ForwardModel:
 
 def load_model_from_csv(filepath: str | Path) -> ForwardModel:
     """Load a forward model from a CSV file.
+
+    **Note:** CSV loading is restricted to magnetic models (ForwardModel).
+    Use JSON files to load gravity or heat flow models.
 
     CSV Format (3 sections, in order):
 
@@ -68,7 +79,7 @@ def load_model_from_csv(filepath: str | Path) -> ForwardModel:
                  Can be a string or Path object.
 
     Returns:
-        Validated ForwardModel instance.
+        Validated ForwardModel instance (magnetic model only).
 
     Raises:
         FileNotFoundError: If the specified file does not exist.

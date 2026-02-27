@@ -1,5 +1,7 @@
 """Forward model container."""
 
+from typing import Literal
+
 from forward_model.models.base import ObservationModel
 from forward_model.models.field import MagneticField
 
@@ -8,6 +10,7 @@ class ForwardModel(ObservationModel, frozen=True):
     """Complete forward magnetic model specification.
 
     Attributes:
+        model_type: Literal discriminator field. Always "magnetic".
         bodies: List of geologic bodies to include in the model.
                 Must contain at least one body.
         field: Earth's magnetic field parameters.
@@ -16,4 +19,5 @@ class ForwardModel(ObservationModel, frozen=True):
                       Typically 0 for surface observations.
     """
 
+    model_type: Literal["magnetic"] = "magnetic"
     field: MagneticField

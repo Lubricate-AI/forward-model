@@ -15,6 +15,7 @@ def _make_model_dict(
 ) -> dict[str, object]:
     """Create a minimal model JSON dict."""
     return {
+        "model_type": "magnetic",
         "bodies": [
             {
                 "name": "Test Body",
