@@ -193,7 +193,10 @@ class TestGeologicBodyRemanentMagnetization:
     def _body(self, **mag_kwargs: object) -> GeologicBody:
         return GeologicBody(
             vertices=self._VERTS,
-            magnetic=MagneticProperties(susceptibility=0.01, **mag_kwargs),  # type: ignore[arg-type]
+            magnetic=MagneticProperties(
+                susceptibility=0.01,
+                **mag_kwargs,  # type: ignore[arg-type]
+            ),
             name="Body",
         )
 
