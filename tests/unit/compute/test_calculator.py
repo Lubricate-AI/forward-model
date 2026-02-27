@@ -194,3 +194,14 @@ class TestCalculateAnomalyDispatch:
         result = calculate_anomaly(simple_model)
         assert isinstance(result, np.ndarray)
         assert result.shape == (7,)
+
+    def test_gravity_model_ignores_component(self, gravity_model: GravityModel) -> None:
+        """component keyword is silently ignored for GravityModel."""
+        result = calculate_anomaly(gravity_model, component="all")  # type: ignore[call-overload]
+        assert isinstance(result, GravityComponents)
+
+    def test_gravity_model_returns_gz_gradient(self, gravity_model: GravityModel) -> None:
+        """GravityComponents includes gz_gradient with same shape as gz."""
+        result = calculate_anomaly(gravity_model)
+        assert result.gz_gradient.shape == result.gz.shape
+        assert np.all(np.isfinite(result.gz_gradient))

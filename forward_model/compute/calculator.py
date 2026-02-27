@@ -1,7 +1,11 @@
-"""High-level interface for magnetic anomaly calculations."""
+"""High-level interface for forward model anomaly calculations.
+
+Dispatches to the appropriate algorithm based on model type:
+magnetic (Talwani 1965), gravity (Talwani 1959), and heat flow (planned).
+"""
 
 from concurrent.futures import ProcessPoolExecutor
-from typing import Literal, overload
+from typing import Literal, NoReturn, overload
 
 import numpy as np
 from numpy.typing import NDArray
@@ -109,6 +113,13 @@ def calculate_anomaly(
     model: GravityModel,
     parallel: bool = ...,
 ) -> GravityComponents: ...
+
+
+@overload
+def calculate_anomaly(
+    model: HeatFlowModel,
+    parallel: bool = ...,
+) -> NoReturn: ...
 
 
 def calculate_anomaly(
