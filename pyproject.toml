@@ -14,7 +14,9 @@ forward-model = "forward_model.__main__:app"
 
 [tool.uv]
 package = true
-dev-dependencies = [
+
+[dependency-groups]
+dev = [
     "mkdocs>=1.6.1",
     "mkdocs-gen-files>=0.6.0",
     "mkdocs-literate-nav>=0.6.2",
