@@ -6,6 +6,7 @@ from typing import Literal, overload
 import numpy as np
 from numpy.typing import NDArray
 
+from forward_model.compute.gravity import GravityComponents, calculate_gravity
 from forward_model.compute.talwani import (
     MagneticComponents,
     PolygonComponents,
@@ -14,6 +15,8 @@ from forward_model.compute.talwani import (
     compute_polygon_anomaly_2_75d,
     field_to_magnetization,
 )
+from forward_model.models.gravity_model import GravityModel
+from forward_model.models.heatflow_model import HeatFlowModel
 from forward_model.models.model import ForwardModel
 
 _worker_obs_points: NDArray[np.float64] | None = None
@@ -101,48 +104,59 @@ def calculate_anomaly(
 ) -> MagneticComponents: ...
 
 
+@overload
 def calculate_anomaly(
-    model: ForwardModel,
+    model: GravityModel,
+    parallel: bool = ...,
+) -> GravityComponents: ...
+
+
+def calculate_anomaly(
+    model: ForwardModel | GravityModel | HeatFlowModel,
     parallel: bool = False,
     component: Literal[
         "bz", "bx", "total_field", "amplitude", "gradient", "all"
     ] = "bz",
-) -> NDArray[np.float64] | MagneticComponents:
-    """Calculate total magnetic anomaly for a forward model.
+) -> NDArray[np.float64] | MagneticComponents | GravityComponents:
+    """Calculate anomaly for a forward model, dispatching on model type.
 
-    Computes the magnetic anomaly using the Talwani (1965) algorithm,
-    summing contributions from all geologic bodies via superposition.
+    Computes the anomaly using the appropriate algorithm for the model type:
+    - ForwardModel (magnetic): Talwani (1965) algorithm, returns NDArray or MagneticComponents
+    - GravityModel: Talwani (1959) algorithm, returns GravityComponents (gz in mGal)
+    - HeatFlowModel: Not yet implemented; raises NotImplementedError
 
     Args:
-        model: Complete forward model specification including bodies,
-               field parameters, and observation points.
-        parallel: If True, compute each body's anomaly in a separate process
-                  using ProcessPoolExecutor. Useful when the model has many
-                  bodies and observation grids are large.
-        component: Which anomaly component to return. One of:
-                   - ``"bz"`` (default): Vertical component in nT. Returns
-                     ``NDArray[np.float64]``. Backward-compatible.
-                   - ``"bx"``: Horizontal component in nT.
-                   - ``"total_field"``: Total field anomaly ΔT in nT,
-                     computed as Bx·cos(I₀)·cos(D₀) + Bz·sin(I₀).
-                   - ``"amplitude"``: Vector amplitude |ΔB| = sqrt(Bx²+Bz²) in nT.
-                   - ``"gradient"``: Horizontal gradient d(ΔT)/dx in nT/m.
-                     Forward model of the measurement from a total-field
-                     gradiometer oriented along the profile.
-                   - ``"all"``: Returns a ``MagneticComponents`` dataclass
-                     containing all five fields.
+        model: A ForwardModel, GravityModel, or HeatFlowModel instance.
+        parallel: If True, compute each body's contribution in a separate process.
+        component: For ForwardModel only — which magnetic component to return.
+                   Ignored for GravityModel. One of:
+                   ``"bz"`` (default), ``"bx"``, ``"total_field"``,
+                   ``"amplitude"``, ``"gradient"``, ``"all"``.
 
     Returns:
-        ``NDArray[np.float64]`` for single-component requests, or
-        ``MagneticComponents`` when ``component="all"``.
+        - ForwardModel: ``NDArray[np.float64]`` or ``MagneticComponents`` (when component="all")
+        - GravityModel: ``GravityComponents`` with gz (mGal) and gz_gradient (mGal/m)
+
+    Raises:
+        NotImplementedError: If model is a HeatFlowModel.
 
     Example:
-        >>> model = load_model("model.json")
-        >>> anomaly = calculate_anomaly(model)
-        >>> print(f"Max anomaly: {anomaly.max():.1f} nT")
-        >>> components = calculate_anomaly(model, component="all")
-        >>> print(f"Max ΔT: {components.total_field.max():.1f} nT")
+        >>> mag_model = load_model("magnetic.json")
+        >>> anomaly = calculate_anomaly(mag_model)
+        >>> grav_model = load_model("gravity.json")
+        >>> components = calculate_anomaly(grav_model)
+        >>> print(f"Max gz: {components.gz.max():.3f} mGal")
     """
+    if isinstance(model, GravityModel):
+        return calculate_gravity(model, parallel=parallel)
+
+    if isinstance(model, HeatFlowModel):
+        raise NotImplementedError(
+            "Heat flow compute not yet implemented. "
+            "Track progress in the project issue tracker."
+        )
+
+    # ForwardModel path — all existing logic unchanged below this point
     observation_points = model.get_observation_points()
 
     per_body: list[

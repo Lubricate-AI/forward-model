@@ -4,11 +4,14 @@ import numpy as np
 import pytest
 
 from forward_model.compute import calculate_anomaly
+from forward_model.compute.gravity import GravityComponents
 from forward_model.compute.talwani import MagneticComponents
 from forward_model.models import (
     ForwardModel,
     GeologicBody,
+    GravityModel,
     GravityProperties,
+    HeatFlowModel,
     MagneticField,
     MagneticProperties,
 )
@@ -154,3 +157,40 @@ class TestCalculateAnomaly:
         )
         with pytest.raises(ValueError, match="DensityOnly"):
             calculate_anomaly(model)
+
+
+class TestCalculateAnomalyDispatch:
+    """Tests for type-dispatched calculate_anomaly."""
+
+    def test_gravity_model_returns_gravity_components(
+        self, gravity_model: GravityModel
+    ) -> None:
+        """calculate_anomaly(gravity_model) returns GravityComponents."""
+        result = calculate_anomaly(gravity_model)
+        assert isinstance(result, GravityComponents)
+        assert result.gz.shape == (7,)
+        assert np.all(np.isfinite(result.gz))
+
+    def test_gravity_model_parallel(self, gravity_model: GravityModel) -> None:
+        """calculate_anomaly(gravity_model, parallel=True) matches serial result."""
+        serial = calculate_anomaly(gravity_model, parallel=False)
+        parallel = calculate_anomaly(gravity_model, parallel=True)
+        assert np.allclose(serial.gz, parallel.gz, rtol=1e-12)
+
+    def test_gravity_model_correct_units(self, gravity_model: GravityModel) -> None:
+        """Gravity result is in mGal (reasonable range for crustal anomalies)."""
+        result = calculate_anomaly(gravity_model)
+        assert np.all(np.abs(result.gz) < 1000.0)
+
+    def test_heat_flow_model_raises_not_implemented(
+        self, heat_flow_model: HeatFlowModel
+    ) -> None:
+        """calculate_anomaly(heat_flow_model) raises NotImplementedError."""
+        with pytest.raises(NotImplementedError, match="Heat flow"):
+            calculate_anomaly(heat_flow_model)
+
+    def test_forward_model_unchanged(self, simple_model: ForwardModel) -> None:
+        """Backward compat: ForwardModel still returns NDArray by default."""
+        result = calculate_anomaly(simple_model)
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (7,)
