@@ -263,7 +263,7 @@ def validate(
                 typer.echo(f"  Field declination: {model.field.declination:.1f}°")
             elif isinstance(model, GravityModel):
                 typer.echo("  Model type: Gravity")
-            elif isinstance(model, HeatFlowModel):
+            elif isinstance(model, HeatFlowModel):  # pyright: ignore[reportUnnecessaryIsInstance]
                 typer.echo("  Model type: Heat Flow")
                 typer.echo(
                     f"  Background heat flow: {model.background_heat_flow:.1f} mW/m²"

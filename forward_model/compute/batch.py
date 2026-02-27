@@ -62,7 +62,8 @@ def _process_single(
     if not isinstance(model, ForwardModel):
         raise NotImplementedError(
             f"Batch processing for non-magnetic models is not yet implemented. "
-            f"Tracked in future issues. Model {model_path} is of type {type(model).__name__}."
+            f"Tracked in future issues. Model {model_path} is of type "
+            f"{type(model).__name__}."
         )
 
     anomaly = calculate_anomaly(model)
