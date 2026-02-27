@@ -263,12 +263,14 @@ def validate(
                 typer.echo(f"  Field declination: {model.field.declination:.1f}°")
             elif isinstance(model, GravityModel):
                 typer.echo("  Model type: Gravity")
-            else:
-                # At this point, model must be HeatFlowModel
+            elif isinstance(model, HeatFlowModel):
                 typer.echo("  Model type: Heat Flow")
                 typer.echo(
                     f"  Background heat flow: {model.background_heat_flow:.1f} mW/m²"
                 )
+            else:
+                # Fallback for future/unknown model types
+                typer.echo(f"  Model type: {type(model).__name__}")
 
         sys.exit(0)
 
