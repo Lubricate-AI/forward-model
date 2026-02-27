@@ -133,6 +133,12 @@ class TestCalculateAnomaly:
             assert anomaly.shape == (n_points,)
             assert np.all(np.isfinite(anomaly))
 
+    def test_calculate_anomaly_all_returns_magnetic_components(self, simple_model: ForwardModel) -> None:
+        """calculate_anomaly(..., component='all') returns a MagneticComponents instance."""
+        from forward_model.compute.talwani import MagneticComponents
+        result = calculate_anomaly(simple_model, component="all")
+        assert isinstance(result, MagneticComponents)
+
     def test_no_magnetic_properties_raises(self, earth_field: MagneticField) -> None:
         """ValueError is raised when a body has no magnetic properties set."""
         body = GeologicBody(

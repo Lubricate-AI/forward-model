@@ -7,7 +7,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from forward_model.compute.talwani import (
-    AnomalyComponents,
+    MagneticComponents,
     PolygonComponents,
     compute_polygon_anomaly,
     compute_polygon_anomaly_2_5d,
@@ -98,7 +98,7 @@ def calculate_anomaly(
     parallel: bool = ...,
     *,
     component: Literal["all"],
-) -> AnomalyComponents: ...
+) -> MagneticComponents: ...
 
 
 def calculate_anomaly(
@@ -107,7 +107,7 @@ def calculate_anomaly(
     component: Literal[
         "bz", "bx", "total_field", "amplitude", "gradient", "all"
     ] = "bz",
-) -> NDArray[np.float64] | AnomalyComponents:
+) -> NDArray[np.float64] | MagneticComponents:
     """Calculate total magnetic anomaly for a forward model.
 
     Computes the magnetic anomaly using the Talwani (1965) algorithm,
@@ -129,12 +129,12 @@ def calculate_anomaly(
                    - ``"gradient"``: Horizontal gradient d(ΔT)/dx in nT/m.
                      Forward model of the measurement from a total-field
                      gradiometer oriented along the profile.
-                   - ``"all"``: Returns an ``AnomalyComponents`` dataclass
+                   - ``"all"``: Returns a ``MagneticComponents`` dataclass
                      containing all five fields.
 
     Returns:
         ``NDArray[np.float64]`` for single-component requests, or
-        ``AnomalyComponents`` when ``component="all"``.
+        ``MagneticComponents`` when ``component="all"``.
 
     Example:
         >>> model = load_model("model.json")
@@ -224,7 +224,7 @@ def calculate_anomaly(
         return gradient
 
     if component == "all":
-        return AnomalyComponents(
+        return MagneticComponents(
             bz=total_bz,
             bx=total_bx,
             total_field=total_field,
