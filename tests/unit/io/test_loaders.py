@@ -21,6 +21,7 @@ class TestLoadModel:
 
         # Load and verify
         loaded = load_model(model_file)
+        assert isinstance(loaded, ForwardModel)
         assert len(loaded.bodies) == len(simple_model.bodies)
         assert loaded.field.intensity == simple_model.field.intensity
         assert loaded.observation_x == simple_model.observation_x

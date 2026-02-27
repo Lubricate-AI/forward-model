@@ -149,18 +149,16 @@ def run(
             typer.echo(f"  {len(model.observation_x)} observation points")
 
         # Dispatch by model type
-        if not isinstance(model, ForwardModel):
-            if isinstance(model, GravityModel):
-                raise NotImplementedError(
-                    "Gravity calculation not yet implemented. Tracked in future issues."
-                )
-            elif isinstance(model, HeatFlowModel):
-                raise NotImplementedError(
-                    "Heat flow calculation not yet implemented. "
-                    "Tracked in future issues."
-                )
-            else:
-                raise ValueError(f"Unknown model type: {type(model)}")
+        if isinstance(model, GravityModel):
+            raise NotImplementedError(
+                "Gravity calculation not yet implemented. Tracked in future issues."
+            )
+        elif isinstance(model, HeatFlowModel):
+            raise NotImplementedError(
+                "Heat flow calculation not yet implemented. "
+                "Tracked in future issues."
+            )
+        # At this point, model must be ForwardModel (only remaining type in union)
 
         # Calculate all anomaly components in one pass
         if verbose:
@@ -266,7 +264,8 @@ def validate(
                 typer.echo(f"  Field declination: {model.field.declination:.1f}°")
             elif isinstance(model, GravityModel):
                 typer.echo("  Model type: Gravity")
-            elif isinstance(model, HeatFlowModel):
+            else:
+                # At this point, model must be HeatFlowModel
                 typer.echo("  Model type: Heat Flow")
                 typer.echo(
                     f"  Background heat flow: {model.background_heat_flow:.1f} mW/m²"

@@ -10,7 +10,7 @@ from forward_model.models import AnyForwardModel
 from forward_model.models.model import ForwardModel
 
 # Type adapter for discriminated union
-_model_adapter = TypeAdapter(AnyForwardModel)
+_model_adapter: TypeAdapter[AnyForwardModel] = TypeAdapter(AnyForwardModel)
 
 
 def load_model(filepath: str | Path) -> AnyForwardModel:
