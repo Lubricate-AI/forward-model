@@ -27,13 +27,6 @@ class GravityComponents:
     gz_gradient: NDArray[np.float64]
 
 
-class PolygonGravityComponents:
-    """Per-polygon gravity contribution before superposition."""
-
-    def __init__(self, gz: NDArray[np.float64]):
-        self.gz = gz
-
-
 # Gravitational constant in SI units: m³/(kg·s²)
 _G = 6.674e-11
 

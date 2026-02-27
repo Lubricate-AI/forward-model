@@ -237,6 +237,8 @@ class TestCalculateGravity:
 
     def test_missing_gravity_properties_raises_error(self) -> None:
         """Test that missing gravity properties raises ValueError."""
+        import pytest
+
         from forward_model.models.properties import MagneticProperties
 
         vertices = [[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]]
@@ -253,7 +255,7 @@ class TestCalculateGravity:
             observation_z=0.0,
         )
 
-        with np.testing.assert_raises(ValueError):
+        with pytest.raises(ValueError):
             calculate_gravity(model)
 
     def test_parallel_computation_matches_serial(self) -> None:
