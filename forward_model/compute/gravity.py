@@ -62,7 +62,7 @@ def _apply_gravity_kernel(
     gz = np.zeros(n_obs, dtype=np.float64)
 
     # Conversion factor: 2 * G (SI) * 1e5 (converts m/s² to mGal)
-    # 2 * G * 1e5 = 2 * 6.674e-11 * 1e5 = 1.3348e-6
+    # 2 * G * 1e5 = 2 * 6.674e-11 * 1e5 = 1.3348e-5
     scale_factor = 2.0 * _G * 1e5
 
     for tx, tz, dtheta, log_term, valid in edge_geometry_2d(
