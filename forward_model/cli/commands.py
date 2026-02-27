@@ -158,6 +158,7 @@ def run(
                 "Heat flow calculation not yet implemented. Tracked in future issues."
             )
         # At this point, model must be ForwardModel (only remaining type in union)
+        assert isinstance(model, ForwardModel)
 
         # Calculate all anomaly components in one pass
         if verbose:
