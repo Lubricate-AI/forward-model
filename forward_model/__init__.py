@@ -30,8 +30,11 @@ from forward_model.models import (
     ForwardModel,
     GeologicBody,
     GravityModel,
+    GravityProperties,
     HeatFlowModel,
     MagneticField,
+    MagneticProperties,
+    ThermalProperties,
 )
 
 # Visualization
@@ -47,6 +50,9 @@ __all__ = [
     "ForwardModel",
     "GravityModel",
     "HeatFlowModel",
+    "MagneticProperties",
+    "GravityProperties",
+    "ThermalProperties",
     # Computation
     "AnomalyComponents",
     "BatchResult",
@@ -64,4 +70,4 @@ __all__ = [
     "plot_combined",
 ]
 
-__version__ = "0.1.0"
+__version__ = "2.0.0"

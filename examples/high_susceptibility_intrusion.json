@@ -3,8 +3,10 @@
   "bodies": [
     {
       "name": "Iron-Ore Intrusion (χ=1.0 SI, N_d=0.3)",
-      "susceptibility": 1.0,
-      "demagnetization_factor": 0.3,
+      "magnetic": {
+        "susceptibility": 1.0,
+        "demagnetization_factor": 0.3
+      },
       "vertices": [
         [-250.0, 100.0],
         [250.0, 100.0],

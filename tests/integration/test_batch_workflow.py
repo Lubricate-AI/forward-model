@@ -20,7 +20,7 @@ def _make_model_dict(
         "bodies": [
             {
                 "name": "Test Body",
-                "susceptibility": susceptibility,
+                "magnetic": {"susceptibility": susceptibility},
                 "vertices": [
                     [0.0, 100.0],
                     [100.0, 100.0],

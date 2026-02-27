@@ -4,7 +4,12 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import (
+    ForwardModel,
+    GeologicBody,
+    MagneticField,
+    MagneticProperties,
+)
 
 
 class TestForwardModel:
@@ -71,7 +76,7 @@ class TestForwardModel:
         """Test model with multiple bodies."""
         body2 = GeologicBody(
             vertices=[[100.0, 50.0], [150.0, 50.0], [150.0, 100.0], [100.0, 100.0]],
-            susceptibility=0.1,
+            magnetic=MagneticProperties(susceptibility=0.1),
             name="Body2",
         )
         model = ForwardModel(
@@ -106,7 +111,7 @@ class TestForwardModelOverlapValidation:
         """Partially overlapping rectangles raise ValidationError."""
         body_b = GeologicBody(
             vertices=[[25.0, 50.0], [75.0, 50.0], [75.0, 150.0], [25.0, 150.0]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="PartialOverlap",
         )
         with pytest.raises(ValidationError, match="overlap"):
@@ -118,7 +123,7 @@ class TestForwardModelOverlapValidation:
         """A body fully containing another raises ValidationError."""
         outer = GeologicBody(
             vertices=[[-50.0, 50.0], [150.0, 50.0], [150.0, 300.0], [-50.0, 300.0]],
-            susceptibility=0.02,
+            magnetic=MagneticProperties(susceptibility=0.02),
             name="Outer",
         )
         with pytest.raises(ValidationError, match="overlap"):
@@ -130,7 +135,7 @@ class TestForwardModelOverlapValidation:
         """Bodies sharing only an edge are accepted (valid geological contact)."""
         adjacent = GeologicBody(
             vertices=[[50.0, 100.0], [100.0, 100.0], [100.0, 200.0], [50.0, 200.0]],
-            susceptibility=0.03,
+            magnetic=MagneticProperties(susceptibility=0.03),
             name="Adjacent",
         )
         model = self._make_model([simple_rectangle, adjacent], earth_field)
@@ -142,7 +147,7 @@ class TestForwardModelOverlapValidation:
         """Bodies touching only at a single corner are accepted."""
         corner = GeologicBody(
             vertices=[[50.0, 200.0], [100.0, 200.0], [100.0, 300.0], [50.0, 300.0]],
-            susceptibility=0.04,
+            magnetic=MagneticProperties(susceptibility=0.04),
             name="CornerTouch",
         )
         model = self._make_model([simple_rectangle, corner], earth_field)
@@ -154,7 +159,7 @@ class TestForwardModelOverlapValidation:
         """Two bodies with exactly the same footprint raise ValidationError."""
         coincident = GeologicBody(
             vertices=list(simple_rectangle.vertices),
-            susceptibility=0.07,
+            magnetic=MagneticProperties(susceptibility=0.07),
             name="Coincident",
         )
         with pytest.raises(ValidationError, match="overlap"):
@@ -175,7 +180,7 @@ class TestForwardModelOverlapValidation:
                 [0.0, 200.0],
                 [0.0, 150.0],
             ],
-            susceptibility=0.08,
+            magnetic=MagneticProperties(susceptibility=0.08),
             name="BoundaryOverlap",
         )
         with pytest.raises(ValidationError, match="overlap"):
@@ -195,12 +200,12 @@ class TestForwardModelOverlapValidation:
         ]
         concave1 = GeologicBody(
             vertices=concave_vertices,
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Concave1",
         )
         concave2 = GeologicBody(
             vertices=list(concave_vertices),
-            susceptibility=0.06,
+            magnetic=MagneticProperties(susceptibility=0.06),
             name="Concave2",
         )
         with pytest.raises(ValidationError, match="overlap"):
@@ -212,7 +217,7 @@ class TestForwardModelOverlapValidation:
         """Non-overlapping bodies pass validation."""
         body2 = GeologicBody(
             vertices=[[100.0, 50.0], [150.0, 50.0], [150.0, 100.0], [100.0, 100.0]],
-            susceptibility=0.1,
+            magnetic=MagneticProperties(susceptibility=0.1),
             name="Body2",
         )
         model = self._make_model([simple_rectangle, body2], earth_field)

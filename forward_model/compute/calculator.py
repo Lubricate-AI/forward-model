@@ -155,20 +155,20 @@ def calculate_anomaly(
         ]
     ] = []
     for body in model.bodies:
-        if body.susceptibility is None:
+        if body.magnetic is None:
             raise ValueError(
-                f"Body '{body.name}' has no susceptibility; "
-                "magnetic calculation requires susceptibility to be set"
+                f"Body '{body.name}' has no magnetic properties; "
+                "magnetic calculation requires magnetic to be set"
             )
         magnetization = field_to_magnetization(
-            susceptibility=body.susceptibility,
+            susceptibility=body.magnetic.susceptibility,
             field_intensity=model.field.intensity,
             field_inclination=model.field.inclination,
             field_declination=model.field.declination,
-            remanent_intensity=body.remanent_intensity,
-            remanent_inclination=body.remanent_inclination,
-            remanent_declination=body.remanent_declination,
-            demagnetization_factor=body.demagnetization_factor,
+            remanent_intensity=body.magnetic.remanent_intensity,
+            remanent_inclination=body.magnetic.remanent_inclination,
+            remanent_declination=body.magnetic.remanent_declination,
+            demagnetization_factor=body.magnetic.demagnetization_factor,
         )
         per_body.append(
             (

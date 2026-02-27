@@ -2,7 +2,9 @@
   "bodies": [
     {
       "name": "Vertical Dyke",
-      "susceptibility": 0.08,
+      "magnetic": {
+        "susceptibility": 0.08
+      },
       "vertices": [
         [20.0, 50.0],
         [30.0, 50.0],

@@ -25,7 +25,8 @@ Rectangle,0.05,0.0,100.0,50.0,100.0,50.0,200.0,0.0,200.0
         assert isinstance(model, ForwardModel)
         assert len(model.bodies) == 1
         assert model.bodies[0].name == "Rectangle"
-        assert model.bodies[0].susceptibility == 0.05
+        assert model.bodies[0].magnetic is not None
+        assert model.bodies[0].magnetic.susceptibility == 0.05
         assert len(model.bodies[0].vertices) == 4
         assert model.field.intensity == 50000.0
         assert model.field.inclination == 60.0
@@ -65,8 +66,10 @@ Body2,0.08,100.0,150.0,150.0,150.0,150.0,250.0,100.0,250.0
         assert len(model.bodies) == 2
         assert model.bodies[0].name == "Body1"
         assert model.bodies[1].name == "Body2"
-        assert model.bodies[0].susceptibility == 0.05
-        assert model.bodies[1].susceptibility == 0.08
+        assert model.bodies[0].magnetic is not None
+        assert model.bodies[0].magnetic.susceptibility == 0.05
+        assert model.bodies[1].magnetic is not None
+        assert model.bodies[1].magnetic.susceptibility == 0.08
 
     def test_load_csv_nonexistent_file(self, tmp_path: Path) -> None:
         """Test loading from nonexistent file raises FileNotFoundError."""

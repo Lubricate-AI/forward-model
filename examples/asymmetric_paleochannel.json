@@ -2,7 +2,9 @@
   "bodies": [
     {
       "name": "Asymmetric Paleochannel",
-      "susceptibility": -0.001,
+      "magnetic": {
+        "susceptibility": -0.001
+      },
       "strike_forward": 700.0,
       "strike_backward": 200.0,
       "vertices": [
