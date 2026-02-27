@@ -32,7 +32,7 @@ def edge_geometry_2d(
     Yields:
         (tx, tz, dtheta, log_ratio, valid) for each non-degenerate edge:
         - tx, tz: Edge tangent unit vector components (scalars).
-        - dtheta: arctan2(z2,x2) − arctan2(z1,x1), wrapped to (−π, π], shape (M,).
+        - dtheta: arctan2(z2,x2) − arctan2(z1,x1), wrapped to [−π, π], shape (M,).
         - log_ratio: log(r2/r1) masked at invalid points, shape (M,).
         - valid: Boolean mask (r1 >= min_distance) & (r2 >= min_distance), shape (M,).
     """
@@ -50,8 +50,8 @@ def edge_geometry_2d(
             continue
 
         edge_length = np.sqrt(dx**2 + dz**2)
-        tx = dx / edge_length
-        tz = dz / edge_length
+        tx = float(dx / edge_length)
+        tz = float(dz / edge_length)
 
         x1 = vertices[j, 0] - obs_x
         z1 = vertices[j, 1] - obs_z
@@ -109,7 +109,7 @@ def edge_geometry_2_5d(
     Yields:
         (tx, tz, dtheta, dlambda, valid) for each non-degenerate edge:
         - tx, tz: Edge tangent unit vector components (scalars).
-        - dtheta: Θ2 − Θ1 wrapped to (−π, π], shape (M,).
+        - dtheta: Θ2 − Θ1 wrapped to [−π, π], shape (M,).
         - dlambda: Λ2 − Λ1 masked at invalid points, shape (M,).
         - valid: Boolean mask (r1 >= min_distance) & (r2 >= min_distance), shape (M,).
     """
@@ -128,8 +128,8 @@ def edge_geometry_2_5d(
             continue
 
         edge_length = np.sqrt(dx**2 + dz**2)
-        tx = dx / edge_length
-        tz = dz / edge_length
+        tx = float(dx / edge_length)
+        tz = float(dz / edge_length)
 
         x1 = vertices[j, 0] - obs_x
         z1 = vertices[j, 1] - obs_z
@@ -149,10 +149,15 @@ def edge_geometry_2_5d(
         dtheta = np.where(dtheta > np.pi, dtheta - 2 * np.pi, dtheta)
         dtheta = np.where(dtheta < -np.pi, dtheta + 2 * np.pi, dtheta)
 
+        ratio1 = np.zeros_like(r1)
+        np.divide(r1, sr1 + y0, out=ratio1, where=valid)
         lambda1 = np.zeros_like(r1)
-        np.log(r1 / (sr1 + y0), out=lambda1, where=valid)
+        np.log(ratio1, out=lambda1, where=valid)
+
+        ratio2 = np.zeros_like(r2)
+        np.divide(r2, sr2 + y0, out=ratio2, where=valid)
         lambda2 = np.zeros_like(r2)
-        np.log(r2 / (sr2 + y0), out=lambda2, where=valid)
+        np.log(ratio2, out=lambda2, where=valid)
         dlambda: NDArray[np.float64] = lambda2 - lambda1
 
         yield tx, tz, dtheta, dlambda, valid
