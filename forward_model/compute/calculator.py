@@ -112,7 +112,7 @@ def calculate_anomaly(
 def calculate_anomaly(
     model: GravityModel,
     parallel: bool = ...,
-    component: object | None = ...,
+    component: Literal["bz", "bx", "total_field", "amplitude", "gradient", "all"] = ...,
 ) -> GravityComponents: ...
 
 
