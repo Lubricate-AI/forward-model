@@ -132,7 +132,8 @@ def calculate_anomaly(
     """Calculate anomaly for a forward model, dispatching on model type.
 
     Computes the anomaly using the appropriate algorithm for the model type:
-    - ForwardModel (magnetic): Talwani (1965) algorithm, returns NDArray or MagneticComponents
+    - ForwardModel (magnetic): Talwani (1965) algorithm, returns NDArray or
+      MagneticComponents
     - GravityModel: Talwani (1959) algorithm, returns GravityComponents (gz in mGal)
     - HeatFlowModel: Not yet implemented; raises NotImplementedError
 
@@ -145,7 +146,8 @@ def calculate_anomaly(
                    ``"amplitude"``, ``"gradient"``, ``"all"``.
 
     Returns:
-        - ForwardModel: ``NDArray[np.float64]`` or ``MagneticComponents`` (when component="all")
+        - ForwardModel: ``NDArray[np.float64]`` or ``MagneticComponents``
+          (when ``component="all"``)
         - GravityModel: ``GravityComponents`` with gz (mGal) and gz_gradient (mGal/m)
 
     Raises:

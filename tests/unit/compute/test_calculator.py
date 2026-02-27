@@ -3,7 +3,11 @@
 import numpy as np
 import pytest
 
-from forward_model.compute import GravityComponents, MagneticComponents, calculate_anomaly
+from forward_model.compute import (
+    GravityComponents,
+    MagneticComponents,
+    calculate_anomaly,
+)
 from forward_model.models import (
     ForwardModel,
     GeologicBody,
@@ -135,8 +139,10 @@ class TestCalculateAnomaly:
             assert anomaly.shape == (n_points,)
             assert np.all(np.isfinite(anomaly))
 
-    def test_calculate_anomaly_all_returns_magnetic_components(self, simple_model: ForwardModel) -> None:
-        """calculate_anomaly(..., component='all') returns a MagneticComponents instance."""
+    def test_calculate_anomaly_all_returns_magnetic_components(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """calculate_anomaly with component='all' returns MagneticComponents."""
         result = calculate_anomaly(simple_model, component="all")
         assert isinstance(result, MagneticComponents)
 
@@ -198,7 +204,9 @@ class TestCalculateAnomalyDispatch:
         result = calculate_anomaly(gravity_model, component="all")  # type: ignore[call-overload]
         assert isinstance(result, GravityComponents)
 
-    def test_gravity_model_returns_gz_gradient(self, gravity_model: GravityModel) -> None:
+    def test_gravity_model_returns_gz_gradient(
+        self, gravity_model: GravityModel
+    ) -> None:
         """GravityComponents includes gz_gradient with same shape as gz."""
         result = calculate_anomaly(gravity_model)
         assert result.gz_gradient.shape == result.gz.shape
@@ -207,9 +215,15 @@ class TestCalculateAnomalyDispatch:
 
 def test_magnetic_components_exported_from_compute() -> None:
     """MagneticComponents is importable from forward_model.compute."""
-    from forward_model.compute import MagneticComponents  # noqa: F401
+    from forward_model.compute import MagneticComponents as MC
+
+    assert MC is MagneticComponents
 
 
 def test_top_level_exports_magnetic_and_gravity_components() -> None:
     """MagneticComponents and GravityComponents are importable from forward_model."""
-    from forward_model import GravityComponents, MagneticComponents  # noqa: F401
+    from forward_model import GravityComponents as GC
+    from forward_model import MagneticComponents as MC
+
+    assert MC is MagneticComponents
+    assert GC is GravityComponents
