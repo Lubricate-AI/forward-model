@@ -15,7 +15,6 @@ from forward_model.compute.talwani import (
 
 __all__ = [
     "AnomalyComponents",
-    "MagneticComponents",
     "BatchResult",
     "batch_calculate",
     "calculate_anomaly",
@@ -26,4 +25,5 @@ __all__ = [
     "compute_polygon_anomaly_2_75d",
     "field_to_magnetization",
     "GravityComponents",
+    "MagneticComponents",
 ]
