@@ -60,9 +60,9 @@ def _process_single(
 
     # Batch processing only supports magnetic models
     if not isinstance(model, ForwardModel):
-        raise ValueError(
-            f"Batch processing only supports magnetic models. "
-            f"Model {model_path} is of type {type(model).__name__}."
+        raise NotImplementedError(
+            f"Batch processing for non-magnetic models is not yet implemented. "
+            f"Tracked in future issues. Model {model_path} is of type {type(model).__name__}."
         )
 
     anomaly = calculate_anomaly(model)
