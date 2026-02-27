@@ -201,7 +201,7 @@ class TestCalculateAnomalyDispatch:
 
     def test_gravity_model_ignores_component(self, gravity_model: GravityModel) -> None:
         """component keyword is silently ignored for GravityModel."""
-        result = calculate_anomaly(gravity_model, component="all")  # type: ignore[call-overload]
+        result = calculate_anomaly(gravity_model, component="all")
         assert isinstance(result, GravityComponents)
 
     def test_gravity_model_returns_gz_gradient(

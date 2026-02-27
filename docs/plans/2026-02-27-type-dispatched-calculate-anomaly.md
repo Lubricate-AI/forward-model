@@ -1,6 +1,5 @@
 # Type-Dispatched `calculate_anomaly()` Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Generalize `calculate_anomaly()` to accept and dispatch on all model types (ForwardModel, GravityModel, HeatFlowModel), keeping existing magnetic behavior unchanged.
 

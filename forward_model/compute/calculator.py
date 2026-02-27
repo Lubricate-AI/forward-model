@@ -112,6 +112,7 @@ def calculate_anomaly(
 def calculate_anomaly(
     model: GravityModel,
     parallel: bool = ...,
+    component: object | None = ...,
 ) -> GravityComponents: ...
 
 
