@@ -13,8 +13,10 @@ Example:
 # Computation
 from forward_model.compute import AnomalyComponents as AnomalyComponents
 from forward_model.compute import BatchResult as BatchResult
+from forward_model.compute import GravityComponents as GravityComponents
+from forward_model.compute import MagneticComponents as MagneticComponents
 from forward_model.compute import batch_calculate as batch_calculate
-from forward_model.compute import calculate_anomaly
+from forward_model.compute import calculate_anomaly as calculate_anomaly
 from forward_model.config import Config as Config
 from forward_model.config import load_config as load_config
 
@@ -60,6 +62,8 @@ __all__ = [
     "BatchResult",
     "batch_calculate",
     "calculate_anomaly",
+    "GravityComponents",
+    "MagneticComponents",
     # I/O
     "load_model",
     "load_model_from_csv",

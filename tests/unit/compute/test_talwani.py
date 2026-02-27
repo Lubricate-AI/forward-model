@@ -11,7 +11,13 @@ from forward_model.compute import (
     compute_polygon_anomaly_2_75d,
     field_to_magnetization,
 )
+from forward_model.compute.talwani import MagneticComponents
 from forward_model.models import ForwardModel, GeologicBody, MagneticField
+
+
+def test_magnetic_components_alias() -> None:
+    """MagneticComponents is canonical; AnomalyComponents is a backward-compat alias."""
+    assert MagneticComponents is AnomalyComponents
 
 
 class TestFieldToMagnetization:

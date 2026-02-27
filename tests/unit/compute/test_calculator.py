@@ -3,11 +3,17 @@
 import numpy as np
 import pytest
 
-from forward_model.compute import calculate_anomaly
+from forward_model.compute import (
+    GravityComponents,
+    MagneticComponents,
+    calculate_anomaly,
+)
 from forward_model.models import (
     ForwardModel,
     GeologicBody,
+    GravityModel,
     GravityProperties,
+    HeatFlowModel,
     MagneticField,
     MagneticProperties,
 )
@@ -133,6 +139,13 @@ class TestCalculateAnomaly:
             assert anomaly.shape == (n_points,)
             assert np.all(np.isfinite(anomaly))
 
+    def test_calculate_anomaly_all_returns_magnetic_components(
+        self, simple_model: ForwardModel
+    ) -> None:
+        """calculate_anomaly with component='all' returns MagneticComponents."""
+        result = calculate_anomaly(simple_model, component="all")
+        assert isinstance(result, MagneticComponents)
+
     def test_no_magnetic_properties_raises(self, earth_field: MagneticField) -> None:
         """ValueError is raised when a body has no magnetic properties set."""
         body = GeologicBody(
@@ -148,3 +161,69 @@ class TestCalculateAnomaly:
         )
         with pytest.raises(ValueError, match="DensityOnly"):
             calculate_anomaly(model)
+
+
+class TestCalculateAnomalyDispatch:
+    """Tests for type-dispatched calculate_anomaly."""
+
+    def test_gravity_model_returns_gravity_components(
+        self, gravity_model: GravityModel
+    ) -> None:
+        """calculate_anomaly(gravity_model) returns GravityComponents."""
+        result = calculate_anomaly(gravity_model)
+        assert isinstance(result, GravityComponents)
+        assert result.gz.shape == (7,)
+        assert np.all(np.isfinite(result.gz))
+
+    def test_gravity_model_parallel(self, gravity_model: GravityModel) -> None:
+        """calculate_anomaly(gravity_model, parallel=True) matches serial result."""
+        serial = calculate_anomaly(gravity_model, parallel=False)
+        parallel = calculate_anomaly(gravity_model, parallel=True)
+        assert np.allclose(serial.gz, parallel.gz, rtol=1e-12)
+
+    def test_gravity_model_correct_units(self, gravity_model: GravityModel) -> None:
+        """Gravity result is in mGal (reasonable range for crustal anomalies)."""
+        result = calculate_anomaly(gravity_model)
+        assert np.all(np.abs(result.gz) < 1000.0)
+
+    def test_heat_flow_model_raises_not_implemented(
+        self, heat_flow_model: HeatFlowModel
+    ) -> None:
+        """calculate_anomaly(heat_flow_model) raises NotImplementedError."""
+        with pytest.raises(NotImplementedError, match="Heat flow"):
+            calculate_anomaly(heat_flow_model)
+
+    def test_forward_model_unchanged(self, simple_model: ForwardModel) -> None:
+        """Backward compat: ForwardModel still returns NDArray by default."""
+        result = calculate_anomaly(simple_model)
+        assert isinstance(result, np.ndarray)
+        assert result.shape == (7,)
+
+    def test_gravity_model_ignores_component(self, gravity_model: GravityModel) -> None:
+        """component keyword is silently ignored for GravityModel."""
+        result = calculate_anomaly(gravity_model, component="all")
+        assert isinstance(result, GravityComponents)
+
+    def test_gravity_model_returns_gz_gradient(
+        self, gravity_model: GravityModel
+    ) -> None:
+        """GravityComponents includes gz_gradient with same shape as gz."""
+        result = calculate_anomaly(gravity_model)
+        assert result.gz_gradient.shape == result.gz.shape
+        assert np.all(np.isfinite(result.gz_gradient))
+
+
+def test_magnetic_components_exported_from_compute() -> None:
+    """MagneticComponents is importable from forward_model.compute."""
+    from forward_model.compute import MagneticComponents as MC
+
+    assert MC is MagneticComponents
+
+
+def test_top_level_exports_magnetic_and_gravity_components() -> None:
+    """MagneticComponents and GravityComponents are importable from forward_model."""
+    from forward_model import GravityComponents as GC
+    from forward_model import MagneticComponents as MC
+
+    assert MC is MagneticComponents
+    assert GC is GravityComponents

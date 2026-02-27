@@ -14,7 +14,7 @@ from forward_model.compute.geometry import (
 
 
 @dataclass
-class AnomalyComponents:
+class MagneticComponents:
     """All magnetic anomaly components at each observation point.
 
     Attributes:
@@ -33,6 +33,10 @@ class AnomalyComponents:
     total_field: NDArray[np.float64]
     amplitude: NDArray[np.float64]
     gradient: NDArray[np.float64]
+
+
+# Backward-compatible alias — external code using AnomalyComponents keeps working
+AnomalyComponents = MagneticComponents
 
 
 class PolygonComponents(NamedTuple):
