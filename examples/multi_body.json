@@ -2,7 +2,9 @@
   "bodies": [
     {
       "name": "Dyke",
-      "susceptibility": 0.05,
+      "magnetic": {
+        "susceptibility": 0.05
+      },
       "color": "#87CEEB",
       "hatch": "///",
       "vertices": [
@@ -14,7 +16,9 @@
     },
     {
       "name": "Intrusion",
-      "susceptibility": 0.08,
+      "magnetic": {
+        "susceptibility": 0.08
+      },
       "vertices": [
         [60.0, 150.0],
         [120.0, 150.0],
@@ -24,7 +28,9 @@
     },
     {
       "name": "Void",
-      "susceptibility": -0.01,
+      "magnetic": {
+        "susceptibility": -0.01
+      },
       "vertices": [
         [150.0, 120.0],
         [170.0, 120.0],

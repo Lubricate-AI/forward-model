@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from forward_model.models import GeologicBody, GravityModel
+from forward_model.models import GeologicBody, GravityModel, GravityProperties
 
 
 class ObservationData(TypedDict):
@@ -22,13 +22,13 @@ class TestGravityModel:
     def _body(self, **kwargs: object) -> GeologicBody:
         return GeologicBody(
             vertices=self._VERTS,
-            density=2670.0,
+            gravity=GravityProperties(density_contrast=2670.0),
             name="Body",
             **kwargs,  # type: ignore[arg-type]
         )
 
     def test_valid_model_with_density_body(self) -> None:
-        """GravityModel accepts a body with only density set."""
+        """GravityModel accepts a body with only gravity set."""
         body = self._body()
         model = GravityModel(
             bodies=[body],
@@ -36,14 +36,15 @@ class TestGravityModel:
             observation_z=0.0,
         )
         assert len(model.bodies) == 1
-        assert model.bodies[0].density == 2670.0
+        assert model.bodies[0].gravity is not None
+        assert model.bodies[0].gravity.density_contrast == 2670.0
         assert len(model.observation_x) == 3
         assert model.observation_z == 0.0
 
-    def test_valid_model_with_susceptibility_body(
+    def test_valid_model_with_magnetic_body(
         self, simple_rectangle: GeologicBody
     ) -> None:
-        """GravityModel accepts a body that has susceptibility (but no density)."""
+        """GravityModel accepts a body that has magnetic (but no gravity)."""
         model = GravityModel(
             bodies=[simple_rectangle],
             observation_x=[0.0, 10.0],
@@ -115,12 +116,12 @@ class TestGravityModel:
         """GravityModel accepts multiple bodies."""
         body1 = GeologicBody(
             vertices=self._VERTS,
-            density=2670.0,
+            gravity=GravityProperties(density_contrast=2670.0),
             name="Body1",
         )
         body2 = GeologicBody(
             vertices=[[5.0, 0.0], [6.0, 0.0], [6.0, 1.0]],
-            density=-200.0,
+            gravity=GravityProperties(density_contrast=-200.0),
             name="Body2",
         )
         model = GravityModel(
@@ -139,7 +140,11 @@ class TestGravityModelOverlapValidation:
     _OBS: ObservationData = {"observation_x": [0.0, 50.0], "observation_z": 0.0}
 
     def _body(self, vertices: list[list[float]], name: str) -> GeologicBody:
-        return GeologicBody(vertices=vertices, density=2670.0, name=name)
+        return GeologicBody(
+            vertices=vertices,
+            gravity=GravityProperties(density_contrast=2670.0),
+            name=name,
+        )
 
     def test_overlapping_bodies_rejected(self) -> None:
         """Partially overlapping bodies raise ValidationError."""

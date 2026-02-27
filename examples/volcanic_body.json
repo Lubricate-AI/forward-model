@@ -3,10 +3,12 @@
   "bodies": [
     {
       "name": "Volcanic Flow (High-Q, Q≈5)",
-      "susceptibility": 0.01,
-      "remanent_intensity": 2.0,
-      "remanent_inclination": -45.0,
-      "remanent_declination": 10.0,
+      "magnetic": {
+        "susceptibility": 0.01,
+        "remanent_intensity": 2.0,
+        "remanent_inclination": -45.0,
+        "remanent_declination": 10.0
+      },
       "vertices": [
         [-500.0, 50.0],
         [500.0, 50.0],

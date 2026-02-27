@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from forward_model.models import GeologicBody, HeatFlowModel
+from forward_model.models import GeologicBody, HeatFlowModel, ThermalProperties
 
 
 class ObservationData(TypedDict):
@@ -117,8 +117,7 @@ class TestHeatFlowModel:
         """Model accepts multiple geologic bodies."""
         body2 = GeologicBody(
             vertices=[[100.0, 50.0], [150.0, 50.0], [150.0, 100.0], [100.0, 100.0]],
-            susceptibility=0.0,
-            thermal_conductivity=1.5,
+            thermal=ThermalProperties(conductivity=1.5),
             name="Shale",
         )
         model = HeatFlowModel(
@@ -138,7 +137,7 @@ class TestHeatFlowModelOverlapValidation:
 
     def _body(self, vertices: list[list[float]], name: str) -> GeologicBody:
         return GeologicBody(
-            vertices=vertices, susceptibility=0.0, thermal_conductivity=3.3, name=name
+            vertices=vertices, thermal=ThermalProperties(conductivity=3.3), name=name
         )
 
     def test_overlapping_bodies_rejected(self) -> None:

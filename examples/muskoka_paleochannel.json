@@ -2,7 +2,9 @@
   "bodies": [
     {
       "name": "Muskoka Paleochannel",
-      "susceptibility": -0.001,
+      "magnetic": {
+        "susceptibility": -0.001
+      },
       "strike_half_length": 500.0,
       "vertices": [
         [-75.0, 80.0],

@@ -490,9 +490,11 @@ class TestAnomalyComponents:
 
     def _simple_model(self, inclination: float = 60.0) -> ForwardModel:
         """Build a minimal ForwardModel for calculate_anomaly tests."""
+        from forward_model.models.properties import MagneticProperties
+
         body = GeologicBody(
             vertices=[[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Block",
         )
         field = MagneticField(
@@ -569,6 +571,8 @@ class TestAnomalyComponents:
         At I=90°, ΔT = Bz. Bz is symmetric about x=0 for a centered body, so
         its derivative d(ΔT)/dx is antisymmetric: gradient(-x) == -gradient(x).
         """
+        from forward_model.models.properties import MagneticProperties
+
         body = GeologicBody(
             vertices=[
                 [-25.0, 100.0],
@@ -576,7 +580,7 @@ class TestAnomalyComponents:
                 [25.0, 200.0],
                 [-25.0, 200.0],
             ],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Block",
         )
         field = MagneticField(intensity=50000.0, inclination=90.0, declination=0.0)
@@ -670,14 +674,16 @@ class TestMixed2DAnd25DModel:
 
     def test_mixed_model_runs_without_error(self) -> None:
         """ForwardModel with one 2D body and one 2.5D body computes without error."""
+        from forward_model.models.properties import MagneticProperties
+
         body_2d = GeologicBody(
             vertices=[[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="2D Body",
         )
         body_25d = GeologicBody(
             vertices=[[50.0, 100.0], [100.0, 100.0], [100.0, 200.0], [50.0, 200.0]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="2.5D Body",
             strike_half_length=500.0,
         )
@@ -699,14 +705,18 @@ class TestMixed2DAnd25DModel:
         field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
         obs_x = list(np.linspace(-200.0, 200.0, 41))
 
-        body_2d = GeologicBody(vertices=verts, susceptibility=0.05, name="2D")
+        from forward_model.models.properties import MagneticProperties
+
+        body_2d = GeologicBody(
+            vertices=verts, magnetic=MagneticProperties(susceptibility=0.05), name="2D"
+        )
         model_2d = ForwardModel(
             bodies=[body_2d], field=field, observation_x=obs_x, observation_z=0.0
         )
 
         body_25d = GeologicBody(
             vertices=verts,
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="2.5D",
             strike_half_length=150.0,
         )

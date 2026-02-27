@@ -6,7 +6,12 @@ import numpy as np
 import pytest
 from pydantic import ValidationError
 
-from forward_model.models import GeologicBody
+from forward_model.models import (
+    GeologicBody,
+    GravityProperties,
+    MagneticProperties,
+    ThermalProperties,
+)
 
 
 class TestGeologicBody:
@@ -15,7 +20,8 @@ class TestGeologicBody:
     def test_valid_body(self, simple_rectangle: GeologicBody) -> None:
         """Test creating a valid geologic body."""
         assert len(simple_rectangle.vertices) == 4
-        assert simple_rectangle.susceptibility == 0.05
+        assert simple_rectangle.magnetic is not None
+        assert simple_rectangle.magnetic.susceptibility == 0.05
         assert simple_rectangle.name == "Rectangle"
 
     def test_minimum_vertices(self) -> None:
@@ -23,7 +29,7 @@ class TestGeologicBody:
         with pytest.raises(ValidationError, match="at least 3 items"):
             GeologicBody(
                 vertices=[[0.0, 0.0], [1.0, 0.0]],
-                susceptibility=0.01,
+                magnetic=MagneticProperties(susceptibility=0.01),
                 name="Invalid",
             )
 
@@ -32,7 +38,7 @@ class TestGeologicBody:
         with pytest.raises(ValidationError, match="exactly 2 coordinates"):
             GeologicBody(
                 vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0, 2.0]],
-                susceptibility=0.01,
+                magnetic=MagneticProperties(susceptibility=0.01),
                 name="Invalid",
             )
 
@@ -41,18 +47,14 @@ class TestGeologicBody:
         with pytest.raises(ValidationError, match="non-finite values"):
             GeologicBody(
                 vertices=[[0.0, 0.0], [float("inf"), 0.0], [1.0, 1.0]],
-                susceptibility=0.01,
+                magnetic=MagneticProperties(susceptibility=0.01),
                 name="Invalid",
             )
 
     def test_non_finite_susceptibility(self) -> None:
         """Test that non-finite susceptibility is rejected."""
         with pytest.raises(ValidationError, match="must be finite"):
-            GeologicBody(
-                vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-                susceptibility=float("nan"),
-                name="Invalid",
-            )
+            MagneticProperties(susceptibility=float("nan"))
 
     def test_to_numpy(self, simple_rectangle: GeologicBody) -> None:
         """Test conversion to NumPy array."""
@@ -65,7 +67,7 @@ class TestGeologicBody:
     def test_immutability(self, simple_rectangle: GeologicBody) -> None:
         """Test that GeologicBody is immutable."""
         with pytest.raises(ValidationError):
-            simple_rectangle.susceptibility = 0.1  # type: ignore
+            simple_rectangle.magnetic = None  # type: ignore
 
 
 class TestGeologicBodyLabelLoc:
@@ -75,7 +77,7 @@ class TestGeologicBodyLabelLoc:
         """label_loc defaults to None when not provided."""
         body = GeologicBody(
             vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-            susceptibility=0.01,
+            magnetic=MagneticProperties(susceptibility=0.01),
             name="Body",
         )
         assert body.label_loc is None
@@ -84,7 +86,7 @@ class TestGeologicBodyLabelLoc:
         """label_loc stores a valid 2-element coordinate list."""
         body = GeologicBody(
             vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-            susceptibility=0.01,
+            magnetic=MagneticProperties(susceptibility=0.01),
             name="Body",
             label_loc=[100.0, 200.0],
         )
@@ -95,7 +97,7 @@ class TestGeologicBodyLabelLoc:
         with pytest.raises(ValidationError, match="exactly 2 coordinates"):
             GeologicBody(
                 vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-                susceptibility=0.01,
+                magnetic=MagneticProperties(susceptibility=0.01),
                 name="Body",
                 label_loc=[100.0, 200.0, 300.0],
             )
@@ -105,7 +107,7 @@ class TestGeologicBodyLabelLoc:
         with pytest.raises(ValidationError, match="non-finite values"):
             GeologicBody(
                 vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-                susceptibility=0.01,
+                magnetic=MagneticProperties(susceptibility=0.01),
                 name="Body",
                 label_loc=[float("inf"), 200.0],
             )
@@ -119,7 +121,7 @@ class TestGeologicBodyVisualProperties:
     def _body(self, **kwargs: object) -> GeologicBody:
         return GeologicBody(
             vertices=self._VERTS,
-            susceptibility=0.01,
+            magnetic=MagneticProperties(susceptibility=0.01),
             name="Body",
             **kwargs,  # type: ignore[arg-type]
         )
@@ -183,29 +185,34 @@ class TestGeologicBodyVisualProperties:
 
 
 class TestGeologicBodyRemanentMagnetization:
-    """Tests for remanent magnetization fields on GeologicBody."""
+    """Tests for remanent magnetization fields on MagneticProperties
+    (via GeologicBody)."""
 
     _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
 
-    def _body(self, **kwargs: object) -> GeologicBody:
+    def _body(self, **mag_kwargs: object) -> GeologicBody:
         return GeologicBody(
             vertices=self._VERTS,
-            susceptibility=0.01,
+            magnetic=MagneticProperties(
+                susceptibility=0.01,
+                **mag_kwargs,  # type: ignore[arg-type]
+            ),
             name="Body",
-            **kwargs,  # type: ignore[arg-type]
         )
 
     def test_remanent_defaults_to_zero(self) -> None:
         """All three remanent fields default to 0.0."""
         body = self._body()
-        assert body.remanent_intensity == 0.0
-        assert body.remanent_inclination == 0.0
-        assert body.remanent_declination == 0.0
+        assert body.magnetic is not None
+        assert body.magnetic.remanent_intensity == 0.0
+        assert body.magnetic.remanent_inclination == 0.0
+        assert body.magnetic.remanent_declination == 0.0
 
     def test_remanent_intensity_valid(self) -> None:
         """Positive remanent intensity is accepted."""
         body = self._body(remanent_intensity=2.5)
-        assert body.remanent_intensity == 2.5
+        assert body.magnetic is not None
+        assert body.magnetic.remanent_intensity == 2.5
 
     def test_remanent_intensity_negative_rejected(self) -> None:
         """Negative remanent intensity is rejected (ge=0.0 constraint)."""
@@ -224,9 +231,11 @@ class TestGeologicBodyRemanentMagnetization:
     def test_remanent_inclination_bounds(self) -> None:
         """±90° inclination is accepted; ±91° is rejected."""
         body_pos = self._body(remanent_inclination=90.0)
-        assert body_pos.remanent_inclination == 90.0
+        assert body_pos.magnetic is not None
+        assert body_pos.magnetic.remanent_inclination == 90.0
         body_neg = self._body(remanent_inclination=-90.0)
-        assert body_neg.remanent_inclination == -90.0
+        assert body_neg.magnetic is not None
+        assert body_neg.magnetic.remanent_inclination == -90.0
         with pytest.raises(ValidationError):
             self._body(remanent_inclination=91.0)
         with pytest.raises(ValidationError):
@@ -235,9 +244,11 @@ class TestGeologicBodyRemanentMagnetization:
     def test_remanent_declination_bounds(self) -> None:
         """±180° declination is accepted; ±181° is rejected."""
         body_pos = self._body(remanent_declination=180.0)
-        assert body_pos.remanent_declination == 180.0
+        assert body_pos.magnetic is not None
+        assert body_pos.magnetic.remanent_declination == 180.0
         body_neg = self._body(remanent_declination=-180.0)
-        assert body_neg.remanent_declination == -180.0
+        assert body_neg.magnetic is not None
+        assert body_neg.magnetic.remanent_declination == -180.0
         with pytest.raises(ValidationError):
             self._body(remanent_declination=181.0)
         with pytest.raises(ValidationError):
@@ -252,57 +263,76 @@ class TestGeologicBodyRemanentMagnetization:
         )
         d = original.model_dump()
         restored = GeologicBody(**d)
-        assert restored.remanent_intensity == original.remanent_intensity
-        assert restored.remanent_inclination == original.remanent_inclination
-        assert restored.remanent_declination == original.remanent_declination
+        assert restored.magnetic is not None
+        assert original.magnetic is not None
+        assert (
+            restored.magnetic.remanent_intensity == original.magnetic.remanent_intensity
+        )
+        assert (
+            restored.magnetic.remanent_inclination
+            == original.magnetic.remanent_inclination
+        )
+        assert (
+            restored.magnetic.remanent_declination
+            == original.magnetic.remanent_declination
+        )
 
 
 class TestGeologicBodyDemagnetization:
-    """Tests for the demagnetization_factor field on GeologicBody."""
+    """Tests for the demagnetization_factor field on
+    MagneticProperties (via GeologicBody)."""
 
     _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
 
-    def _body(self, **kwargs: object) -> GeologicBody:
+    def _body(self, **mag_kwargs: object) -> GeologicBody:
         return GeologicBody(
             vertices=self._VERTS,
-            susceptibility=0.01,
+            magnetic=MagneticProperties(
+                susceptibility=0.01,
+                **mag_kwargs,  # type: ignore[arg-type]
+            ),
             name="Body",
-            **kwargs,  # type: ignore[arg-type]
         )
 
     def test_default_is_zero(self) -> None:
         """demagnetization_factor defaults to 0.0."""
         body = self._body()
-        assert body.demagnetization_factor == 0.0
+        assert body.magnetic is not None
+        assert body.magnetic.demagnetization_factor == 0.0
 
     def test_valid_lower_bound(self) -> None:
         """0.0 is accepted without warning."""
         body = self._body(demagnetization_factor=0.0)
-        assert body.demagnetization_factor == 0.0
+        assert body.magnetic is not None
+        assert body.magnetic.demagnetization_factor == 0.0
 
     def test_valid_2d_upper_bound(self) -> None:
         """0.5 is accepted without warning (physical 2D upper limit)."""
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             body = self._body(demagnetization_factor=0.5)
-        assert body.demagnetization_factor == 0.5
+        assert body.magnetic is not None
+        assert body.magnetic.demagnetization_factor == 0.5
 
     def test_valid_mid_range(self) -> None:
         """Values in (0.0, 0.5] are accepted silently."""
         body = self._body(demagnetization_factor=0.3)
-        assert body.demagnetization_factor == 0.3
+        assert body.magnetic is not None
+        assert body.magnetic.demagnetization_factor == 0.3
 
     def test_above_half_emits_warning(self) -> None:
         """Values in (0.5, 1.0] are accepted but emit a UserWarning."""
         with pytest.warns(UserWarning, match="exceeds 0.5"):
             body = self._body(demagnetization_factor=0.7)
-        assert body.demagnetization_factor == 0.7
+        assert body.magnetic is not None
+        assert body.magnetic.demagnetization_factor == 0.7
 
     def test_exactly_one_emits_warning(self) -> None:
         """The maximum value 1.0 still emits a UserWarning."""
         with pytest.warns(UserWarning, match="exceeds 0.5"):
             body = self._body(demagnetization_factor=1.0)
-        assert body.demagnetization_factor == 1.0
+        assert body.magnetic is not None
+        assert body.magnetic.demagnetization_factor == 1.0
 
     def test_negative_rejected(self) -> None:
         """Values below 0.0 raise ValidationError."""
@@ -329,7 +359,13 @@ class TestGeologicBodyDemagnetization:
         original = self._body(demagnetization_factor=0.3)
         d = original.model_dump()
         restored = GeologicBody(**d)
-        assert restored.demagnetization_factor == original.demagnetization_factor
+
+        assert restored.magnetic is not None
+        assert original.magnetic is not None
+        assert (
+            restored.magnetic.demagnetization_factor
+            == original.magnetic.demagnetization_factor
+        )
 
 
 class TestGeologicBodyStrikeHalfLength:
@@ -340,7 +376,7 @@ class TestGeologicBodyStrikeHalfLength:
     def _body(self, **kwargs: object) -> GeologicBody:
         return GeologicBody(
             vertices=self._VERTS,
-            susceptibility=0.01,
+            magnetic=MagneticProperties(susceptibility=0.01),
             name="Body",
             **kwargs,  # type: ignore[arg-type]
         )
@@ -396,97 +432,109 @@ class TestGeologicBodyStrikeHalfLength:
 
 
 class TestGeologicBodyThermalProperties:
-    """Tests for the thermal_conductivity and heat_generation fields on GeologicBody."""
+    """Tests for ThermalProperties on GeologicBody."""
 
     _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
 
-    def _body(self, **kwargs: object) -> GeologicBody:
+    def _body_with_thermal(self, **thermal_kwargs: object) -> GeologicBody:
         return GeologicBody(
             vertices=self._VERTS,
-            susceptibility=0.01,
+            thermal=ThermalProperties(**thermal_kwargs),  # type: ignore[arg-type]
             name="Body",
-            **kwargs,  # type: ignore[arg-type]
         )
 
-    # --- thermal_conductivity ---
+    def _body_no_thermal(self) -> GeologicBody:
+        return GeologicBody(
+            vertices=self._VERTS,
+            magnetic=MagneticProperties(susceptibility=0.01),
+            name="Body",
+        )
 
-    def test_thermal_conductivity_default_is_none(self) -> None:
-        """thermal_conductivity defaults to None."""
-        assert self._body().thermal_conductivity is None
+    # --- thermal group ---
+
+    def test_thermal_default_is_none(self) -> None:
+        """thermal defaults to None when not provided."""
+        assert self._body_no_thermal().thermal is None
 
     def test_thermal_conductivity_valid(self) -> None:
         """A positive finite value (granite ~3.3 W/m·K) is accepted."""
-        body = self._body(thermal_conductivity=3.3)
-        assert body.thermal_conductivity == 3.3
+        body = self._body_with_thermal(conductivity=3.3)
+        assert body.thermal is not None
+        assert body.thermal.conductivity == 3.3
 
     def test_thermal_conductivity_zero_rejected(self) -> None:
         """Zero raises ValidationError (gt=0.0 constraint)."""
         with pytest.raises(ValidationError):
-            self._body(thermal_conductivity=0.0)
+            self._body_with_thermal(conductivity=0.0)
 
     def test_thermal_conductivity_negative_rejected(self) -> None:
         """Negative value raises ValidationError."""
         with pytest.raises(ValidationError):
-            self._body(thermal_conductivity=-1.0)
+            self._body_with_thermal(conductivity=-1.0)
 
     def test_thermal_conductivity_inf_rejected(self) -> None:
         """Infinite value raises ValidationError (finiteness validator)."""
         with pytest.raises(ValidationError, match="finite"):
-            self._body(thermal_conductivity=float("inf"))
+            self._body_with_thermal(conductivity=float("inf"))
 
     def test_thermal_conductivity_nan_rejected(self) -> None:
         """NaN raises ValidationError."""
         with pytest.raises(ValidationError):
-            self._body(thermal_conductivity=float("nan"))
+            self._body_with_thermal(conductivity=float("nan"))
 
     # --- heat_generation ---
 
-    def test_heat_generation_default_is_none(self) -> None:
-        """heat_generation defaults to None."""
-        assert self._body().heat_generation is None
+    def test_heat_generation_default_is_zero(self) -> None:
+        """heat_generation defaults to 0.0 when not provided."""
+        body = self._body_with_thermal(conductivity=3.3)
+        assert body.thermal is not None
+        assert body.thermal.heat_generation == 0.0
 
     def test_heat_generation_zero_accepted(self) -> None:
         """Zero is accepted (ge=0.0 allows zero)."""
-        body = self._body(heat_generation=0.0)
-        assert body.heat_generation == 0.0
+        body = self._body_with_thermal(conductivity=3.3, heat_generation=0.0)
+        assert body.thermal is not None
+        assert body.thermal.heat_generation == 0.0
 
     def test_heat_generation_valid(self) -> None:
         """A positive finite value (2.5 µW/m³) is accepted."""
-        body = self._body(heat_generation=2.5)
-        assert body.heat_generation == 2.5
+        body = self._body_with_thermal(conductivity=3.3, heat_generation=2.5)
+        assert body.thermal is not None
+        assert body.thermal.heat_generation == 2.5
 
     def test_heat_generation_negative_rejected(self) -> None:
         """Negative value raises ValidationError."""
         with pytest.raises(ValidationError):
-            self._body(heat_generation=-0.1)
+            self._body_with_thermal(conductivity=3.3, heat_generation=-0.1)
 
     def test_heat_generation_inf_rejected(self) -> None:
         """Infinite value raises ValidationError (finiteness validator)."""
         with pytest.raises(ValidationError, match="finite"):
-            self._body(heat_generation=float("inf"))
+            self._body_with_thermal(conductivity=3.3, heat_generation=float("inf"))
 
     def test_heat_generation_nan_rejected(self) -> None:
         """NaN raises ValidationError."""
         with pytest.raises(ValidationError):
-            self._body(heat_generation=float("nan"))
+            self._body_with_thermal(conductivity=3.3, heat_generation=float("nan"))
 
     # --- roundtrip ---
 
     def test_json_roundtrip_thermal_fields(self) -> None:
         """model_dump() → GeologicBody(**d) round-trip preserves thermal values."""
-        original = self._body(thermal_conductivity=3.3, heat_generation=2.5)
+        original = self._body_with_thermal(conductivity=3.3, heat_generation=2.5)
         d = original.model_dump()
         restored = GeologicBody(**d)
-        assert restored.thermal_conductivity == original.thermal_conductivity
-        assert restored.heat_generation == original.heat_generation
+        assert restored.thermal is not None
+        assert original.thermal is not None
+        assert restored.thermal.conductivity == original.thermal.conductivity
+        assert restored.thermal.heat_generation == original.thermal.heat_generation
 
     def test_json_roundtrip_none(self) -> None:
-        """Round-trip with None preserves None for both fields."""
-        original = self._body()
+        """Round-trip with None preserves None for the thermal group."""
+        original = self._body_no_thermal()
         d = original.model_dump()
         restored = GeologicBody(**d)
-        assert restored.thermal_conductivity is None
-        assert restored.heat_generation is None
+        assert restored.thermal is None
 
 
 class TestGeologicBodyAsymmetricStrike:
@@ -497,7 +545,7 @@ class TestGeologicBodyAsymmetricStrike:
     def _body(self, **kwargs: object) -> GeologicBody:
         return GeologicBody(
             vertices=self._VERTS,
-            susceptibility=0.01,
+            magnetic=MagneticProperties(susceptibility=0.01),
             name="Body",
             **kwargs,  # type: ignore[arg-type]
         )
@@ -554,7 +602,7 @@ class TestGeologicBodyAsymmetricStrike:
 
 
 class TestGeologicBodyDensity:
-    """Tests for the density field on GeologicBody."""
+    """Tests for the gravity field (density_contrast) on GeologicBody."""
 
     _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
 
@@ -565,97 +613,123 @@ class TestGeologicBodyDensity:
             **kwargs,  # type: ignore[arg-type]
         )
 
-    def test_density_only_accepted(self) -> None:
-        """Body with only density (no susceptibility) is valid."""
-        body = self._body(density=2670.0)
-        assert body.density == 2670.0
-        assert body.susceptibility is None
+    def test_gravity_only_accepted(self) -> None:
+        """Body with only gravity (no magnetic) is valid."""
+        body = self._body(gravity=GravityProperties(density_contrast=2670.0))
+        assert body.gravity is not None
+        assert body.gravity.density_contrast == 2670.0
+        assert body.magnetic is None
 
-    def test_density_default_is_none(self) -> None:
-        """density defaults to None when not provided (susceptibility must be set)."""
-        body = self._body(susceptibility=0.01)
-        assert body.density is None
+    def test_gravity_default_is_none(self) -> None:
+        """gravity defaults to None when not provided (magnetic must be set)."""
+        body = self._body(magnetic=MagneticProperties(susceptibility=0.01))
+        assert body.gravity is None
 
     def test_density_positive(self) -> None:
         """Positive density contrast is accepted."""
-        body = self._body(density=500.0)
-        assert body.density == 500.0
+        body = self._body(gravity=GravityProperties(density_contrast=500.0))
+        assert body.gravity is not None
+        assert body.gravity.density_contrast == 500.0
 
     def test_density_negative(self) -> None:
         """Negative density contrast is accepted (lighter body than host)."""
-        body = self._body(density=-300.0)
-        assert body.density == -300.0
+        body = self._body(gravity=GravityProperties(density_contrast=-300.0))
+        assert body.gravity is not None
+        assert body.gravity.density_contrast == -300.0
 
     def test_density_zero(self) -> None:
         """Zero density contrast is accepted."""
-        body = self._body(density=0.0)
-        assert body.density == 0.0
+        body = self._body(gravity=GravityProperties(density_contrast=0.0))
+        assert body.gravity is not None
+        assert body.gravity.density_contrast == 0.0
 
     def test_density_non_finite_inf_rejected(self) -> None:
         """Infinite density raises ValidationError."""
         with pytest.raises(ValidationError, match="finite"):
-            self._body(density=float("inf"))
+            self._body(gravity=GravityProperties(density_contrast=float("inf")))
 
     def test_density_non_finite_nan_rejected(self) -> None:
         """NaN density raises ValidationError."""
         with pytest.raises(ValidationError, match="finite"):
-            self._body(density=float("nan"))
+            self._body(gravity=GravityProperties(density_contrast=float("nan")))
 
-    def test_both_susceptibility_and_density_accepted(self) -> None:
-        """Body with both susceptibility and density is valid."""
-        body = self._body(susceptibility=0.05, density=2670.0)
-        assert body.susceptibility == 0.05
-        assert body.density == 2670.0
+    def test_both_magnetic_and_gravity_accepted(self) -> None:
+        """Body with both magnetic and gravity is valid."""
+        body = self._body(
+            magnetic=MagneticProperties(susceptibility=0.05),
+            gravity=GravityProperties(density_contrast=2670.0),
+        )
+        assert body.magnetic is not None
+        assert body.magnetic.susceptibility == 0.05
+        assert body.gravity is not None
+        assert body.gravity.density_contrast == 2670.0
 
-    def test_json_roundtrip_density_only(self) -> None:
-        """model_dump() round-trip preserves density-only body."""
-        original = self._body(density=1500.0)
+    def test_json_roundtrip_gravity_only(self) -> None:
+        """model_dump() round-trip preserves gravity-only body."""
+        original = self._body(gravity=GravityProperties(density_contrast=1500.0))
         d = original.model_dump()
         restored = GeologicBody(**d)
-        assert restored.density == original.density
-        assert restored.susceptibility is None
+        assert restored.gravity is not None
+        assert original.gravity is not None
+        assert restored.gravity.density_contrast == original.gravity.density_contrast
+        assert restored.magnetic is None
 
 
 class TestGeologicBodyPhysicalPropertyValidation:
-    """Tests for the at-least-one-of susceptibility/density model validator."""
+    """Tests for the at-least-one-of magnetic/gravity/thermal model validator."""
 
     _VERTS = [[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]]
 
-    def test_neither_susceptibility_nor_density_raises(self) -> None:
-        """Omitting both susceptibility and density raises ValidationError."""
+    def test_neither_raises(self) -> None:
+        """Omitting all of magnetic, gravity, and thermal raises ValidationError."""
         with pytest.raises(ValidationError, match="At least one of"):
             GeologicBody(
                 vertices=self._VERTS,
                 name="Body",
             )
 
-    def test_susceptibility_only_accepted(self) -> None:
-        """Providing only susceptibility satisfies the validator."""
+    def test_magnetic_only_accepted(self) -> None:
+        """Providing only magnetic satisfies the validator."""
         body = GeologicBody(
             vertices=self._VERTS,
-            susceptibility=0.01,
+            magnetic=MagneticProperties(susceptibility=0.01),
             name="Body",
         )
-        assert body.susceptibility == 0.01
-        assert body.density is None
+        assert body.magnetic is not None
+        assert body.gravity is None
+        assert body.thermal is None
 
-    def test_density_only_accepted(self) -> None:
-        """Providing only density satisfies the validator."""
+    def test_gravity_only_accepted(self) -> None:
+        """Providing only gravity satisfies the validator."""
         body = GeologicBody(
             vertices=self._VERTS,
-            density=2670.0,
+            gravity=GravityProperties(density_contrast=2670.0),
             name="Body",
         )
-        assert body.density == 2670.0
-        assert body.susceptibility is None
+        assert body.gravity is not None
+        assert body.magnetic is None
+        assert body.thermal is None
 
-    def test_both_accepted(self) -> None:
-        """Providing both susceptibility and density is valid."""
+    def test_thermal_only_accepted(self) -> None:
+        """Providing only thermal satisfies the validator."""
         body = GeologicBody(
             vertices=self._VERTS,
-            susceptibility=0.05,
-            density=2670.0,
+            thermal=ThermalProperties(conductivity=3.3),
             name="Body",
         )
-        assert body.susceptibility == 0.05
-        assert body.density == 2670.0
+        assert body.thermal is not None
+        assert body.magnetic is None
+        assert body.gravity is None
+
+    def test_all_three_accepted(self) -> None:
+        """Providing all three property groups is valid."""
+        body = GeologicBody(
+            vertices=self._VERTS,
+            magnetic=MagneticProperties(susceptibility=0.05),
+            gravity=GravityProperties(density_contrast=2670.0),
+            thermal=ThermalProperties(conductivity=3.3),
+            name="Body",
+        )
+        assert body.magnetic is not None
+        assert body.gravity is not None
+        assert body.thermal is not None

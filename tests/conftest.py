@@ -7,6 +7,8 @@ from forward_model.models import (
     GeologicBody,
     HeatFlowModel,
     MagneticField,
+    MagneticProperties,
+    ThermalProperties,
 )
 
 
@@ -15,7 +17,7 @@ def simple_rectangle() -> GeologicBody:
     """A simple rectangular body centered at x=25, depth 100-200m."""
     return GeologicBody(
         vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
-        susceptibility=0.05,
+        magnetic=MagneticProperties(susceptibility=0.05),
         name="Rectangle",
     )
 
@@ -48,7 +50,7 @@ def body_2_5d() -> GeologicBody:
     """2.5D body with strike_half_length=5000 m."""
     return GeologicBody(
         vertices=[[0, 100], [50, 100], [50, 200], [0, 200]],
-        susceptibility=0.05,
+        magnetic=MagneticProperties(susceptibility=0.05),
         name="Body2_5D",
         strike_half_length=5000.0,
     )
@@ -59,7 +61,7 @@ def body_2_75d() -> GeologicBody:
     """2.75D body with asymmetric strike (forward=8000, backward=3000)."""
     return GeologicBody(
         vertices=[[0, 100], [50, 100], [50, 200], [0, 200]],
-        susceptibility=0.08,
+        magnetic=MagneticProperties(susceptibility=0.08),
         name="Body2_75D",
         strike_forward=8000.0,
         strike_backward=3000.0,
@@ -93,9 +95,7 @@ def thermal_body() -> GeologicBody:
     """A body with thermal properties set (granite-like: 3.3 W/m·K, 2.5 µW/m³)."""
     return GeologicBody(
         vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
-        susceptibility=0.0,
-        thermal_conductivity=3.3,
-        heat_generation=2.5,
+        thermal=ThermalProperties(conductivity=3.3, heat_generation=2.5),
         name="Granite",
     )
 

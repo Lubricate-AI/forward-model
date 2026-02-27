@@ -4,7 +4,13 @@ import numpy as np
 import pytest
 
 from forward_model.compute import calculate_anomaly
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import (
+    ForwardModel,
+    GeologicBody,
+    GravityProperties,
+    MagneticField,
+    MagneticProperties,
+)
 
 
 class TestCalculateAnomaly:
@@ -25,7 +31,7 @@ class TestCalculateAnomaly:
         # Create body with zero susceptibility
         zero_body = GeologicBody(
             vertices=simple_rectangle.vertices,
-            susceptibility=0.0,
+            magnetic=MagneticProperties(susceptibility=0.0),
             name="Zero",
         )
         model = ForwardModel(
@@ -50,7 +56,7 @@ class TestCalculateAnomaly:
                 [150.0, 200.0],
                 [100.0, 200.0],
             ],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Body2",
         )
 
@@ -97,7 +103,7 @@ class TestCalculateAnomaly:
                 [150.0, 200.0],
                 [100.0, 200.0],
             ],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Body2",
         )
         model = ForwardModel(
@@ -127,11 +133,11 @@ class TestCalculateAnomaly:
             assert anomaly.shape == (n_points,)
             assert np.all(np.isfinite(anomaly))
 
-    def test_no_susceptibility_raises(self, earth_field: MagneticField) -> None:
-        """ValueError is raised when a body has no susceptibility set."""
+    def test_no_magnetic_properties_raises(self, earth_field: MagneticField) -> None:
+        """ValueError is raised when a body has no magnetic properties set."""
         body = GeologicBody(
             vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
-            density=2670.0,
+            gravity=GravityProperties(density_contrast=2670.0),
             name="DensityOnly",
         )
         model = ForwardModel(

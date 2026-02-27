@@ -8,7 +8,12 @@ import pytest
 
 from forward_model.compute import calculate_anomaly
 from forward_model.io import load_model, write_csv, write_json
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import (
+    ForwardModel,
+    GeologicBody,
+    MagneticField,
+    MagneticProperties,
+)
 from forward_model.viz import plot_combined
 
 
@@ -25,7 +30,7 @@ class TestCompleteWorkflow:
                 [100.0, 200.0],
                 [0.0, 200.0],
             ],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Test Body",
         )
 
@@ -69,7 +74,12 @@ class TestCompleteWorkflow:
         # Verify roundtrip equality
         assert len(reloaded_model.bodies) == len(model.bodies)
         assert reloaded_model.bodies[0].name == model.bodies[0].name
-        assert reloaded_model.bodies[0].susceptibility == model.bodies[0].susceptibility
+        assert reloaded_model.bodies[0].magnetic is not None
+        assert model.bodies[0].magnetic is not None
+        assert (
+            reloaded_model.bodies[0].magnetic.susceptibility
+            == model.bodies[0].magnetic.susceptibility
+        )
         assert reloaded_model.field.intensity == model.field.intensity
         assert reloaded_model.observation_x == model.observation_x
 
@@ -91,13 +101,13 @@ class TestCompleteWorkflow:
         # Create two bodies
         body1 = GeologicBody(
             vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Body 1",
         )
 
         body2 = GeologicBody(
             vertices=[[100.0, 50.0], [150.0, 50.0], [150.0, 150.0], [100.0, 150.0]],
-            susceptibility=0.1,
+            magnetic=MagneticProperties(susceptibility=0.1),
             name="Body 2",
         )
 
@@ -136,7 +146,7 @@ class TestJSONRoundtrip:
             bodies=[
                 GeologicBody(
                     vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
-                    susceptibility=0.01,
+                    magnetic=MagneticProperties(susceptibility=0.01),
                     name="Triangle",
                 )
             ],

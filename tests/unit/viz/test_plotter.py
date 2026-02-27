@@ -93,16 +93,16 @@ class TestPlotModel:
 
     def test_plot_model_show_colorbar_false(self) -> None:
         """Test that show_colorbar=False suppresses the colorbar."""
-        from forward_model.models import GeologicBody, MagneticField
+        from forward_model.models import GeologicBody, MagneticField, MagneticProperties
 
         body1 = GeologicBody(
             vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Body1",
         )
         body2 = GeologicBody(
             vertices=[[60.0, 100.0], [110.0, 100.0], [110.0, 200.0], [60.0, 200.0]],
-            susceptibility=0.10,
+            magnetic=MagneticProperties(susceptibility=0.10),
             name="Body2",
         )
         field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
@@ -365,16 +365,16 @@ class TestPlotCombined:
 
     def test_plot_combined_show_colorbar_false(self) -> None:
         """Test that show_colorbar=False suppresses colorbar in combined view."""
-        from forward_model.models import GeologicBody, MagneticField
+        from forward_model.models import GeologicBody, MagneticField, MagneticProperties
 
         body1 = GeologicBody(
             vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Body1",
         )
         body2 = GeologicBody(
             vertices=[[60.0, 100.0], [110.0, 100.0], [110.0, 200.0], [60.0, 200.0]],
-            susceptibility=0.10,
+            magnetic=MagneticProperties(susceptibility=0.10),
             name="Body2",
         )
         field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
@@ -487,11 +487,11 @@ class TestPlotModelBodyVisualProperties:
         color: str | list[float] | None = None,
         hatch: str | None = None,
     ) -> ForwardModel:
-        from forward_model.models import GeologicBody, MagneticField
+        from forward_model.models import GeologicBody, MagneticField, MagneticProperties
 
         body = GeologicBody(
             vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Body",
             color=color,
             hatch=hatch,
@@ -564,11 +564,11 @@ class TestPlotModelLabelFeatures:
     """Tests for new label placement features in plot_model."""
 
     def _make_model(self, label_loc: list[float] | None = None) -> ForwardModel:
-        from forward_model.models import GeologicBody, MagneticField
+        from forward_model.models import GeologicBody, MagneticField, MagneticProperties
 
         body = GeologicBody(
             vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Body",
             label_loc=label_loc,
         )
@@ -642,11 +642,11 @@ class TestResolveStrikeExtents:
     """Unit tests for the _resolve_strike_extents helper."""
 
     def _body(self, **kwargs: object) -> "object":
-        from forward_model.models import GeologicBody
+        from forward_model.models import GeologicBody, MagneticProperties
 
         return GeologicBody(
             vertices=[[0, 100], [50, 100], [50, 200], [0, 200]],
-            susceptibility=0.05,
+            magnetic=MagneticProperties(susceptibility=0.05),
             name="Test",
             **kwargs,  # type: ignore[arg-type]
         )
