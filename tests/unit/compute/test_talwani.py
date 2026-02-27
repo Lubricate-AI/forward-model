@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from forward_model.compute.talwani import MagneticComponents
+
 from forward_model.compute import (
     AnomalyComponents,
     calculate_anomaly,
@@ -12,6 +14,12 @@ from forward_model.compute import (
     field_to_magnetization,
 )
 from forward_model.models import ForwardModel, GeologicBody, MagneticField
+
+
+def test_magnetic_components_alias():
+    """MagneticComponents is the canonical name; AnomalyComponents is a backward-compat alias."""
+    from forward_model.compute.talwani import AnomalyComponents
+    assert MagneticComponents is AnomalyComponents
 
 
 class TestFieldToMagnetization:
