@@ -1,10 +1,17 @@
 """Tests for HeatFlowModel container."""
 
+from typing import TypedDict
+
 import numpy as np
 import pytest
 from pydantic import ValidationError
 
 from forward_model.models import GeologicBody, HeatFlowModel
+
+
+class ObservationData(TypedDict):
+    observation_x: list[float]
+    observation_z: float
 
 
 class TestHeatFlowModel:
@@ -122,3 +129,39 @@ class TestHeatFlowModel:
         assert len(model.bodies) == 2
         assert model.bodies[0].name == "Granite"
         assert model.bodies[1].name == "Shale"
+
+
+class TestHeatFlowModelOverlapValidation:
+    """Overlap validation is inherited from ObservationModel."""
+
+    _OBS: ObservationData = {"observation_x": [0.0, 50.0], "observation_z": 0.0}
+
+    def _body(self, vertices: list[list[float]], name: str) -> GeologicBody:
+        return GeologicBody(
+            vertices=vertices, susceptibility=0.0, thermal_conductivity=3.3, name=name
+        )
+
+    def test_overlapping_bodies_rejected(self) -> None:
+        """Partially overlapping bodies raise ValidationError."""
+        a = self._body([[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]], "A")
+        b = self._body([[25.0, 50.0], [75.0, 50.0], [75.0, 150.0], [25.0, 150.0]], "B")
+        with pytest.raises(ValidationError, match="overlap"):
+            HeatFlowModel(bodies=[a, b], **self._OBS)
+
+    def test_adjacent_shared_edge_accepted(self) -> None:
+        """Bodies sharing only an edge are accepted."""
+        a = self._body([[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]], "A")
+        b = self._body(
+            [[50.0, 100.0], [100.0, 100.0], [100.0, 200.0], [50.0, 200.0]], "B"
+        )
+        model = HeatFlowModel(bodies=[a, b], **self._OBS)
+        assert len(model.bodies) == 2
+
+    def test_corner_touch_accepted(self) -> None:
+        """Bodies touching only at a corner are accepted."""
+        a = self._body([[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]], "A")
+        b = self._body(
+            [[50.0, 200.0], [100.0, 200.0], [100.0, 300.0], [50.0, 300.0]], "B"
+        )
+        model = HeatFlowModel(bodies=[a, b], **self._OBS)
+        assert len(model.bodies) == 2
