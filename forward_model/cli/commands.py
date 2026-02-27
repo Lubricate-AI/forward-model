@@ -157,8 +157,8 @@ def run(
             raise NotImplementedError(
                 "Heat flow calculation not yet implemented. Tracked in future issues."
             )
-        # At this point, model must be ForwardModel (only remaining type in union)
-        assert isinstance(model, ForwardModel)
+        elif not isinstance(model, ForwardModel):  # type: ignore[reportUnnecessaryIsInstance]
+            raise ValueError(f"Unexpected model type: {type(model).__name__}")
 
         # Calculate all anomaly components in one pass
         if verbose:
