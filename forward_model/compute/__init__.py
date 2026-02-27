@@ -5,6 +5,7 @@ from forward_model.compute.calculator import calculate_anomaly
 from forward_model.compute.gravity import GravityComponents, calculate_gravity
 from forward_model.compute.talwani import (
     AnomalyComponents,
+    MagneticComponents,
     compute_demagnetization_factor,
     compute_polygon_anomaly,
     compute_polygon_anomaly_2_5d,
@@ -14,6 +15,7 @@ from forward_model.compute.talwani import (
 
 __all__ = [
     "AnomalyComponents",
+    "MagneticComponents",
     "BatchResult",
     "batch_calculate",
     "calculate_anomaly",

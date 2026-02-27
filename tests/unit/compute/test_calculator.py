@@ -3,9 +3,7 @@
 import numpy as np
 import pytest
 
-from forward_model.compute import calculate_anomaly
-from forward_model.compute.gravity import GravityComponents
-from forward_model.compute.talwani import MagneticComponents
+from forward_model.compute import GravityComponents, MagneticComponents, calculate_anomaly
 from forward_model.models import (
     ForwardModel,
     GeologicBody,
@@ -205,3 +203,8 @@ class TestCalculateAnomalyDispatch:
         result = calculate_anomaly(gravity_model)
         assert result.gz_gradient.shape == result.gz.shape
         assert np.all(np.isfinite(result.gz_gradient))
+
+
+def test_magnetic_components_exported_from_compute() -> None:
+    """MagneticComponents is importable from forward_model.compute."""
+    from forward_model.compute import MagneticComponents  # noqa: F401
