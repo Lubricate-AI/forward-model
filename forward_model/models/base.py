@@ -146,6 +146,11 @@ class ObservationModel(BaseModel, frozen=True):
     Provides common fields, validators, and helpers for models that define
     a set of geologic bodies and a surface of observation points.
 
+    All subclasses inherit body-overlap validation: construction raises
+    ``ValidationError`` if any two bodies have a non-trivial geometric
+    overlap.  Bodies that only share an edge or a single corner are
+    permitted (valid geological contacts).
+
     Attributes:
         bodies: List of geologic bodies to include in the model.
                 Must contain at least one body.
