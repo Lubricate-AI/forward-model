@@ -6,6 +6,12 @@ from typing import NamedTuple
 import numpy as np
 from numpy.typing import NDArray
 
+from forward_model.compute.geometry import (
+    edge_geometry_2_5d,
+    edge_geometry_2_75d,
+    edge_geometry_2d,
+)
+
 
 @dataclass
 class AnomalyComponents:
@@ -162,7 +168,6 @@ def compute_polygon_anomaly(
         Talwani, M., and Heirtzler, J. R. (1965). Computation of magnetic
         anomalies caused by two-dimensional structures of arbitrary shape.
     """
-    n_vertices = len(vertices)
     n_obs = len(observation_points)
     bz = np.zeros(n_obs, dtype=np.float64)
     bx = np.zeros(n_obs, dtype=np.float64)
@@ -174,62 +179,22 @@ def compute_polygon_anomaly(
 
     Mx, Mz = magnetization
 
-    obs_x = observation_points[:, 0]  # (M,)
-    obs_z = observation_points[:, 1]  # (M,)
-
     # Loop over polygon edges (N iterations, each vectorized over M obs points)
-    for j in range(n_vertices):
-        j_next = (j + 1) % n_vertices
-
-        # Edge geometry — scalars, same for all observation points
-        dx = vertices[j_next, 0] - vertices[j, 0]
-        dz = vertices[j_next, 1] - vertices[j, 1]
-        edge_length = np.sqrt(dx**2 + dz**2)
-
-        # Restore original L∞ predicate for backward-compatible degenerate-edge skipping
-        if np.abs(dx) < min_distance and np.abs(dz) < min_distance:
-            continue
-
-        tx = dx / edge_length
-        tz = dz / edge_length
-
-        # Vectors from each observation point to each edge vertex — (M,) arrays
-        x1 = vertices[j, 0] - obs_x
-        z1 = vertices[j, 1] - obs_z
-        x2 = vertices[j_next, 0] - obs_x
-        z2 = vertices[j_next, 1] - obs_z
-
-        r1 = np.sqrt(x1**2 + z1**2)
-        r2 = np.sqrt(x2**2 + z2**2)
-        valid = (r1 >= min_distance) & (r2 >= min_distance)
-
-        theta1: NDArray[np.float64] = np.arctan2(z1, x1)
-        theta2: NDArray[np.float64] = np.arctan2(z2, x2)
-        dtheta: NDArray[np.float64] = theta2 - theta1
-        dtheta = np.where(dtheta > np.pi, dtheta - 2 * np.pi, dtheta)
-        dtheta = np.where(dtheta < -np.pi, dtheta + 2 * np.pi, dtheta)
-
-        # Guard against division-by-zero and log(0) using masked ufuncs so
-        # NumPy never evaluates r2/r1 or log(...) for invalid points.
-        r_ratio = np.empty_like(r1)
-        np.divide(r2, r1, out=r_ratio, where=valid)
-        log_term = np.zeros_like(r1)
-        np.log(r_ratio, out=log_term, where=valid)
-
+    for tx, tz, dtheta, log_term, valid in edge_geometry_2d(
+        vertices, observation_points, min_distance
+    ):
         # Bz (vertical): Talwani (1965)
-        bz_contrib = np.where(
+        bz += np.where(
             valid,
             Mx * (dtheta * tz - log_term * tx) + Mz * (-dtheta * tx - log_term * tz),
             0.0,
         )
         # Bx (horizontal): Talwani (1965)
-        bx_contrib = np.where(
+        bx += np.where(
             valid,
             Mx * (dtheta * tx + log_term * tz) + Mz * (-dtheta * tz + log_term * tx),
             0.0,
         )
-        bz += bz_contrib
-        bx += bx_contrib
 
     bz *= mu_0_4pi_nT
     bx *= mu_0_4pi_nT
@@ -271,7 +236,6 @@ def compute_polygon_anomaly_2_5d(
         anomalies due to a polygon: Algorithms and Fortran subroutines.
         Geophysics, 52(2), 232–238.
     """
-    n_vertices = len(vertices)
     n_obs = len(observation_points)
     bz = np.zeros(n_obs, dtype=np.float64)
     bx = np.zeros(n_obs, dtype=np.float64)
@@ -281,65 +245,19 @@ def compute_polygon_anomaly_2_5d(
 
     Mx, Mz = magnetization
 
-    obs_x = observation_points[:, 0]  # (M,)
-    obs_z = observation_points[:, 1]  # (M,)
-
-    y0 = strike_half_length
-
-    for j in range(n_vertices):
-        j_next = (j + 1) % n_vertices
-
-        dx = vertices[j_next, 0] - vertices[j, 0]
-        dz = vertices[j_next, 1] - vertices[j, 1]
-        edge_length = np.sqrt(dx**2 + dz**2)
-
-        if np.abs(dx) < min_distance and np.abs(dz) < min_distance:
-            continue
-
-        tx = dx / edge_length
-        tz = dz / edge_length
-
-        x1 = vertices[j, 0] - obs_x
-        z1 = vertices[j, 1] - obs_z
-        x2 = vertices[j_next, 0] - obs_x
-        z2 = vertices[j_next, 1] - obs_z
-
-        r1 = np.sqrt(x1**2 + z1**2)
-        r2 = np.sqrt(x2**2 + z2**2)
-        valid = (r1 >= min_distance) & (r2 >= min_distance)
-
-        # Won & Bevis (1987) modified angle function:
-        #   Θk = arctan2(zk·y0, xk·sqrt(rk²+y0²))
-        # Reduces to arctan2(zk, xk) = θk as y0 → ∞.
-        sr1 = np.sqrt(r1**2 + y0**2)  # sqrt(r1²+y0²), shape (M,)
-        sr2 = np.sqrt(r2**2 + y0**2)
-        theta1: NDArray[np.float64] = np.arctan2(z1 * y0, x1 * sr1)
-        theta2: NDArray[np.float64] = np.arctan2(z2 * y0, x2 * sr2)
-        dtheta: NDArray[np.float64] = theta2 - theta1
-        dtheta = np.where(dtheta > np.pi, dtheta - 2 * np.pi, dtheta)
-        dtheta = np.where(dtheta < -np.pi, dtheta + 2 * np.pi, dtheta)
-
-        # Won & Bevis (1987) modified log function:
-        #   Λk = log(rk / (sqrt(rk²+y0²) + y0))
-        # Difference Λ2-Λ1 reduces to log(r2/r1) as y0 → ∞.
-        lambda1 = np.zeros_like(r1)
-        np.log(r1 / (sr1 + y0), out=lambda1, where=valid)
-        lambda2 = np.zeros_like(r2)
-        np.log(r2 / (sr2 + y0), out=lambda2, where=valid)
-        dlambda: NDArray[np.float64] = lambda2 - lambda1
-
-        bz_contrib = np.where(
+    for tx, tz, dtheta, dlambda, valid in edge_geometry_2_5d(
+        vertices, observation_points, strike_half_length, min_distance
+    ):
+        bz += np.where(
             valid,
             Mx * (dtheta * tz - dlambda * tx) + Mz * (-dtheta * tx - dlambda * tz),
             0.0,
         )
-        bx_contrib = np.where(
+        bx += np.where(
             valid,
             Mx * (dtheta * tx + dlambda * tz) + Mz * (-dtheta * tz + dlambda * tx),
             0.0,
         )
-        bz += bz_contrib
-        bx += bx_contrib
 
     bz *= mu_0_4pi_nT
     bx *= mu_0_4pi_nT
@@ -386,13 +304,29 @@ def compute_polygon_anomaly_2_75d(
         anomalies due to a polygon: Algorithms and Fortran subroutines.
         Geophysics, 52(2), 232–238.
     """
-    fwd = compute_polygon_anomaly_2_5d(
-        vertices, observation_points, magnetization, strike_forward, min_distance
-    )
-    bwd = compute_polygon_anomaly_2_5d(
-        vertices, observation_points, magnetization, strike_backward, min_distance
-    )
-    return PolygonComponents(
-        bz=(fwd.bz + bwd.bz) / 2.0,
-        bx=(fwd.bx + bwd.bx) / 2.0,
-    )
+    n_obs = len(observation_points)
+    bz = np.zeros(n_obs, dtype=np.float64)
+    bx = np.zeros(n_obs, dtype=np.float64)
+
+    mu_0_4pi = 1e-7  # T·m/A in SI
+    mu_0_4pi_nT = mu_0_4pi * 1e9  # nT·m/A
+
+    Mx, Mz = magnetization
+
+    for tx, tz, dtheta, dlambda, valid in edge_geometry_2_75d(
+        vertices, observation_points, strike_forward, strike_backward, min_distance
+    ):
+        bz += np.where(
+            valid,
+            Mx * (dtheta * tz - dlambda * tx) + Mz * (-dtheta * tx - dlambda * tz),
+            0.0,
+        )
+        bx += np.where(
+            valid,
+            Mx * (dtheta * tx + dlambda * tz) + Mz * (-dtheta * tz + dlambda * tx),
+            0.0,
+        )
+
+    bz *= mu_0_4pi_nT
+    bx *= mu_0_4pi_nT
+    return PolygonComponents(bz=bz, bx=bx)
