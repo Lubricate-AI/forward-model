@@ -155,8 +155,7 @@ def run(
             )
         elif isinstance(model, HeatFlowModel):
             raise NotImplementedError(
-                "Heat flow calculation not yet implemented. "
-                "Tracked in future issues."
+                "Heat flow calculation not yet implemented. Tracked in future issues."
             )
         # At this point, model must be ForwardModel (only remaining type in union)
 
