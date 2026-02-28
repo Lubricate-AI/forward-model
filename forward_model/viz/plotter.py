@@ -16,6 +16,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from numpy.typing import NDArray
 
 from forward_model.models.body import GeologicBody
+from forward_model.models.gravity_model import GravityModel
 from forward_model.models.model import ForwardModel
 
 
@@ -66,9 +67,9 @@ def _resolve_strike_extents(
 
 
 def plot_model(
-    model: ForwardModel,
+    model: ForwardModel | GravityModel,
     ax: Axes | None = None,
-    color_by: Literal["index", "susceptibility"] = "susceptibility",
+    color_by: Literal["index", "susceptibility", "density"] | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -83,14 +84,17 @@ def plot_model(
     observation points.
 
     Args:
-        model: The forward model to visualize.
+        model: The forward model to visualize. Accepts ForwardModel or GravityModel.
         ax: Matplotlib axes to plot on. If None, creates new axes.
         color_by: How to color bodies. "index" uses different colors for each
-                 body, "susceptibility" uses a colormap based on susceptibility.
+                 body, "susceptibility" uses a colormap based on susceptibility,
+                 "density" uses a colormap based on density contrast. If None
+                 (default), resolves to "density" for GravityModel and
+                 "susceptibility" for ForwardModel.
         show_observation_lines: If True, show vertical dashed lines at obs points.
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
-        show_colorbar: If True, show colorbar when color_by="susceptibility".
+        show_colorbar: If True, show colorbar when coloring by a continuous value.
         equal_aspect: If True, lock x and z axes to equal scale.
         label_offsets: Optional mapping of body name to (dx, dz) offset from the
                       computed label anchor. The label text is placed at
@@ -110,46 +114,73 @@ def plot_model(
     if ax is None:
         _, ax = plt.subplots()
 
-    # Determine colors based on color_by parameter
+    # Resolve None sentinel
+    _is_gravity = isinstance(model, GravityModel)
+    if color_by is None:
+        _effective_color_by: Literal["index", "susceptibility", "density"] = (
+            "density" if _is_gravity else "susceptibility"
+        )
+    else:
+        _effective_color_by = color_by
+
     cmap = plt.cm.viridis  # type: ignore
-    if color_by == "susceptibility":
-        # Use susceptibility-based colormap
-        _FALLBACK_COLOR = (0.5, 0.5, 0.5, 1.0)
+    _FALLBACK_COLOR = (0.5, 0.5, 0.5, 1.0)
+    _auto_colorbar = False
+    _colorbar_norm: plt.Normalize | None = None  # type: ignore
+
+    if _effective_color_by == "density":
+        density_values = [
+            body.gravity.density_contrast
+            for body in model.bodies
+            if body.gravity is not None
+        ]
+        if not density_values or len(set(density_values)) == 1:
+            colors = [
+                cmap(0.5) if body.gravity is not None else _FALLBACK_COLOR
+                for body in model.bodies
+            ]
+        else:
+            _colorbar_norm = plt.Normalize(  # type: ignore
+                vmin=min(density_values), vmax=max(density_values)
+            )
+            colors = [
+                (
+                    cmap(_colorbar_norm(body.gravity.density_contrast))
+                    if body.gravity is not None
+                    else _FALLBACK_COLOR
+                )
+                for body in model.bodies
+            ]  # type: ignore
+            _auto_colorbar = True
+    elif _effective_color_by == "susceptibility":
         susc_values = [
             body.magnetic.susceptibility
             for body in model.bodies
             if body.magnetic is not None
         ]
-        susc_set = set(susc_values)
-
-        if not susc_values or len(susc_set) == 1:
-            # All susceptibilities are the same or none present - use single/fallback
+        if not susc_values or len(set(susc_values)) == 1:
             colors = [
                 cmap(0.5) if body.magnetic is not None else _FALLBACK_COLOR
                 for body in model.bodies
             ]
-            _auto_colorbar = False
         else:
-            # Multiple susceptibilities - use colormap
-            norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
+            _colorbar_norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
             colors = [
                 (
-                    cmap(norm(body.magnetic.susceptibility))
+                    cmap(_colorbar_norm(body.magnetic.susceptibility))
                     if body.magnetic is not None
                     else _FALLBACK_COLOR
                 )
                 for body in model.bodies
             ]  # type: ignore
             _auto_colorbar = True
-    else:
-        # Use index-based colors
+    else:  # "index"
         colors = plt.cm.tab10(np.linspace(0, 1, max(len(model.bodies), 10)))  # type: ignore
-        _auto_colorbar = False
 
     # Plot each body
     for i, body in enumerate(model.bodies):
         vertices = body.to_numpy()
-        color = colors[i % len(colors)] if color_by == "index" else colors[i]
+        color = colors[i % len(colors)] if _effective_color_by == "index" else colors[i]
 
         # Create polygon patch
         face_color = body.color if body.color is not None else color
@@ -171,7 +202,9 @@ def plot_model(
             lx, lz = _polygon_centroid(vertices)
             lx, lz = _clamp_to_limits(lx, lz, xlim, zlim)
 
-        if body.magnetic is not None:
+        if body.gravity is not None:
+            label = f"{body.name}\n(ρ={body.gravity.density_contrast:.1f} kg/m³)"
+        elif body.magnetic is not None:
             label = f"{body.name}\n(χ={body.magnetic.susceptibility:.3f})"
         else:
             label = body.name
@@ -204,19 +237,16 @@ def plot_model(
                 bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.7},
             )
 
-    # Add colorbar if using susceptibility coloring with multiple values
-    if color_by == "susceptibility" and _auto_colorbar and show_colorbar:
-        susc_values = [
-            body.magnetic.susceptibility
-            for body in model.bodies
-            if body.magnetic is not None
-        ]
-        sm = plt.cm.ScalarMappable(  # type: ignore
-            cmap=cmap,
-            norm=plt.Normalize(vmin=min(susc_values), vmax=max(susc_values)),  # type: ignore
-        )
-        sm.set_array([])  # type: ignore
-        plt.colorbar(sm, ax=ax, label="Susceptibility (SI)")  # type: ignore
+    # Add colorbar if coloring with multiple values
+    if _auto_colorbar and show_colorbar:
+        if _effective_color_by == "density":
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
+            sm.set_array([])  # type: ignore
+            plt.colorbar(sm, ax=ax, label="Density Contrast (kg/m³)")  # type: ignore
+        else:
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
+            sm.set_array([])  # type: ignore
+            plt.colorbar(sm, ax=ax, label="Susceptibility (SI)")  # type: ignore
 
     # Plot observation lines
     if show_observation_lines:
@@ -382,6 +412,9 @@ _COMPONENT_LABELS: dict[str, tuple[str, str]] = {
     "total_field": ("ΔT (nT)", "Total Field Anomaly (ΔT)"),
     "amplitude": ("|ΔB| (nT)", "Anomaly Amplitude (|ΔB|)"),
     "gradient": ("d(ΔT)/dx (nT/m)", "Horizontal Gradient d(ΔT)/dx"),
+    # Gravity components
+    "gz": ("gz (mGal)", "Vertical Gravity Anomaly (gz)"),
+    "gz_gradient": ("gz gradient (mGal/m)", "Horizontal Gradient d(gz)/dx"),
 }
 
 
@@ -393,23 +426,23 @@ def plot_anomaly(
     component: str = "total_field",
     gradient: NDArray[np.float64] | None = None,
 ) -> Axes:
-    """Plot magnetic anomaly profile.
+    """Plot anomaly profile.
 
-    Creates a line plot showing the magnetic anomaly as a function
+    Creates a line plot showing the anomaly as a function
     of position along the profile. When ``gradient`` is supplied, the
-    horizontal gradient d(ΔT)/dx is overlaid on a secondary y-axis on
+    horizontal gradient is overlaid on a secondary y-axis on
     the right side of the plot.
 
     Args:
         observation_x: X-coordinates of observation points (meters).
-        anomaly: Magnetic anomaly values (nanoTesla).
+        anomaly: Anomaly values (nT for magnetic, mGal for gravity).
         ax: Matplotlib axes to plot on. If None, creates new axes.
         xlim: Optional (min, max) x-axis limits in meters.
         component: Which component is being plotted. Controls axis labels.
                    One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
-                   ``"gradient"``.
-        gradient: Optional d(ΔT)/dx values (nT/m). When provided, overlaid
-                  on a twin y-axis with an orange dashed line.
+                   ``"gradient"``, ``"gz"``, ``"gz_gradient"``.
+        gradient: Optional gradient values (nT/m for magnetic, mGal/m for gravity).
+                  When provided, overlaid on a twin y-axis with an orange dashed line.
 
     Returns:
         The matplotlib Axes object containing the plot.
@@ -444,15 +477,21 @@ def plot_anomaly(
     # Overlay gradient on secondary y-axis
     if gradient is not None:
         ax2 = ax.twinx()
+        _gradient_component = (
+            "gz_gradient" if component.startswith("gz") else "gradient"
+        )
+        _gradient_ylabel, _ = _COMPONENT_LABELS.get(
+            _gradient_component, ("Gradient", "Gradient")
+        )
         ax2.plot(
             observation_x,
             gradient,
             color="tab:orange",
             linestyle="--",
             linewidth=1.5,
-            label="d(ΔT)/dx (nT/m)",
+            label=_gradient_ylabel,
         )
-        ax2.set_ylabel("d(ΔT)/dx (nT/m)", fontsize=11, color="tab:orange")
+        ax2.set_ylabel(_gradient_ylabel, fontsize=11, color="tab:orange")
         ax2.tick_params(axis="y", labelcolor="tab:orange")
         # Combined legend from both axes
         lines1, labels1 = ax.get_legend_handles_labels()
@@ -465,20 +504,20 @@ def plot_anomaly(
 
 
 def plot_combined(
-    model: ForwardModel,
+    model: ForwardModel | GravityModel,
     anomaly: NDArray[np.float64],
     save_path: str | Path | None = None,
     style: str = "default",
     figsize: tuple[float, float] | None = None,
     dpi: int | None = None,
-    color_by: Literal["index", "susceptibility"] = "susceptibility",
+    color_by: Literal["index", "susceptibility", "density"] | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
     show_colorbar: bool = True,
     label_offsets: dict[str, tuple[float, float]] | None = None,
     show_label_arrows: bool | dict[str, bool] = False,
-    component: str = "total_field",
+    component: str | None = None,
     gradient: NDArray[np.float64] | None = None,
     show_3d: bool = False,
     default_strike: float = 10_000.0,
@@ -486,14 +525,15 @@ def plot_combined(
     """Create combined plot with cross-section and anomaly profile.
 
     Creates a two-panel figure with the geologic cross-section on top
-    and the magnetic anomaly profile below, with aligned x-axes. When
-    ``gradient`` is supplied, d(ΔT)/dx is overlaid on a secondary y-axis
-    in the anomaly panel. When ``show_3d`` is True, a third panel with a
-    3D extruded view is added below the anomaly panel.
+    and the anomaly profile below, with aligned x-axes. When
+    ``gradient`` is supplied, the horizontal gradient is overlaid on a
+    secondary y-axis in the anomaly panel. When ``show_3d`` is True, a third panel
+    with a 3D extruded view is added below the anomaly panel.
 
     Args:
         model: The forward model to visualize.
-        anomaly: Magnetic anomaly values (nanoTesla).
+        anomaly: Anomaly values (nT for magnetic components, mGal for gravity
+                components).
         save_path: Optional path to save the figure. If None, does not save.
         style: Plot style name ("default", "publication", "presentation").
         figsize: Figure size as (width, height) in inches. If None, uses (12, 8).
@@ -502,14 +542,16 @@ def plot_combined(
         show_observation_lines: If True, show vertical lines at observation points.
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
-        show_colorbar: If True, show colorbar when color_by="susceptibility".
+        show_colorbar: If True, show colorbar when color_by is a continuous mode
+                      ("susceptibility" or "density").
         label_offsets: Optional mapping of body name to (dx, dz) offset from the
                       computed label anchor. Passed through to ``plot_model``.
         show_label_arrows: If True or per-body dict, draw arrows from text to centroid.
         component: Which anomaly component is being plotted. Controls axis labels.
-                   One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``.
-        gradient: Optional d(ΔT)/dx values (nT/m). When provided, overlaid on a
-                  secondary y-axis in the anomaly panel.
+                   One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
+                   ``"gz"``, ``"gz_gradient"``. None auto-detects from model type.
+        gradient: Optional gradient values for the secondary y-axis overlay.
+                  Units: nT/m for magnetic, mGal/m for gravity.
         show_3d: If True, add a third panel with a 3D extruded view.
         default_strike: Total strike length (m) used for 2D (infinite-strike) bodies
                        when ``show_3d=True``. Passed through to ``plot_model_3d``.
@@ -523,6 +565,17 @@ def plot_combined(
         >>> plt.show()
     """
     from forward_model.viz.styles import get_style
+
+    # Resolve sentinel defaults based on model type
+    _is_gravity = isinstance(model, GravityModel)
+    _effective_component: str = (
+        ("gz" if _is_gravity else "total_field") if component is None else component
+    )
+    _effective_color_by: Literal["index", "susceptibility", "density"] = (
+        ("density" if _is_gravity else "susceptibility")
+        if color_by is None
+        else color_by
+    )
 
     # Get style configuration
     style_config = get_style(style)
@@ -549,7 +602,7 @@ def plot_combined(
         plot_model(
             model,
             ax=ax1,
-            color_by=color_by,
+            color_by=_effective_color_by,
             show_observation_lines=show_observation_lines,
             xlim=xlim,
             zlim=zlim,
@@ -565,12 +618,12 @@ def plot_combined(
             anomaly,
             ax=ax2,
             xlim=xlim,
-            component=component,
+            component=_effective_component,
             gradient=gradient,
         )
 
-        # Plot 3D view if requested
-        if show_3d:
+        # Plot 3D view if requested (only supported for ForwardModel)
+        if show_3d and isinstance(model, ForwardModel):
             plot_model_3d(model, default_strike=default_strike, ax=ax3d)
 
         if xlim is not None:

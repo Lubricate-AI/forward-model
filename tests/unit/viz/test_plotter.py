@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from forward_model.models import ForwardModel
+from forward_model.models.gravity_model import GravityModel
 from forward_model.viz import plot_anomaly, plot_combined, plot_model, plot_model_3d
 from forward_model.viz.plotter import _polygon_centroid, _resolve_strike_extents
 
@@ -214,6 +215,47 @@ class TestPlotAnomaly:
         plot_anomaly(obs_x, anomaly, ax=ax)
 
         assert len(fig.axes) == 1
+        plt.close()
+
+    def test_gz_component_ylabel(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.5, 1.2, 0.8])
+        ax = plot_anomaly(obs_x, anomaly, component="gz")
+        assert ax.get_ylabel() == "gz (mGal)"
+        plt.close()
+
+    def test_gz_component_title(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.5, 1.2, 0.8])
+        ax = plot_anomaly(obs_x, anomaly, component="gz")
+        assert ax.get_title() == "Vertical Gravity Anomaly (gz)"
+        plt.close()
+
+    def test_gz_gradient_component_ylabel(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.01, 0.05, -0.02])
+        ax = plot_anomaly(obs_x, anomaly, component="gz_gradient")
+        assert ax.get_ylabel() == "gz gradient (mGal/m)"
+        plt.close()
+
+    def test_gz_gradient_component_title(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.01, 0.05, -0.02])
+        ax = plot_anomaly(obs_x, anomaly, component="gz_gradient")
+        assert ax.get_title() == "Horizontal Gradient d(gz)/dx"
+        plt.close()
+
+    def test_end_to_end_with_gravity_model(self, gravity_model: GravityModel) -> None:
+        """Smoke test: plot_anomaly with real gz output from calculate_anomaly."""
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        ax = plot_anomaly(
+            list(gravity_model.observation_x),
+            components.gz,
+            component="gz",
+        )
+        assert ax.get_ylabel() == "gz (mGal)"
         plt.close()
 
 
@@ -744,4 +786,230 @@ class TestPlotModel3D:
         assert isinstance(ax3d, Axes3D)
         assert abs(ax3d.elev - 30.0) < 1e-6
         assert abs(ax3d.azim - (-45.0)) < 1e-6
+        plt.close(fig)
+
+
+class TestComponentLabels:
+    """Tests for gravity additions to _COMPONENT_LABELS."""
+
+    def test_gz_ylabel(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        ylabel, _ = _COMPONENT_LABELS["gz"]
+        assert ylabel == "gz (mGal)"
+
+    def test_gz_title(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        _, title = _COMPONENT_LABELS["gz"]
+        assert title == "Vertical Gravity Anomaly (gz)"
+
+    def test_gz_gradient_ylabel(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        ylabel, _ = _COMPONENT_LABELS["gz_gradient"]
+        assert ylabel == "gz gradient (mGal/m)"
+
+    def test_gz_gradient_title(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        _, title = _COMPONENT_LABELS["gz_gradient"]
+        assert title == "Horizontal Gradient d(gz)/dx"
+
+
+class TestPlotModelGravity:
+    """Tests for plot_model with GravityModel input."""
+
+    def test_gravity_model_renders_without_error(
+        self, gravity_model: GravityModel
+    ) -> None:
+        ax = plot_model(gravity_model)
+        assert ax is not None
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_gravity_body_label_shows_density(
+        self, gravity_model: GravityModel
+    ) -> None:
+        from matplotlib.text import Annotation, Text
+
+        ax = plot_model(gravity_model)
+        texts = [
+            c
+            for c in ax.get_children()
+            if isinstance(c, Text)
+            and not isinstance(c, Annotation)
+            and "GravityBody" in c.get_text()
+        ]
+        assert len(texts) == 1
+        assert "300.0" in texts[0].get_text()
+        assert "kg/m" in texts[0].get_text()
+        assert "χ=" not in texts[0].get_text()
+        plt.close()
+
+    def test_gravity_colorbar_label_is_density(self) -> None:
+        """Two bodies with different densities → colorbar labeled with density units."""
+        from forward_model.models.body import GeologicBody
+        from forward_model.models.gravity_model import GravityModel
+        from forward_model.models.properties import GravityProperties
+
+        body1 = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            gravity=GravityProperties(density_contrast=200.0),
+            name="Body1",
+        )
+        body2 = GeologicBody(
+            vertices=[[60.0, 100.0], [110.0, 100.0], [110.0, 200.0], [60.0, 200.0]],
+            gravity=GravityProperties(density_contrast=400.0),
+            name="Body2",
+        )
+        model = GravityModel(
+            bodies=[body1, body2],
+            observation_x=[0.0, 55.0, 110.0],
+            observation_z=0.0,
+        )
+        fig, ax = plt.subplots()
+        plot_model(model, ax=ax, show_colorbar=True)
+        assert len(fig.axes) == 2  # colorbar axis added
+        colorbar_ax = fig.axes[1]
+        ylabel = colorbar_ax.get_ylabel()
+        assert "kg/m" in ylabel or "Density" in ylabel
+        plt.close()
+
+    def test_color_by_density_explicit(self, gravity_model: GravityModel) -> None:
+        ax = plot_model(gravity_model, color_by="density")
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_color_by_index_still_works(self, gravity_model: GravityModel) -> None:
+        ax = plot_model(gravity_model, color_by="index")
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_magnetic_model_default_unchanged(self, simple_model: ForwardModel) -> None:
+        """ForwardModel with default color_by=None still uses susceptibility path."""
+        ax = plot_model(simple_model)
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_magnetic_model_label_still_shows_chi(
+        self, simple_model: ForwardModel
+    ) -> None:
+        from matplotlib.text import Annotation, Text
+
+        ax = plot_model(simple_model)
+        texts = [
+            c
+            for c in ax.get_children()
+            if isinstance(c, Text)
+            and not isinstance(c, Annotation)
+            and "Rectangle" in c.get_text()
+        ]
+        assert len(texts) == 1
+        assert "χ=" in texts[0].get_text()
+        plt.close()
+
+
+class TestPlotCombinedGravity:
+    """Tests for plot_combined with GravityModel."""
+
+    def test_gravity_model_creates_figure(self, gravity_model: GravityModel) -> None:
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        fig = plot_combined(gravity_model, components.gz)
+        assert fig is not None
+        assert len(fig.axes) == 2
+        plt.close()
+
+    def test_anomaly_ylabel_is_mgal(self, gravity_model: GravityModel) -> None:
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        fig = plot_combined(gravity_model, components.gz)
+        assert "mGal" in fig.axes[1].get_ylabel()
+        plt.close()
+
+    def test_anomaly_title_mentions_gravity(self, gravity_model: GravityModel) -> None:
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        fig = plot_combined(gravity_model, components.gz)
+        title = fig.axes[1].get_title()
+        assert "Gravity" in title or "gz" in title
+        plt.close()
+
+    def test_cross_section_label_shows_density(
+        self, gravity_model: GravityModel
+    ) -> None:
+        from matplotlib.text import Annotation, Text
+
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        fig = plot_combined(gravity_model, components.gz)
+        cross_ax = fig.axes[0]
+        texts = [
+            c
+            for c in cross_ax.get_children()
+            if isinstance(c, Text)
+            and not isinstance(c, Annotation)
+            and "GravityBody" in c.get_text()
+        ]
+        assert len(texts) == 1
+        assert "kg/m" in texts[0].get_text()
+        assert "χ=" not in texts[0].get_text()
+        plt.close()
+
+    def test_magnetic_model_ylabel_unchanged(self, simple_model: ForwardModel) -> None:
+        from forward_model.compute.calculator import calculate_anomaly
+
+        anomaly = calculate_anomaly(simple_model, component="total_field")
+        fig = plot_combined(simple_model, anomaly)
+        assert "nT" in fig.axes[1].get_ylabel()
+        plt.close()
+
+    def test_explicit_component_gz(self, gravity_model: GravityModel) -> None:
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        fig = plot_combined(gravity_model, components.gz, component="gz")
+        assert fig.axes[1].get_ylabel() == "gz (mGal)"
+        plt.close()
+
+    def test_explicit_component_gz_gradient(self, gravity_model: GravityModel) -> None:
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        fig = plot_combined(
+            gravity_model, components.gz_gradient, component="gz_gradient"
+        )
+        assert "mGal/m" in fig.axes[1].get_ylabel()
+        plt.close()
+
+    def test_color_by_index_explicit(self, gravity_model: GravityModel) -> None:
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        fig = plot_combined(gravity_model, components.gz, color_by="index")
+        assert fig is not None
+        plt.close()
+
+    def test_gradient_overlay_adds_twin_axis(self, gravity_model: GravityModel) -> None:
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        fig = plot_combined(
+            gravity_model, components.gz, gradient=components.gz_gradient
+        )
+        assert len(fig.axes) >= 3
+        plt.close()
+
+    def test_saves_to_file(self, gravity_model: GravityModel, tmp_path: Path) -> None:
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        output = tmp_path / "gravity_combined.png"
+        fig = plot_combined(gravity_model, components.gz, save_path=output)
+        assert output.exists()
         plt.close(fig)
