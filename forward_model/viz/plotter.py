@@ -16,6 +16,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from numpy.typing import NDArray
 
 from forward_model.models.body import GeologicBody
+from forward_model.models.gravity_model import GravityModel
 from forward_model.models.model import ForwardModel
 
 
@@ -66,9 +67,9 @@ def _resolve_strike_extents(
 
 
 def plot_model(
-    model: ForwardModel,
+    model: ForwardModel | GravityModel,
     ax: Axes | None = None,
-    color_by: Literal["index", "susceptibility"] = "susceptibility",
+    color_by: Literal["index", "susceptibility", "density"] | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -83,14 +84,17 @@ def plot_model(
     observation points.
 
     Args:
-        model: The forward model to visualize.
+        model: The forward model to visualize. Accepts ForwardModel or GravityModel.
         ax: Matplotlib axes to plot on. If None, creates new axes.
         color_by: How to color bodies. "index" uses different colors for each
-                 body, "susceptibility" uses a colormap based on susceptibility.
+                 body, "susceptibility" uses a colormap based on susceptibility,
+                 "density" uses a colormap based on density contrast. If None
+                 (default), resolves to "density" for GravityModel and
+                 "susceptibility" for ForwardModel.
         show_observation_lines: If True, show vertical dashed lines at obs points.
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
-        show_colorbar: If True, show colorbar when color_by="susceptibility".
+        show_colorbar: If True, show colorbar when coloring by a continuous value.
         equal_aspect: If True, lock x and z axes to equal scale.
         label_offsets: Optional mapping of body name to (dx, dz) offset from the
                       computed label anchor. The label text is placed at
@@ -110,27 +114,53 @@ def plot_model(
     if ax is None:
         _, ax = plt.subplots()
 
-    # Determine colors based on color_by parameter
+    # Resolve None sentinel
+    _is_gravity = isinstance(model, GravityModel)
+    if color_by is None:
+        _effective_color_by: Literal["index", "susceptibility", "density"] = (
+            "density" if _is_gravity else "susceptibility"
+        )
+    else:
+        _effective_color_by = color_by
+
     cmap = plt.cm.viridis  # type: ignore
-    if color_by == "susceptibility":
-        # Use susceptibility-based colormap
-        _FALLBACK_COLOR = (0.5, 0.5, 0.5, 1.0)
+    _FALLBACK_COLOR = (0.5, 0.5, 0.5, 1.0)
+    _auto_colorbar = False
+
+    if _effective_color_by == "density":
+        density_values = [
+            body.gravity.density_contrast
+            for body in model.bodies
+            if body.gravity is not None
+        ]
+        if not density_values or len(set(density_values)) == 1:
+            colors = [
+                cmap(0.5) if body.gravity is not None else _FALLBACK_COLOR
+                for body in model.bodies
+            ]
+        else:
+            norm = plt.Normalize(vmin=min(density_values), vmax=max(density_values))  # type: ignore
+            colors = [
+                (
+                    cmap(norm(body.gravity.density_contrast))
+                    if body.gravity is not None
+                    else _FALLBACK_COLOR
+                )
+                for body in model.bodies
+            ]  # type: ignore
+            _auto_colorbar = True
+    elif _effective_color_by == "susceptibility":
         susc_values = [
             body.magnetic.susceptibility
             for body in model.bodies
             if body.magnetic is not None
         ]
-        susc_set = set(susc_values)
-
-        if not susc_values or len(susc_set) == 1:
-            # All susceptibilities are the same or none present - use single/fallback
+        if not susc_values or len(set(susc_values)) == 1:
             colors = [
                 cmap(0.5) if body.magnetic is not None else _FALLBACK_COLOR
                 for body in model.bodies
             ]
-            _auto_colorbar = False
         else:
-            # Multiple susceptibilities - use colormap
             norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
             colors = [
                 (
@@ -141,15 +171,13 @@ def plot_model(
                 for body in model.bodies
             ]  # type: ignore
             _auto_colorbar = True
-    else:
-        # Use index-based colors
+    else:  # "index"
         colors = plt.cm.tab10(np.linspace(0, 1, max(len(model.bodies), 10)))  # type: ignore
-        _auto_colorbar = False
 
     # Plot each body
     for i, body in enumerate(model.bodies):
         vertices = body.to_numpy()
-        color = colors[i % len(colors)] if color_by == "index" else colors[i]
+        color = colors[i % len(colors)] if _effective_color_by == "index" else colors[i]
 
         # Create polygon patch
         face_color = body.color if body.color is not None else color
@@ -171,7 +199,9 @@ def plot_model(
             lx, lz = _polygon_centroid(vertices)
             lx, lz = _clamp_to_limits(lx, lz, xlim, zlim)
 
-        if body.magnetic is not None:
+        if body.gravity is not None:
+            label = f"{body.name}\n(ρ={body.gravity.density_contrast:.1f} kg/m³)"
+        elif body.magnetic is not None:
             label = f"{body.name}\n(χ={body.magnetic.susceptibility:.3f})"
         else:
             label = body.name
@@ -204,19 +234,32 @@ def plot_model(
                 bbox={"boxstyle": "round,pad=0.3", "facecolor": "white", "alpha": 0.7},
             )
 
-    # Add colorbar if using susceptibility coloring with multiple values
-    if color_by == "susceptibility" and _auto_colorbar and show_colorbar:
-        susc_values = [
-            body.magnetic.susceptibility
-            for body in model.bodies
-            if body.magnetic is not None
-        ]
-        sm = plt.cm.ScalarMappable(  # type: ignore
-            cmap=cmap,
-            norm=plt.Normalize(vmin=min(susc_values), vmax=max(susc_values)),  # type: ignore
-        )
-        sm.set_array([])  # type: ignore
-        plt.colorbar(sm, ax=ax, label="Susceptibility (SI)")  # type: ignore
+    # Add colorbar if coloring with multiple values
+    if _auto_colorbar and show_colorbar:
+        if _effective_color_by == "density":
+            density_values = [
+                body.gravity.density_contrast
+                for body in model.bodies
+                if body.gravity is not None
+            ]
+            sm = plt.cm.ScalarMappable(  # type: ignore
+                cmap=cmap,
+                norm=plt.Normalize(vmin=min(density_values), vmax=max(density_values)),  # type: ignore
+            )
+            sm.set_array([])  # type: ignore
+            plt.colorbar(sm, ax=ax, label="Density Contrast (kg/m³)")  # type: ignore
+        else:
+            susc_values = [
+                body.magnetic.susceptibility
+                for body in model.bodies
+                if body.magnetic is not None
+            ]
+            sm = plt.cm.ScalarMappable(  # type: ignore
+                cmap=cmap,
+                norm=plt.Normalize(vmin=min(susc_values), vmax=max(susc_values)),  # type: ignore
+            )
+            sm.set_array([])  # type: ignore
+            plt.colorbar(sm, ax=ax, label="Susceptibility (SI)")  # type: ignore
 
     # Plot observation lines
     if show_observation_lines:

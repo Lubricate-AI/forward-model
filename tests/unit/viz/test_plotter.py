@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from forward_model.models import ForwardModel
+from forward_model.models.gravity_model import GravityModel
 from forward_model.viz import plot_anomaly, plot_combined, plot_model, plot_model_3d
 from forward_model.viz.plotter import _polygon_centroid, _resolve_strike_extents
 
@@ -773,3 +774,96 @@ class TestComponentLabels:
 
         _, title = _COMPONENT_LABELS["gz_gradient"]
         assert title == "Horizontal Gravity Gradient (gz)"
+
+
+class TestPlotModelGravity:
+    """Tests for plot_model with GravityModel input."""
+
+    def test_gravity_model_renders_without_error(
+        self, gravity_model: GravityModel
+    ) -> None:
+        ax = plot_model(gravity_model)
+        assert ax is not None
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_gravity_body_label_shows_density(
+        self, gravity_model: GravityModel
+    ) -> None:
+        from matplotlib.text import Annotation, Text
+
+        ax = plot_model(gravity_model)
+        texts = [
+            c
+            for c in ax.get_children()
+            if isinstance(c, Text)
+            and not isinstance(c, Annotation)
+            and "GravityBody" in c.get_text()
+        ]
+        assert len(texts) == 1
+        assert "300.0" in texts[0].get_text()
+        assert "kg/m" in texts[0].get_text()
+        assert "χ=" not in texts[0].get_text()
+        plt.close()
+
+    def test_gravity_colorbar_label_is_density(self) -> None:
+        """Two bodies with different densities → colorbar labeled with density units."""
+        from forward_model.models.body import GeologicBody
+        from forward_model.models.gravity_model import GravityModel
+        from forward_model.models.properties import GravityProperties
+
+        body1 = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            gravity=GravityProperties(density_contrast=200.0),
+            name="Body1",
+        )
+        body2 = GeologicBody(
+            vertices=[[60.0, 100.0], [110.0, 100.0], [110.0, 200.0], [60.0, 200.0]],
+            gravity=GravityProperties(density_contrast=400.0),
+            name="Body2",
+        )
+        model = GravityModel(
+            bodies=[body1, body2],
+            observation_x=[0.0, 55.0, 110.0],
+            observation_z=0.0,
+        )
+        fig, ax = plt.subplots()
+        plot_model(model, ax=ax, show_colorbar=True)
+        assert len(fig.axes) == 2  # colorbar axis added
+        colorbar_ax = fig.axes[1]
+        ylabel = colorbar_ax.get_ylabel()
+        assert "kg/m" in ylabel or "Density" in ylabel
+        plt.close()
+
+    def test_color_by_density_explicit(self, gravity_model: GravityModel) -> None:
+        ax = plot_model(gravity_model, color_by="density")
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_color_by_index_still_works(self, gravity_model: GravityModel) -> None:
+        ax = plot_model(gravity_model, color_by="index")
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_magnetic_model_default_unchanged(self, simple_model: ForwardModel) -> None:
+        """ForwardModel with default color_by=None still uses susceptibility path."""
+        ax = plot_model(simple_model)
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_magnetic_model_label_still_shows_chi(
+        self, simple_model: ForwardModel
+    ) -> None:
+        from matplotlib.text import Annotation, Text
+
+        ax = plot_model(simple_model)
+        texts = [
+            c
+            for c in ax.get_children()
+            if isinstance(c, Text)
+            and not isinstance(c, Annotation)
+            and "Rectangle" in c.get_text()
+        ]
+        assert len(texts) == 1
+        assert "χ=" in texts[0].get_text()
+        plt.close()
