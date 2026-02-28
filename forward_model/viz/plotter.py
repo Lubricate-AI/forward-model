@@ -440,8 +440,7 @@ def plot_anomaly(
         xlim: Optional (min, max) x-axis limits in meters.
         component: Which component is being plotted. Controls axis labels.
                    One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
-                   ``"gradient"``, ``"gz"``, ``"gz_gradient"``. None defaults
-                   apply when called from ``plot_combined()``.
+                   ``"gradient"``, ``"gz"``, ``"gz_gradient"``.
         gradient: Optional gradient values (nT/m for magnetic, mGal/m for gravity).
                   When provided, overlaid on a twin y-axis with an orange dashed line.
 
@@ -526,10 +525,10 @@ def plot_combined(
     """Create combined plot with cross-section and anomaly profile.
 
     Creates a two-panel figure with the geologic cross-section on top
-    and the magnetic anomaly profile below, with aligned x-axes. When
-    ``gradient`` is supplied, d(ΔT)/dx is overlaid on a secondary y-axis
-    in the anomaly panel. When ``show_3d`` is True, a third panel with a
-    3D extruded view is added below the anomaly panel.
+    and the anomaly profile below, with aligned x-axes. When
+    ``gradient`` is supplied, the horizontal gradient is overlaid on a
+    secondary y-axis in the anomaly panel. When ``show_3d`` is True, a third panel
+    with a 3D extruded view is added below the anomaly panel.
 
     Args:
         model: The forward model to visualize.
