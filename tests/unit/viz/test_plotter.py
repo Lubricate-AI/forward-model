@@ -217,6 +217,47 @@ class TestPlotAnomaly:
         assert len(fig.axes) == 1
         plt.close()
 
+    def test_gz_component_ylabel(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.5, 1.2, 0.8])
+        ax = plot_anomaly(obs_x, anomaly, component="gz")
+        assert ax.get_ylabel() == "gz (mGal)"
+        plt.close()
+
+    def test_gz_component_title(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.5, 1.2, 0.8])
+        ax = plot_anomaly(obs_x, anomaly, component="gz")
+        assert ax.get_title() == "Vertical Gravity Anomaly (gz)"
+        plt.close()
+
+    def test_gz_gradient_component_ylabel(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.01, 0.05, -0.02])
+        ax = plot_anomaly(obs_x, anomaly, component="gz_gradient")
+        assert ax.get_ylabel() == "gz gradient (mGal/m)"
+        plt.close()
+
+    def test_gz_gradient_component_title(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.01, 0.05, -0.02])
+        ax = plot_anomaly(obs_x, anomaly, component="gz_gradient")
+        assert ax.get_title() == "Horizontal Gravity Gradient (gz)"
+        plt.close()
+
+    def test_end_to_end_with_gravity_model(self, gravity_model: GravityModel) -> None:
+        """Smoke test: plot_anomaly with real gz output from calculate_anomaly."""
+        from forward_model.compute.calculator import calculate_anomaly
+
+        components = calculate_anomaly(gravity_model)
+        ax = plot_anomaly(
+            list(gravity_model.observation_x),
+            components.gz,
+            component="gz",
+        )
+        assert ax.get_ylabel() == "gz (mGal)"
+        plt.close()
+
 
 class TestPlotCombined:
     """Tests for plot_combined function."""
