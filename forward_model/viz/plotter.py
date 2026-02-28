@@ -414,7 +414,7 @@ _COMPONENT_LABELS: dict[str, tuple[str, str]] = {
     "gradient": ("d(ΔT)/dx (nT/m)", "Horizontal Gradient d(ΔT)/dx"),
     # Gravity components
     "gz": ("gz (mGal)", "Vertical Gravity Anomaly (gz)"),
-    "gz_gradient": ("gz gradient (mGal/m)", "Horizontal Gravity Gradient (gz)"),
+    "gz_gradient": ("gz gradient (mGal/m)", "Horizontal Gradient d(gz)/dx"),
 }
 
 

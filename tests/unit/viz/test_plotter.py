@@ -242,7 +242,7 @@ class TestPlotAnomaly:
         obs_x = [0.0, 10.0, 20.0]
         anomaly = np.array([0.01, 0.05, -0.02])
         ax = plot_anomaly(obs_x, anomaly, component="gz_gradient")
-        assert ax.get_title() == "Horizontal Gravity Gradient (gz)"
+        assert ax.get_title() == "Horizontal Gradient d(gz)/dx"
         plt.close()
 
     def test_end_to_end_with_gravity_model(self, gravity_model: GravityModel) -> None:
@@ -814,7 +814,7 @@ class TestComponentLabels:
         from forward_model.viz.plotter import _COMPONENT_LABELS
 
         _, title = _COMPONENT_LABELS["gz_gradient"]
-        assert title == "Horizontal Gravity Gradient (gz)"
+        assert title == "Horizontal Gradient d(gz)/dx"
 
 
 class TestPlotModelGravity:
