@@ -468,3 +468,130 @@ For API documentation, see the package docstrings or generate documentation with
 ```bash
 python -m pydoc forward_model
 ```
+
+---
+
+## Gravity Anomaly Theory
+
+### The Talwani (1959) Method for Gravity
+
+The Talwani et al. (1959) algorithm computes the vertical component of the gravity anomaly ($g_z$, in mGal) due to a 2D body with an arbitrary polygonal cross-section. The body is assumed to extend infinitely in the strike direction (the $y$-axis), reducing the 3D volume integral to a line integral along the polygon boundary.
+
+For a polygon with $N$ vertices $(x_i, z_i)$ observed at a surface point, each edge $i \to i+1$ contributes to the anomaly via:
+
+$$g_z = 2G\Delta\rho \sum_{i=1}^{N} \left( -x_i \,\Delta\theta_i - z_i \ln r_i \right)$$
+
+where:
+
+- $G = 6.674 \times 10^{-11}$ m³ kg⁻¹ s⁻² is the universal gravitational constant
+- $\Delta\rho$ is the density contrast between the body and host rock (kg/m³)
+- $\Delta\theta_i$ is the subtended angle for edge $i$ at the observation point
+- $\ln r_i$ is the log distance term derived from the edge geometry
+
+The result is computed in m/s² and converted to milligals (mGal) using $1\ \text{mGal} = 10^{-5}\ \text{m/s}^2$.
+
+### Physical Constants and Units
+
+| Quantity | Symbol | Value / Unit |
+|----------|--------|--------------|
+| Gravitational constant | $G$ | $6.674 \times 10^{-11}$ m³ kg⁻¹ s⁻² |
+| Density contrast | $\Delta\rho$ | kg/m³ |
+| Vertical anomaly | $g_z$ | mGal (1 mGal = 10⁻⁵ m/s²) |
+| Horizontal gradient | $\partial g_z / \partial x$ | mGal/m |
+
+### Density Contrast
+
+Unlike magnetic susceptibility, density contrast can be positive or negative:
+
+- **Positive $\Delta\rho$**: the body is denser than the host (e.g., mafic intrusion in sedimentary rock). Produces a gravity **high**.
+- **Negative $\Delta\rho$**: the body is less dense than the host (e.g., salt dome, granitic pluton in denser crust). Produces a gravity **low**.
+
+Typical density contrasts for common geological scenarios:
+
+| Scenario | Density Contrast (kg/m³) |
+|----------|--------------------------|
+| Mafic intrusion in sedimentary rock | +200 to +600 |
+| Granite pluton in average crust | −100 to −300 |
+| Salt dome in sedimentary rock | −200 to −400 |
+| Iron ore body in limestone | +500 to +2000 |
+| Basement high beneath sedimentary basin | +100 to +400 |
+
+### 2.5D and 2.75D Extensions
+
+As with magnetic modeling, the gravity kernel supports finite-strike extensions (Won & Bevis 1987):
+
+- **2.5D** (`strike_half_length`): symmetric finite strike extent. The anomaly is attenuated for bodies with limited along-strike length. Both ends of the body are at equal distance from the profile.
+- **2.75D** (`strike_forward`, `strike_backward`): asymmetric strike extents. Useful when the body extends a different distance on either side of the profile (e.g., a body truncated by a fault on one side).
+
+When `strike_half_length` or `strike_forward`/`strike_backward` are not set, the body is treated as infinite in the strike direction (2D case), which maximises the predicted anomaly amplitude.
+
+---
+
+## Data Reduction Requirements
+
+!!! important
+    This library computes a **forward model** — it predicts the gravity anomaly due to a known subsurface density distribution. To compare this against field observations, your observed data must be fully reduced to the **Complete Bouguer Anomaly (CBA)** before comparison. This library does **not** perform data reduction.
+
+### Why Data Reduction Is Necessary
+
+Raw gravity readings from a gravimeter measure the total gravitational acceleration at the observation point. This includes contributions from many sources unrelated to the subsurface geology of interest:
+
+- The reference ellipsoid (latitude-dependent normal gravity)
+- The elevation of the observation point above the geoid
+- The rock mass between the instrument and the geoid
+- Irregular topography around the instrument
+
+Each of these effects must be removed — **corrected** — before the residual signal can meaningfully be compared to a forward model.
+
+### The Three Corrections
+
+**1. Free-Air Correction → Free-Air Anomaly**
+
+Removes the effect of observation elevation above the geoid, accounting for the decrease in gravity with height. It does *not* account for the mass of rock between the instrument and sea level.
+
+$$\text{Free-Air Correction} \approx +0.3086 \times h \quad \text{(mGal)}$$
+
+where $h$ is the station elevation in metres above the geoid.
+
+$$\text{Free-Air Anomaly (FAA)} = g_\text{obs} - g_\text{normal} + \text{FAC}$$
+
+The FAA reflects both the subsurface density distribution and the mass of rock below the station.
+
+**2. Bouguer Slab Correction → Simple Bouguer Anomaly**
+
+Removes the gravitational attraction of an infinite horizontal slab of rock with thickness equal to the station elevation $h$ and density $\rho_B$ (the *Bouguer density*, typically 2670 kg/m³ for continental crust):
+
+$$\text{Bouguer Slab Correction (BSC)} = 2\pi G \rho_B h \approx 0.04193 \times \rho_B \times h \quad \text{(mGal)}$$
+
+$$\text{Simple Bouguer Anomaly (SBA)} = \text{FAA} - \text{BSC}$$
+
+The slab correction assumes perfectly flat topography. In areas of significant relief this is insufficient, necessitating a terrain correction.
+
+**3. Terrain Correction → Complete Bouguer Anomaly**
+
+The infinite-slab assumption over- or under-corrects in areas of irregular topography:
+
+- **Valleys** adjacent to the station remove rock that the slab assumed present → gravity is lower than assumed → correction is positive.
+- **Hills** adjacent to the station add rock mass above the observation datum → correction is also positive.
+
+The terrain correction $T$ is therefore **always positive**, and:
+
+$$\text{Complete Bouguer Anomaly (CBA)} = \text{SBA} + T$$
+
+### What to Supply to This Library
+
+When comparing observed and modeled gravity:
+
+- Supply your observed data as the **Complete Bouguer Anomaly (CBA)** in **mGal**.
+- CBA values are routinely provided in national gravity datasets and published geological surveys.
+- If your data is already labelled as the CBA, it is ready to use directly.
+- This library does **not** implement free-air, Bouguer, or terrain corrections — many data reduction workflows are survey-specific and are well served by existing tools.
+
+!!! note
+    A related quantity, the *Free-Air Anomaly (FAA)*, is appropriate for marine surveys where the water column replaces the Bouguer slab. For land surveys use the CBA.
+
+### References
+
+- Talwani, M., Worzel, J. L., & Landisman, M. (1959). Rapid gravity computations for two-dimensional bodies with application to the Mendocino submarine fracture zone. *Journal of Geophysical Research*, 64(1), 49–59.
+- Won, I. J., & Bevis, M. (1987). Computing the gravitational and magnetic anomalies due to a polygon: Algorithms and Fortran subroutines. *Geophysics*, 52(2), 232–238.
+- Telford, W. M., Geldart, L. P., & Sheriff, R. E. (1990). *Applied Geophysics* (2nd ed.). Cambridge University Press.
