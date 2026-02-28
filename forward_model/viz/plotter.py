@@ -426,23 +426,24 @@ def plot_anomaly(
     component: str = "total_field",
     gradient: NDArray[np.float64] | None = None,
 ) -> Axes:
-    """Plot magnetic anomaly profile.
+    """Plot anomaly profile.
 
-    Creates a line plot showing the magnetic anomaly as a function
+    Creates a line plot showing the anomaly as a function
     of position along the profile. When ``gradient`` is supplied, the
-    horizontal gradient d(ΔT)/dx is overlaid on a secondary y-axis on
+    horizontal gradient is overlaid on a secondary y-axis on
     the right side of the plot.
 
     Args:
         observation_x: X-coordinates of observation points (meters).
-        anomaly: Magnetic anomaly values (nanoTesla).
+        anomaly: Anomaly values (nT for magnetic, mGal for gravity).
         ax: Matplotlib axes to plot on. If None, creates new axes.
         xlim: Optional (min, max) x-axis limits in meters.
         component: Which component is being plotted. Controls axis labels.
                    One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
-                   ``"gradient"``.
-        gradient: Optional d(ΔT)/dx values (nT/m). When provided, overlaid
-                  on a twin y-axis with an orange dashed line.
+                   ``"gradient"``, ``"gz"``, ``"gz_gradient"``. None defaults
+                   apply when called from ``plot_combined()``.
+        gradient: Optional gradient values (nT/m for magnetic, mGal/m for gravity).
+                  When provided, overlaid on a twin y-axis with an orange dashed line.
 
     Returns:
         The matplotlib Axes object containing the plot.
@@ -477,15 +478,21 @@ def plot_anomaly(
     # Overlay gradient on secondary y-axis
     if gradient is not None:
         ax2 = ax.twinx()
+        _gradient_component = (
+            "gz_gradient" if component.startswith("gz") else "gradient"
+        )
+        _gradient_ylabel, _ = _COMPONENT_LABELS.get(
+            _gradient_component, ("Gradient", "Gradient")
+        )
         ax2.plot(
             observation_x,
             gradient,
             color="tab:orange",
             linestyle="--",
             linewidth=1.5,
-            label="d(ΔT)/dx (nT/m)",
+            label=_gradient_ylabel,
         )
-        ax2.set_ylabel("d(ΔT)/dx (nT/m)", fontsize=11, color="tab:orange")
+        ax2.set_ylabel(_gradient_ylabel, fontsize=11, color="tab:orange")
         ax2.tick_params(axis="y", labelcolor="tab:orange")
         # Combined legend from both axes
         lines1, labels1 = ax.get_legend_handles_labels()
@@ -526,7 +533,8 @@ def plot_combined(
 
     Args:
         model: The forward model to visualize.
-        anomaly: Magnetic anomaly values (nanoTesla).
+        anomaly: Anomaly values (nT for magnetic components, mGal for gravity
+                components).
         save_path: Optional path to save the figure. If None, does not save.
         style: Plot style name ("default", "publication", "presentation").
         figsize: Figure size as (width, height) in inches. If None, uses (12, 8).
@@ -535,14 +543,16 @@ def plot_combined(
         show_observation_lines: If True, show vertical lines at observation points.
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
-        show_colorbar: If True, show colorbar when color_by="susceptibility".
+        show_colorbar: If True, show colorbar when color_by is a continuous mode
+                      ("susceptibility" or "density").
         label_offsets: Optional mapping of body name to (dx, dz) offset from the
                       computed label anchor. Passed through to ``plot_model``.
         show_label_arrows: If True or per-body dict, draw arrows from text to centroid.
         component: Which anomaly component is being plotted. Controls axis labels.
-                   One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``.
-        gradient: Optional d(ΔT)/dx values (nT/m). When provided, overlaid on a
-                  secondary y-axis in the anomaly panel.
+                   One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
+                   ``"gz"``, ``"gz_gradient"``. None auto-detects from model type.
+        gradient: Optional gradient values for the secondary y-axis overlay.
+                  Units: nT/m for magnetic, mGal/m for gravity.
         show_3d: If True, add a third panel with a 3D extruded view.
         default_strike: Total strike length (m) used for 2D (infinite-strike) bodies
                        when ``show_3d=True``. Passed through to ``plot_model_3d``.
