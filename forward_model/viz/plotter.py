@@ -202,9 +202,9 @@ def plot_model(
             lx, lz = _polygon_centroid(vertices)
             lx, lz = _clamp_to_limits(lx, lz, xlim, zlim)
 
-        if _effective_color_by == "density" and body.gravity is not None:
+        if body.gravity is not None:
             label = f"{body.name}\n(ρ={body.gravity.density_contrast:.1f} kg/m³)"
-        elif _effective_color_by == "susceptibility" and body.magnetic is not None:
+        elif body.magnetic is not None:
             label = f"{body.name}\n(χ={body.magnetic.susceptibility:.3f})"
         else:
             label = body.name
@@ -622,8 +622,8 @@ def plot_combined(
             gradient=gradient,
         )
 
-        # Plot 3D view if requested
-        if show_3d:
+        # Plot 3D view if requested (only supported for ForwardModel)
+        if show_3d and isinstance(model, ForwardModel):
             plot_model_3d(model, default_strike=default_strike, ax=ax3d)
 
         if xlim is not None:
