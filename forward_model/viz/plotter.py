@@ -498,20 +498,20 @@ def plot_anomaly(
 
 
 def plot_combined(
-    model: ForwardModel,
+    model: ForwardModel | GravityModel,
     anomaly: NDArray[np.float64],
     save_path: str | Path | None = None,
     style: str = "default",
     figsize: tuple[float, float] | None = None,
     dpi: int | None = None,
-    color_by: Literal["index", "susceptibility"] = "susceptibility",
+    color_by: Literal["index", "susceptibility", "density"] | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
     show_colorbar: bool = True,
     label_offsets: dict[str, tuple[float, float]] | None = None,
     show_label_arrows: bool | dict[str, bool] = False,
-    component: str = "total_field",
+    component: str | None = None,
     gradient: NDArray[np.float64] | None = None,
     show_3d: bool = False,
     default_strike: float = 10_000.0,
@@ -557,6 +557,17 @@ def plot_combined(
     """
     from forward_model.viz.styles import get_style
 
+    # Resolve sentinel defaults based on model type
+    _is_gravity = isinstance(model, GravityModel)
+    _effective_component: str = (
+        ("gz" if _is_gravity else "total_field") if component is None else component
+    )
+    _effective_color_by: Literal["index", "susceptibility", "density"] = (
+        ("density" if _is_gravity else "susceptibility")
+        if color_by is None
+        else color_by
+    )
+
     # Get style configuration
     style_config = get_style(style)
 
@@ -582,7 +593,7 @@ def plot_combined(
         plot_model(
             model,
             ax=ax1,
-            color_by=color_by,
+            color_by=_effective_color_by,
             show_observation_lines=show_observation_lines,
             xlim=xlim,
             zlim=zlim,
@@ -598,7 +609,7 @@ def plot_combined(
             anomaly,
             ax=ax2,
             xlim=xlim,
-            component=component,
+            component=_effective_component,
             gradient=gradient,
         )
 
