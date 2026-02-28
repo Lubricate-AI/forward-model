@@ -126,6 +126,7 @@ def plot_model(
     cmap = plt.cm.viridis  # type: ignore
     _FALLBACK_COLOR = (0.5, 0.5, 0.5, 1.0)
     _auto_colorbar = False
+    _colorbar_norm: plt.Normalize | None = None  # type: ignore
 
     if _effective_color_by == "density":
         density_values = [
@@ -139,10 +140,12 @@ def plot_model(
                 for body in model.bodies
             ]
         else:
-            norm = plt.Normalize(vmin=min(density_values), vmax=max(density_values))  # type: ignore
+            _colorbar_norm = plt.Normalize(  # type: ignore
+                vmin=min(density_values), vmax=max(density_values)
+            )
             colors = [
                 (
-                    cmap(norm(body.gravity.density_contrast))
+                    cmap(_colorbar_norm(body.gravity.density_contrast))
                     if body.gravity is not None
                     else _FALLBACK_COLOR
                 )
@@ -161,10 +164,10 @@ def plot_model(
                 for body in model.bodies
             ]
         else:
-            norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
+            _colorbar_norm = plt.Normalize(vmin=min(susc_values), vmax=max(susc_values))  # type: ignore
             colors = [
                 (
-                    cmap(norm(body.magnetic.susceptibility))
+                    cmap(_colorbar_norm(body.magnetic.susceptibility))
                     if body.magnetic is not None
                     else _FALLBACK_COLOR
                 )
@@ -199,9 +202,9 @@ def plot_model(
             lx, lz = _polygon_centroid(vertices)
             lx, lz = _clamp_to_limits(lx, lz, xlim, zlim)
 
-        if body.gravity is not None:
+        if _effective_color_by == "density" and body.gravity is not None:
             label = f"{body.name}\n(ρ={body.gravity.density_contrast:.1f} kg/m³)"
-        elif body.magnetic is not None:
+        elif _effective_color_by == "susceptibility" and body.magnetic is not None:
             label = f"{body.name}\n(χ={body.magnetic.susceptibility:.3f})"
         else:
             label = body.name
@@ -237,27 +240,11 @@ def plot_model(
     # Add colorbar if coloring with multiple values
     if _auto_colorbar and show_colorbar:
         if _effective_color_by == "density":
-            density_values = [
-                body.gravity.density_contrast
-                for body in model.bodies
-                if body.gravity is not None
-            ]
-            sm = plt.cm.ScalarMappable(  # type: ignore
-                cmap=cmap,
-                norm=plt.Normalize(vmin=min(density_values), vmax=max(density_values)),  # type: ignore
-            )
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
             sm.set_array([])  # type: ignore
             plt.colorbar(sm, ax=ax, label="Density Contrast (kg/m³)")  # type: ignore
         else:
-            susc_values = [
-                body.magnetic.susceptibility
-                for body in model.bodies
-                if body.magnetic is not None
-            ]
-            sm = plt.cm.ScalarMappable(  # type: ignore
-                cmap=cmap,
-                norm=plt.Normalize(vmin=min(susc_values), vmax=max(susc_values)),  # type: ignore
-            )
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
             sm.set_array([])  # type: ignore
             plt.colorbar(sm, ax=ax, label="Susceptibility (SI)")  # type: ignore
 
