@@ -14,25 +14,30 @@ def write_csv(
     filepath: str | Path,
     observation_x: list[float],
     anomaly: NDArray[np.float64],
+    anomaly_label: str = "anomaly_nT",
 ) -> None:
     """Write anomaly results to CSV file.
 
     Creates a simple tabular CSV format with columns for x-coordinate
-    and magnetic anomaly value.
+    and anomaly value.
 
     Args:
         filepath: Output file path. Can be a string or Path object.
         observation_x: List of x-coordinates for observation points (meters).
-        anomaly: Array of magnetic anomaly values (nanoTesla).
+        anomaly: Array of anomaly values.
+        anomaly_label: Column header for the anomaly values. Defaults to
+            ``"anomaly_nT"`` for magnetic results; use ``"anomaly_mGal"``
+            for gravity results.
 
     Example:
         >>> write_csv("results.csv", model.observation_x, anomaly)
+        >>> write_csv("gravity.csv", model.observation_x, gz, anomaly_label="anomaly_mGal")
     """
     filepath = Path(filepath)
 
     with open(filepath, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["x_m", "anomaly_nT"])
+        writer.writerow(["x_m", anomaly_label])
         for x, anom in zip(observation_x, anomaly, strict=True):
             writer.writerow([x, anom])
 

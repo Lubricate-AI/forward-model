@@ -31,7 +31,7 @@ from forward_model.models import ForwardModel, GravityModel, HeatFlowModel
 
 app = typer.Typer(
     name="forward-model",
-    help="2D forward magnetic modeling using Talwani algorithm",
+    help="2D forward magnetic and gravity modeling using Talwani algorithm",
     add_completion=False,
 )
 
@@ -109,12 +109,14 @@ def run(
     no_plot: bool = typer.Option(
         False, "--no-plot", help="Skip plot generation entirely"
     ),
-    component: Literal[
-        "bz", "bx", "total_field", "amplitude", "gradient"
-    ] = typer.Option(
-        "bz",
+    component: str | None = typer.Option(
+        None,
         "--component",
-        help="Anomaly component: bz (default), bx, total_field, amplitude, gradient",
+        help=(
+            "Anomaly component to export. "
+            "Magnetic: bz (default), bx, total_field, amplitude, gradient. "
+            "Gravity: gz (default), gz_gradient."
+        ),
     ),
     plot_style: str | None = typer.Option(
         None, "--plot-style", help="Plot style (default, publication, presentation)"
@@ -128,8 +130,9 @@ def run(
 ) -> None:
     """Run forward model calculation.
 
-    Loads a model from JSON, computes the magnetic anomaly, and optionally
-    exports results and generates visualizations.
+    Loads a model from JSON or CSV, computes the anomaly (magnetic or gravity),
+    and optionally exports results and generates visualizations. Model type is
+    auto-detected from the file content.
     """
     try:
         cfg = load_config()
@@ -149,71 +152,139 @@ def run(
             typer.echo(f"  {len(model.observation_x)} observation points")
 
         # Dispatch by model type
-        if isinstance(model, GravityModel):
-            raise NotImplementedError(
-                "Gravity calculation not yet implemented. Tracked in future issues."
-            )
-        elif isinstance(model, HeatFlowModel):
+        if isinstance(model, HeatFlowModel):
             raise NotImplementedError(
                 "Heat flow calculation not yet implemented. Tracked in future issues."
             )
-        elif not isinstance(model, ForwardModel):  # type: ignore[reportUnnecessaryIsInstance]
+        elif not isinstance(model, (ForwardModel, GravityModel)):  # type: ignore[reportUnnecessaryIsInstance]
             raise ValueError(f"Unexpected model type: {type(model).__name__}")
 
-        # Calculate all anomaly components in one pass
-        if verbose:
-            typer.echo("Calculating magnetic anomaly...")
-        all_components = calculate_anomaly(model, component="all")
-        anomaly = {
-            "bz": all_components.bz,
-            "bx": all_components.bx,
-            "total_field": all_components.total_field,
-            "amplitude": all_components.amplitude,
-            "gradient": all_components.gradient,
-        }[component]
-        if verbose:
-            min_val = float(anomaly.min())
-            max_val = float(anomaly.max())
-            typer.echo(f"  {component} range: {min_val:.2f} to {max_val:.2f}")
-
-        # Export results (uses the selected component)
-        if output_csv:
+        if isinstance(model, GravityModel):
+            # --- Gravity path ---
+            effective_component = component or "gz"
+            valid_gravity = {"gz", "gz_gradient"}
+            if effective_component not in valid_gravity:
+                raise ValueError(
+                    f"Component '{effective_component}' is not valid for a gravity model. "
+                    f"Valid options: {', '.join(sorted(valid_gravity))}"
+                )
             if verbose:
-                typer.echo(f"Writing CSV to {output_csv}...")
-            write_csv(output_csv, model.observation_x, anomaly)
-
-        if output_json:
+                typer.echo("Calculating gravity anomaly...")
+            gravity_result = calculate_anomaly(model)
+            anomaly = {"gz": gravity_result.gz, "gz_gradient": gravity_result.gz_gradient}[
+                effective_component
+            ]
             if verbose:
-                typer.echo(f"Writing JSON to {output_json}...")
-            write_json(output_json, model, anomaly)
+                min_val = float(anomaly.min())
+                max_val = float(anomaly.max())
+                typer.echo(f"  {effective_component} range: {min_val:.4f} to {max_val:.4f}")
 
-        if output_npy:
-            if verbose:
-                typer.echo(f"Writing NumPy to {output_npy}...")
-            write_numpy(output_npy, model.observation_x, anomaly)
-
-        # Generate plot — always shows TMI on primary axis with gradient overlay
-        if not no_plot:
-            if verbose:
-                typer.echo("Generating plot...")
-            plot_combined(
-                model,
-                all_components.total_field,
-                save_path=plot,
-                component="total_field",
-                gradient=all_components.gradient,
-                style=effective_style,
-                dpi=effective_dpi,
-            )
-            if plot:
+            # Export results
+            if output_csv:
                 if verbose:
-                    typer.echo(f"  Plot saved to {plot}")
-            else:
-                if verbose:
-                    typer.echo("  Displaying plot...")
-                import matplotlib.pyplot as plt
+                    typer.echo(f"Writing CSV to {output_csv}...")
+                write_csv(
+                    output_csv,
+                    model.observation_x,
+                    anomaly,
+                    anomaly_label="anomaly_mGal",
+                )
 
-                plt.show()  # type: ignore[reportUnknownMemberType]
+            if output_json:
+                if verbose:
+                    typer.echo(f"Writing JSON to {output_json}...")
+                write_json(output_json, model, anomaly)
+
+            if output_npy:
+                if verbose:
+                    typer.echo(f"Writing NumPy to {output_npy}...")
+                write_numpy(output_npy, model.observation_x, anomaly)
+
+            # Generate plot — gz on primary axis with gz_gradient overlay
+            if not no_plot:
+                if verbose:
+                    typer.echo("Generating plot...")
+                plot_combined(
+                    model,
+                    gravity_result.gz,
+                    save_path=plot,
+                    component="gz",
+                    gradient=gravity_result.gz_gradient,
+                    style=effective_style,
+                    dpi=effective_dpi,
+                )
+                if plot:
+                    if verbose:
+                        typer.echo(f"  Plot saved to {plot}")
+                else:
+                    if verbose:
+                        typer.echo("  Displaying plot...")
+                    import matplotlib.pyplot as plt
+
+                    plt.show()  # type: ignore[reportUnknownMemberType]
+
+        else:
+            # --- Magnetic path ---
+            effective_component = component or "bz"
+            valid_magnetic = {"bz", "bx", "total_field", "amplitude", "gradient"}
+            if effective_component not in valid_magnetic:
+                raise ValueError(
+                    f"Component '{effective_component}' is not valid for a magnetic model. "
+                    f"Valid options: {', '.join(sorted(valid_magnetic))}"
+                )
+            if verbose:
+                typer.echo("Calculating magnetic anomaly...")
+            all_components = calculate_anomaly(model, component="all")
+            anomaly = {
+                "bz": all_components.bz,
+                "bx": all_components.bx,
+                "total_field": all_components.total_field,
+                "amplitude": all_components.amplitude,
+                "gradient": all_components.gradient,
+            }[effective_component]
+            if verbose:
+                min_val = float(anomaly.min())
+                max_val = float(anomaly.max())
+                typer.echo(f"  {effective_component} range: {min_val:.2f} to {max_val:.2f}")
+
+            # Export results (uses the selected component)
+            if output_csv:
+                if verbose:
+                    typer.echo(f"Writing CSV to {output_csv}...")
+                write_csv(output_csv, model.observation_x, anomaly)
+
+            if output_json:
+                if verbose:
+                    typer.echo(f"Writing JSON to {output_json}...")
+                write_json(output_json, model, anomaly)
+
+            if output_npy:
+                if verbose:
+                    typer.echo(f"Writing NumPy to {output_npy}...")
+                write_numpy(output_npy, model.observation_x, anomaly)
+
+            # Generate plot — always shows TMI on primary axis with gradient overlay
+            if not no_plot:
+                if verbose:
+                    typer.echo("Generating plot...")
+                plot_combined(
+                    model,
+                    all_components.total_field,
+                    save_path=plot,
+                    component="total_field",
+                    gradient=all_components.gradient,
+                    style=effective_style,
+                    dpi=effective_dpi,
+                )
+                if plot:
+                    if verbose:
+                        typer.echo(f"  Plot saved to {plot}")
+                else:
+                    if verbose:
+                        typer.echo("  Displaying plot...")
+                    import matplotlib.pyplot as plt
+
+                    plt.show()  # type: ignore[reportUnknownMemberType]
 
         typer.echo(typer.style("✓ Calculation complete", fg=typer.colors.GREEN))
 
