@@ -745,3 +745,31 @@ class TestPlotModel3D:
         assert abs(ax3d.elev - 30.0) < 1e-6
         assert abs(ax3d.azim - (-45.0)) < 1e-6
         plt.close(fig)
+
+
+class TestComponentLabels:
+    """Tests for gravity additions to _COMPONENT_LABELS."""
+
+    def test_gz_ylabel(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        ylabel, _ = _COMPONENT_LABELS["gz"]
+        assert ylabel == "gz (mGal)"
+
+    def test_gz_title(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        _, title = _COMPONENT_LABELS["gz"]
+        assert title == "Vertical Gravity Anomaly (gz)"
+
+    def test_gz_gradient_ylabel(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        ylabel, _ = _COMPONENT_LABELS["gz_gradient"]
+        assert ylabel == "gz gradient (mGal/m)"
+
+    def test_gz_gradient_title(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        _, title = _COMPONENT_LABELS["gz_gradient"]
+        assert title == "Horizontal Gravity Gradient (gz)"

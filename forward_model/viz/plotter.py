@@ -382,6 +382,9 @@ _COMPONENT_LABELS: dict[str, tuple[str, str]] = {
     "total_field": ("ΔT (nT)", "Total Field Anomaly (ΔT)"),
     "amplitude": ("|ΔB| (nT)", "Anomaly Amplitude (|ΔB|)"),
     "gradient": ("d(ΔT)/dx (nT/m)", "Horizontal Gradient d(ΔT)/dx"),
+    # Gravity components
+    "gz": ("gz (mGal)", "Vertical Gravity Anomaly (gz)"),
+    "gz_gradient": ("gz gradient (mGal/m)", "Horizontal Gravity Gradient (gz)"),
 }
 
 
