@@ -70,7 +70,9 @@ def _resolve_strike_extents(
 def plot_model(
     model: ForwardModel | GravityModel | HeatFlowModel,
     ax: Axes | None = None,
-    color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"] | None = None,
+    color_by: Literal[
+        "index", "susceptibility", "density", "thermal_conductivity"
+    ] | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -85,14 +87,16 @@ def plot_model(
     observation points.
 
     Args:
-        model: The forward model to visualize. Accepts ForwardModel, GravityModel, or HeatFlowModel.
+        model: The forward model to visualize. Accepts ForwardModel,
+               GravityModel, or HeatFlowModel.
         ax: Matplotlib axes to plot on. If None, creates new axes.
         color_by: How to color bodies. "index" uses different colors for each
                  body, "susceptibility" uses a colormap based on susceptibility,
                  "density" uses a colormap based on density contrast.
                  "thermal_conductivity" uses a colormap based on thermal conductivity.
                  If None (default), resolves to "density" for GravityModel,
-                 "thermal_conductivity" for HeatFlowModel, and "susceptibility" for ForwardModel.
+                 "thermal_conductivity" for HeatFlowModel, and
+                 "susceptibility" for ForwardModel.
         show_observation_lines: If True, show vertical dashed lines at obs points.
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
@@ -120,7 +124,9 @@ def plot_model(
     _is_gravity = isinstance(model, GravityModel)
     _is_heatflow = isinstance(model, HeatFlowModel)
     if color_by is None:
-        _effective_color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"] = (
+        _effective_color_by: Literal[
+            "index", "susceptibility", "density", "thermal_conductivity"
+        ] = (
             "density" if _is_gravity
             else ("thermal_conductivity" if _is_heatflow else "susceptibility")
         )
@@ -190,7 +196,9 @@ def plot_model(
                 for body in model.bodies
             ]
         else:
-            _colorbar_norm = plt.Normalize(vmin=min(thermal_values), vmax=max(thermal_values))  # type: ignore
+            _colorbar_norm = plt.Normalize(  # type: ignore
+                vmin=min(thermal_values), vmax=max(thermal_values)
+            )
             colors = [
                 (
                     cmap(_colorbar_norm(body.thermal.conductivity))
@@ -449,7 +457,10 @@ _COMPONENT_LABELS: dict[str, tuple[str, str]] = {
     "gz_gradient": ("gz gradient (mGal/m)", "Horizontal Gradient d(gz)/dx"),
     # Heat flow components
     "heatflow": ("Heat Flow Anomaly (mW/m²)", "Heat Flow Anomaly (mW/m²)"),
-    "heatflow_gradient": ("Heat Flow Gradient (mW/m²/m)", "Heat Flow Gradient (mW/m²/m)"),
+    "heatflow_gradient": (
+        "Heat Flow Gradient (mW/m²/m)",
+        "Heat Flow Gradient (mW/m²/m)",
+    ),
 }
 
 
@@ -470,14 +481,16 @@ def plot_anomaly(
 
     Args:
         observation_x: X-coordinates of observation points (meters).
-        anomaly: Anomaly values (nT for magnetic, mGal for gravity, mW/m² for heat flow).
+        anomaly: Anomaly values (nT for magnetic, mGal for gravity,
+                 mW/m² for heat flow).
         ax: Matplotlib axes to plot on. If None, creates new axes.
         xlim: Optional (min, max) x-axis limits in meters.
         component: Which component is being plotted. Controls axis labels.
                    One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
                    ``"gradient"``, ``"gz"``, ``"gz_gradient"``, ``"heatflow"``,
                    ``"heatflow_gradient"``.
-        gradient: Optional gradient values (nT/m for magnetic, mGal/m for gravity, mW/m²/m for heat flow).
+        gradient: Optional gradient values (nT/m for magnetic,
+                  mGal/m for gravity, mW/m²/m for heat flow).
                   When provided, overlaid on a twin y-axis with an orange dashed line.
 
     Returns:
@@ -515,7 +528,11 @@ def plot_anomaly(
         ax2 = ax.twinx()
         _gradient_component = (
             "gz_gradient" if component.startswith("gz")
-            else ("heatflow_gradient" if component.startswith("heatflow") else "gradient")
+            else (
+                "heatflow_gradient"
+                if component.startswith("heatflow")
+                else "gradient"
+            )
         )
         _gradient_ylabel, _ = _COMPONENT_LABELS.get(
             _gradient_component, ("Gradient", "Gradient")
@@ -547,7 +564,9 @@ def plot_combined(
     style: str = "default",
     figsize: tuple[float, float] | None = None,
     dpi: int | None = None,
-    color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"] | None = None,
+    color_by: Literal[
+        "index", "susceptibility", "density", "thermal_conductivity"
+    ] | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -612,7 +631,9 @@ def plot_combined(
          else ("heatflow" if _is_heatflow else "total_field"))
         if component is None else component
     )
-    _effective_color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"] = (
+    _effective_color_by: Literal[
+        "index", "susceptibility", "density", "thermal_conductivity"
+    ] = (
         ("density" if _is_gravity
          else ("thermal_conductivity" if _is_heatflow else "susceptibility"))
         if color_by is None
