@@ -790,7 +790,7 @@ class TestPlotModel3D:
 
 
 class TestComponentLabels:
-    """Tests for gravity additions to _COMPONENT_LABELS."""
+    """Tests for domain-specific additions to _COMPONENT_LABELS (gravity, heat flow)."""
 
     def test_gz_ylabel(self) -> None:
         from forward_model.viz.plotter import _COMPONENT_LABELS
