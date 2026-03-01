@@ -186,12 +186,22 @@ class TestCalculateAnomalyDispatch:
         result = calculate_anomaly(gravity_model)
         assert np.all(np.abs(result.gz) < 1000.0)
 
-    def test_heat_flow_model_raises_not_implemented(
+    def test_heat_flow_model_returns_heat_flow_components(
         self, heat_flow_model: HeatFlowModel
     ) -> None:
-        """calculate_anomaly(heat_flow_model) raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="Heat flow"):
-            calculate_anomaly(heat_flow_model)
+        """calculate_anomaly(heat_flow_model) returns HeatFlowComponents."""
+        from forward_model.compute.heatflow_talwani import HeatFlowComponents
+
+        result = calculate_anomaly(heat_flow_model)
+        assert isinstance(result, HeatFlowComponents)
+        assert result.heat_flow.shape == (7,)
+        assert np.all(np.isfinite(result.heat_flow))
+
+    def test_heat_flow_model_parallel(self, heat_flow_model: HeatFlowModel) -> None:
+        """calculate_anomaly(heat_flow_model, parallel=True) matches serial."""
+        serial = calculate_anomaly(heat_flow_model, parallel=False)
+        parallel = calculate_anomaly(heat_flow_model, parallel=True)
+        np.testing.assert_allclose(serial.heat_flow, parallel.heat_flow, rtol=1e-10)
 
     def test_forward_model_unchanged(self, simple_model: ForwardModel) -> None:
         """Backward compat: ForwardModel still returns NDArray by default."""
@@ -227,3 +237,17 @@ def test_top_level_exports_magnetic_and_gravity_components() -> None:
 
     assert MC is MagneticComponents
     assert GC is GravityComponents
+
+
+def test_heat_flow_components_exported_from_compute() -> None:
+    """HeatFlowComponents is importable from forward_model.compute."""
+    from forward_model.compute import HeatFlowComponents
+
+    assert HeatFlowComponents is not None
+
+
+def test_top_level_exports_heat_flow_components() -> None:
+    """HeatFlowComponents is importable from forward_model."""
+    from forward_model import HeatFlowComponents
+
+    assert HeatFlowComponents is not None
