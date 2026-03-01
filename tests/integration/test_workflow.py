@@ -11,8 +11,10 @@ from forward_model.io import load_model, write_csv, write_json
 from forward_model.models import (
     ForwardModel,
     GeologicBody,
+    HeatFlowModel,
     MagneticField,
     MagneticProperties,
+    ThermalProperties,
 )
 from forward_model.viz import plot_combined
 
@@ -189,6 +191,70 @@ class TestJSONRoundtrip:
         # Verify results match
         loaded_anomaly = np.array(data["results"]["anomaly_nT"])
         assert np.allclose(loaded_anomaly, anomaly)
+
+
+class TestHeatFlowWorkflow:
+    """Integration test: load → compute → verify for heat flow."""
+
+    def test_heat_flow_compute_full_path(self) -> None:
+        """Full path: HeatFlowModel created, anomaly computed, result correct."""
+        from forward_model import HeatFlowComponents, calculate_anomaly
+
+        body = GeologicBody(
+            vertices=[[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
+            thermal=ThermalProperties(conductivity=1.0, heat_generation=2.5),
+            name="GraniteBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=list(np.linspace(-100.0, 100.0, 21)),
+            observation_z=0.0,
+            background_heat_flow=65.0,
+        )
+
+        result = calculate_anomaly(model)
+
+        assert isinstance(result, HeatFlowComponents)
+        assert result.heat_flow.shape == (21,)
+        assert np.all(np.isfinite(result.heat_flow))
+        assert np.all(np.isfinite(result.heat_flow_gradient))
+        # Symmetric body → symmetric heat flow
+        np.testing.assert_allclose(result.heat_flow[0], result.heat_flow[20], rtol=1e-6)
+        np.testing.assert_allclose(result.heat_flow[5], result.heat_flow[15], rtol=1e-6)
+        # Perturbation only — should be much less than background
+        assert np.all(np.abs(result.heat_flow) < 100.0)
+
+    def test_heat_flow_json_roundtrip(self, tmp_path: Path) -> None:
+        """HeatFlowModel serialises to JSON and can be reloaded."""
+        from forward_model import calculate_anomaly
+
+        model = HeatFlowModel(
+            bodies=[
+                GeologicBody(
+                    vertices=[[0.0, 50.0], [100.0, 50.0], [100.0, 150.0], [0.0, 150.0]],
+                    thermal=ThermalProperties(conductivity=2.0),
+                    name="Slab",
+                )
+            ],
+            observation_x=[0.0, 50.0, 100.0],
+            observation_z=0.0,
+        )
+        result = calculate_anomaly(model)
+
+        json_file = tmp_path / "heat_flow_model.json"
+        write_json(json_file, model, result.heat_flow)
+        assert json_file.exists()
+
+        import json as _json
+
+        with open(json_file) as f:
+            data = _json.load(f)
+
+        loaded = HeatFlowModel.model_validate(data["model"])
+        assert loaded.model_type == "heat_flow"
+        assert len(loaded.bodies) == 1
+        assert loaded.bodies[0].thermal is not None
+        assert loaded.bodies[0].thermal.conductivity == 2.0
 
 
 class TestErrorHandling:

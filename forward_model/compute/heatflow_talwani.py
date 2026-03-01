@@ -437,7 +437,7 @@ def calculate_heat_flow(
     # Horizontal heat flow component (qx) via complementary kernel
     body_qx: list[NDArray[np.float64]] = []
     for body in model.bodies:
-        assert body.thermal is not None  # already validated above
+        assert body.thermal is not None  # already validated above  # nosec B101
         qx = _apply_heatflow_kernel_x(
             body.to_numpy(), observation_points, body.thermal.conductivity, q0
         )

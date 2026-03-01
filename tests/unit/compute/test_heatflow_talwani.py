@@ -36,7 +36,9 @@ class TestHeatFlowKernel:
 
     def test_nonzero_output_with_conductivity_contrast(self) -> None:
         """A body with conductivity contrast produces non-zero heat flow."""
-        from forward_model.compute.heatflow_talwani import _apply_heatflow_kernel
+        from forward_model.compute.heatflow_talwani import (
+            _apply_heatflow_kernel,  # pyright: ignore[reportPrivateUsage]
+        )
 
         vertices = np.array(
             [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
@@ -50,7 +52,9 @@ class TestHeatFlowKernel:
 
     def test_zero_contrast_gives_zero(self) -> None:
         """Zero conductivity contrast produces zero perturbation."""
-        from forward_model.compute.heatflow_talwani import _apply_heatflow_kernel
+        from forward_model.compute.heatflow_talwani import (
+            _apply_heatflow_kernel,  # pyright: ignore[reportPrivateUsage]
+        )
 
         vertices = np.array(
             [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
@@ -65,7 +69,9 @@ class TestHeatFlowKernel:
 
     def test_symmetric_body_symmetric_anomaly(self) -> None:
         """Symmetric polygon produces symmetric heat flow perturbation."""
-        from forward_model.compute.heatflow_talwani import _apply_heatflow_kernel
+        from forward_model.compute.heatflow_talwani import (
+            _apply_heatflow_kernel,  # pyright: ignore[reportPrivateUsage]
+        )
 
         vertices = np.array(
             [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
@@ -81,7 +87,9 @@ class TestHeatFlowKernel:
 
     def test_all_finite(self) -> None:
         """All output values are finite."""
-        from forward_model.compute.heatflow_talwani import _apply_heatflow_kernel
+        from forward_model.compute.heatflow_talwani import (
+            _apply_heatflow_kernel,  # pyright: ignore[reportPrivateUsage]
+        )
 
         vertices = np.array(
             [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
@@ -96,7 +104,9 @@ class TestHeatFlowKernel:
 
     def test_output_shape_matches_observation_points(self) -> None:
         """Output shape matches number of observation points."""
-        from forward_model.compute.heatflow_talwani import _apply_heatflow_kernel
+        from forward_model.compute.heatflow_talwani import (
+            _apply_heatflow_kernel,  # pyright: ignore[reportPrivateUsage]
+        )
 
         vertices = np.array(
             [[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
@@ -116,8 +126,8 @@ class TestHeatFlowStrikeKernels:
     def test_2_5d_attenuates_vs_2d(self) -> None:
         """Finite strike (2.5D) produces smaller amplitude than infinite (2D)."""
         from forward_model.compute.heatflow_talwani import (
-            _apply_heatflow_kernel,
-            _apply_heatflow_kernel_2_5d,
+            _apply_heatflow_kernel,  # pyright: ignore[reportPrivateUsage]
+            _apply_heatflow_kernel_2_5d,  # pyright: ignore[reportPrivateUsage]
         )
 
         vertices = np.array(
@@ -134,7 +144,9 @@ class TestHeatFlowStrikeKernels:
 
     def test_2_75d_produces_finite_values(self) -> None:
         """Asymmetric 2.75D strike produces finite heat flow."""
-        from forward_model.compute.heatflow_talwani import _apply_heatflow_kernel_2_75d
+        from forward_model.compute.heatflow_talwani import (
+            _apply_heatflow_kernel_2_75d,  # pyright: ignore[reportPrivateUsage]
+        )
 
         vertices = np.array(
             [[-25.0, 100.0], [25.0, 100.0], [25.0, 200.0], [-25.0, 200.0]],
@@ -147,8 +159,8 @@ class TestHeatFlowStrikeKernels:
     def test_large_strike_approaches_2d(self) -> None:
         """Very large strike half-length should approach 2D result."""
         from forward_model.compute.heatflow_talwani import (
-            _apply_heatflow_kernel,
-            _apply_heatflow_kernel_2_5d,
+            _apply_heatflow_kernel,  # pyright: ignore[reportPrivateUsage]
+            _apply_heatflow_kernel_2_5d,  # pyright: ignore[reportPrivateUsage]
         )
 
         vertices = np.array(

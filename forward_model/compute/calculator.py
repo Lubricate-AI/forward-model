@@ -11,7 +11,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from forward_model.compute.gravity import GravityComponents, calculate_gravity
-from forward_model.compute.heatflow_talwani import HeatFlowComponents, calculate_heat_flow
+from forward_model.compute.heatflow_talwani import (
+    HeatFlowComponents,
+    calculate_heat_flow,
+)
 from forward_model.compute.talwani import (
     MagneticComponents,
     PolygonComponents,
