@@ -1,5 +1,5 @@
 site_name: Forward Model
-site_description: A Python package for 2D forward magnetic modeling using the Talwani algorithm
+site_description: A Python package for 2D forward magnetic and gravity modeling using the Talwani algorithm
 site_url: https://lubricate-ai.github.io/forward-model
 repo_url: https://github.com/Lubricate-AI/forward-model
 repo_name: Lubricate-AI/forward-model
@@ -41,6 +41,7 @@ theme:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Theory: theory.md
   - User Guide:
       - CLI Usage: user-guide/cli.md
       - Visualization: user-guide/visualization.md

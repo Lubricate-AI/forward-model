@@ -23,17 +23,21 @@ from forward_model import (
     load_model_from_csv,     # Load model from CSV
 
     # Computation
-    calculate_anomaly,       # Calculate magnetic anomaly
+    calculate_anomaly,       # Calculate magnetic or gravity anomaly
 
     # Visualization
     plot_model,              # Plot cross-section
     plot_anomaly,            # Plot anomaly profile
     plot_combined,           # Combined plot (recommended)
 
-    # Data Models
-    ForwardModel,            # Main model class
+    # Magnetic Data Models
+    ForwardModel,            # Magnetic model class
     GeologicBody,            # Body definition
     MagneticField,           # Field parameters
+
+    # Gravity Data Models
+    GravityModel,            # Gravity model class
+    GravityProperties,       # Density contrast properties
 )
 ```
 
@@ -89,6 +93,47 @@ field = MagneticField(
     declination=0.0         # Declination angle (degrees)
 )
 ```
+
+## Gravity Modeling
+
+### GravityModel
+
+The model class for gravity forward calculations. Uses density contrast instead of susceptibility and does not require a magnetic field definition:
+
+```python
+from forward_model.models import GravityModel, GeologicBody, GravityProperties
+
+model = GravityModel(
+    bodies=[...],              # List of GeologicBody objects with gravity properties
+    observation_x=[...],       # X-coordinates for observation points (meters)
+    observation_z=0.0          # Z-coordinate for observation level (meters)
+)
+```
+
+### GravityProperties
+
+Gravity-specific physical properties for a geological body:
+
+```python
+gravity = GravityProperties(
+    density_contrast=400.0     # Density contrast with host rock (kg/m³)
+)
+```
+
+### GravityComponents
+
+Return type from `calculate_anomaly()` when passed a `GravityModel`. Contains the computed gravity anomaly and its horizontal gradient:
+
+```python
+from forward_model import calculate_anomaly
+
+result = calculate_anomaly(model)  # Returns GravityComponents
+result.gz            # Vertical gravity anomaly (mGal), NDArray[float64]
+result.gz_gradient   # Horizontal gradient of gz (mGal/m), NDArray[float64]
+```
+
+!!! note
+    `calculate_anomaly()` dispatches on model type: pass a `ForwardModel` for magnetic results, or a `GravityModel` for gravity results (`GravityComponents`).
 
 ## Usage Examples
 

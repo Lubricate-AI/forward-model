@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide will help you install Forward Model and run your first magnetic anomaly calculation.
+This guide will help you install Forward Model and run your first magnetic or gravity anomaly calculation.
 
 ## Installation
 
@@ -115,6 +115,9 @@ The calculation produces a plot with two panels:
 2. **Bottom panel**: Calculated magnetic anomaly profile
 
 The magnetic anomaly shows the characteristic dipolar signature of a vertical body magnetized by Earth's field.
+
+!!! tip "Gravity modeling"
+    If you are working with gravity data, see the [Gravity Modeling example](user-guide/examples.md#gravity-modeling) for the equivalent workflow using `GravityModel` and `GravityProperties`.
 
 ## Next Steps
 

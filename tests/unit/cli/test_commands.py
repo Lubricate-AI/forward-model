@@ -331,14 +331,103 @@ Rectangle,0.05,0.0,100.0,50.0,100.0,50.0,200.0,0.0,200.0
 class TestRunNonMagneticModels:
     """Tests for run command with non-magnetic models."""
 
-    def test_run_gravity_model_not_implemented(
-        self, gravity_model_json_file: Path
-    ) -> None:
-        """Test that gravity model run raises NotImplementedError."""
+    def test_run_gravity_model_basic(self, gravity_model_json_file: Path) -> None:
+        """Test that gravity model runs successfully."""
         result = runner.invoke(app, ["run", str(gravity_model_json_file), "--no-plot"])
 
-        assert result.exit_code != 0
-        assert "not yet implemented" in result.output.lower()
+        assert result.exit_code == 0
+        assert "Calculation complete" in result.stdout
+
+    def test_run_gravity_model_with_csv_output(
+        self, gravity_model_json_file: Path, tmp_path: Path
+    ) -> None:
+        """Test gravity model run with CSV output."""
+        output_csv = tmp_path / "gravity_output.csv"
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                str(gravity_model_json_file),
+                "--output-csv",
+                str(output_csv),
+                "--no-plot",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert output_csv.exists()
+        with open(output_csv) as f:
+            lines = f.readlines()
+            assert lines[0].strip() == "x_m,anomaly_mGal"
+            assert len(lines) > 1
+
+    def test_run_gravity_model_with_json_output(
+        self, gravity_model_json_file: Path, tmp_path: Path
+    ) -> None:
+        """Test gravity model run with JSON output uses mGal label."""
+        output_json = tmp_path / "gravity_output.json"
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                str(gravity_model_json_file),
+                "--output-json",
+                str(output_json),
+                "--no-plot",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert output_json.exists()
+        with open(output_json) as f:
+            data = json.load(f)
+        assert "anomaly_mGal" in data["results"]
+        assert "anomaly_nT" not in data["results"]
+        assert len(data["results"]["anomaly_mGal"]) == len(
+            data["results"]["observation_x"]
+        )
+
+    def test_run_gravity_model_gz_gradient_component(
+        self, gravity_model_json_file: Path
+    ) -> None:
+        """Test gravity model run selecting gz_gradient component."""
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                str(gravity_model_json_file),
+                "--component",
+                "gz_gradient",
+                "--no-plot",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "Calculation complete" in result.stdout
+
+    def test_run_gravity_model_invalid_component(
+        self, gravity_model_json_file: Path
+    ) -> None:
+        """Test that invalid magnetic component for gravity model raises error."""
+        result = runner.invoke(
+            app,
+            ["run", str(gravity_model_json_file), "--component", "bz", "--no-plot"],
+        )
+
+        assert result.exit_code == 1
+        assert "Error" in result.output
+
+    def test_run_gravity_model_with_plot(
+        self, gravity_model_json_file: Path, tmp_path: Path
+    ) -> None:
+        """Test gravity model run with plot output."""
+        output_plot = tmp_path / "gravity_plot.png"
+        result = runner.invoke(
+            app, ["run", str(gravity_model_json_file), "--plot", str(output_plot)]
+        )
+
+        assert result.exit_code == 0
+        assert output_plot.exists()
 
     def test_run_heat_flow_model_not_implemented(
         self, heat_flow_model_json_file: Path
