@@ -655,6 +655,67 @@ plt.savefig("pandas_plot.png", dpi=150)
 
 ---
 
+## Gravity Modeling
+
+### Example 11: Dense Mafic Intrusion
+
+This example models a dense mafic intrusion (e.g., a gabbro body) embedded in lower-density sedimentary host rock. The density contrast is +400 kg/m³ — the body is 400 kg/m³ denser than the surrounding rock.
+
+```python
+import numpy as np
+from forward_model import (
+    GeologicBody,
+    GravityModel,
+    GravityProperties,
+    calculate_anomaly,
+    plot_combined,
+)
+
+# Define the intrusive body
+intrusion = GeologicBody(
+    name="Mafic Intrusion",
+    gravity=GravityProperties(density_contrast=400.0),
+    vertices=[
+        [-200.0, 200.0],
+        [200.0, 200.0],
+        [200.0, 800.0],
+        [-200.0, 800.0],
+    ],
+)
+
+# Build the model
+observation_x = np.linspace(-2000, 2000, 81).tolist()
+model = GravityModel(
+    bodies=[intrusion],
+    observation_x=observation_x,
+    observation_z=0.0,
+)
+
+# Compute anomaly
+result = calculate_anomaly(model)
+print(f"Peak gz: {result.gz.max():.3f} mGal")
+
+# Plot
+fig = plot_combined(model, result.gz, component="gz", gradient=result.gz_gradient)
+fig.savefig("dense_intrusion_gravity.png", dpi=150)
+```
+
+The anomaly peaks directly above the centre of the body and falls off symmetrically. The horizontal gradient (`gz_gradient`) highlights the edges.
+
+### Loading from File
+
+You can also load the model from the provided example file:
+
+```python
+from forward_model import load_model, calculate_anomaly, plot_combined
+
+model = load_model("examples/dense_intrusion.json")
+result = calculate_anomaly(model)
+fig = plot_combined(model, result.gz, component="gz")
+```
+
+---
+
 ## Tips for Creating Models
 
 ### Coordinate System
