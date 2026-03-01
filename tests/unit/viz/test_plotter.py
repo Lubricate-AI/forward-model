@@ -816,6 +816,30 @@ class TestComponentLabels:
         _, title = _COMPONENT_LABELS["gz_gradient"]
         assert title == "Horizontal Gradient d(gz)/dx"
 
+    def test_heatflow_ylabel(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        ylabel, _ = _COMPONENT_LABELS["heatflow"]
+        assert ylabel == "Heat Flow Anomaly (mW/m²)"
+
+    def test_heatflow_title(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        _, title = _COMPONENT_LABELS["heatflow"]
+        assert title == "Heat Flow Anomaly (mW/m²)"
+
+    def test_heatflow_gradient_ylabel(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        ylabel, _ = _COMPONENT_LABELS["heatflow_gradient"]
+        assert ylabel == "Heat Flow Gradient (mW/m²/m)"
+
+    def test_heatflow_gradient_title(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        _, title = _COMPONENT_LABELS["heatflow_gradient"]
+        assert title == "Heat Flow Gradient (mW/m²/m)"
+
 
 class TestPlotModelGravity:
     """Tests for plot_model with GravityModel input."""

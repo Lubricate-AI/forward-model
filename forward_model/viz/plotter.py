@@ -415,6 +415,9 @@ _COMPONENT_LABELS: dict[str, tuple[str, str]] = {
     # Gravity components
     "gz": ("gz (mGal)", "Vertical Gravity Anomaly (gz)"),
     "gz_gradient": ("gz gradient (mGal/m)", "Horizontal Gradient d(gz)/dx"),
+    # Heat flow components
+    "heatflow": ("Heat Flow Anomaly (mW/m²)", "Heat Flow Anomaly (mW/m²)"),
+    "heatflow_gradient": ("Heat Flow Gradient (mW/m²/m)", "Heat Flow Gradient (mW/m²/m)"),
 }
 
 
