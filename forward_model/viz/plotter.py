@@ -539,13 +539,13 @@ def plot_anomaly(
 
 
 def plot_combined(
-    model: ForwardModel | GravityModel,
+    model: ForwardModel | GravityModel | HeatFlowModel,
     anomaly: NDArray[np.float64],
     save_path: str | Path | None = None,
     style: str = "default",
     figsize: tuple[float, float] | None = None,
     dpi: int | None = None,
-    color_by: Literal["index", "susceptibility", "density"] | None = None,
+    color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"] | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -568,7 +568,7 @@ def plot_combined(
     Args:
         model: The forward model to visualize.
         anomaly: Anomaly values (nT for magnetic components, mGal for gravity
-                components).
+                components, mW/m² for heat flow components).
         save_path: Optional path to save the figure. If None, does not save.
         style: Plot style name ("default", "publication", "presentation").
         figsize: Figure size as (width, height) in inches. If None, uses (12, 8).
@@ -603,11 +603,15 @@ def plot_combined(
 
     # Resolve sentinel defaults based on model type
     _is_gravity = isinstance(model, GravityModel)
+    _is_heatflow = isinstance(model, HeatFlowModel)
     _effective_component: str = (
-        ("gz" if _is_gravity else "total_field") if component is None else component
+        ("gz" if _is_gravity
+         else ("heatflow" if _is_heatflow else "total_field"))
+        if component is None else component
     )
-    _effective_color_by: Literal["index", "susceptibility", "density"] = (
-        ("density" if _is_gravity else "susceptibility")
+    _effective_color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"] = (
+        ("density" if _is_gravity
+         else ("thermal_conductivity" if _is_heatflow else "susceptibility"))
         if color_by is None
         else color_by
     )
