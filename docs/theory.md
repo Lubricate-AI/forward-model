@@ -595,3 +595,118 @@ When comparing observed and modeled gravity:
 - Talwani, M., Worzel, J. L., & Landisman, M. (1959). Rapid gravity computations for two-dimensional bodies with application to the Mendocino submarine fracture zone. *Journal of Geophysical Research*, 64(1), 49–59.
 - Won, I. J., & Bevis, M. (1987). Computing the gravitational and magnetic anomalies due to a polygon: Algorithms and Fortran subroutines. *Geophysics*, 52(2), 232–238.
 - Telford, W. M., Geldart, L. P., & Sheriff, R. E. (1990). *Applied Geophysics* (2nd ed.). Cambridge University Press.
+
+---
+
+## Heat Flow Modeling
+
+### Physical Background
+
+Heat flow modeling addresses the **forward problem** for steady-state heat conduction: given a 2D body with known geometry and thermal properties, what surface heat flow perturbation does it produce?
+
+The governing equation is the 2D steady-state heat conduction (Laplace) equation in the absence of internal heat sources:
+
+$$\nabla^2 T = 0$$
+
+and, when volumetric radiogenic heat generation $A$ (W/m³) is present:
+
+$$k \nabla^2 T + A = 0$$
+
+where $T$ is temperature (K) and $k$ is thermal conductivity (W/m·K).
+
+### Thermal Conductivity Contrast
+
+When a 2D body with conductivity $k_1$ is embedded in a medium with background conductivity $k_0$, heat flow lines are refracted at the body boundary. This deflection produces a surface anomaly proportional to the conductivity contrast:
+
+$$\Delta k = k_1 - k_0$$
+
+A body with **higher** conductivity than its surroundings focuses heat upward, producing a positive vertical heat flow anomaly at the surface. A body with **lower** conductivity disperses heat, producing a heat flow low.
+
+Typical values:
+
+| Rock Type     | Conductivity (W/m·K) |
+|---------------|---------------------|
+| Granite       | 3.0–3.5             |
+| Granodiorite  | 2.5–3.0             |
+| Basalt        | 1.5–2.5             |
+| Shale         | 1.0–2.0             |
+| Sandstone     | 2.0–4.0             |
+| Salt          | 5–7                 |
+
+### Radiogenic Heat Generation
+
+Some rocks — especially granites — produce heat internally through the radioactive decay of uranium (U), thorium (Th), and potassium (K). This volumetric heat source $A$ (W/m³, reported in µW/m³ at typical crustal values) adds a contribution to the surface heat flow that is independent of the conductivity contrast.
+
+Typical values:
+
+| Rock Type         | Heat Generation $A$ (µW/m³) |
+|-------------------|----------------------------|
+| Granite           | 2–5                        |
+| Granodiorite      | 1–3                        |
+| Basalt            | 0.1–0.5                    |
+| Shale             | 1–3                        |
+| Background crust  | ~0.5–2                     |
+
+Continental background heat flow is approximately **65 mW/m²**. Elevated granitic terranes can exceed 80–100 mW/m².
+
+### Talwani-Style 2D Algorithm
+
+Analogous to the gravity and magnetic implementations, the heat flow perturbation from a 2D polygonal body is computed by summing contributions from each edge. The vertical heat flow perturbation at a surface observation point $x$ is:
+
+$$\delta q_z(x) = \frac{q_0}{\pi} \Delta k \sum_{\text{edges}} \left[ -t_x \, d\theta - t_z \ln\!\left(\frac{r_2}{r_1}\right) \right]$$
+
+where:
+
+- $q_0$: background heat flow (mW/m²)
+- $\Delta k$: thermal conductivity contrast (W/m·K)
+- $t_x$, $t_z$: horizontal and vertical direction cosines of the edge
+- $d\theta$: angle subtended at the observation point by the edge endpoints
+- $r_1$, $r_2$: distances from the observation point to the edge endpoints
+
+This expression is the direct heat-flow analogue of the Talwani (1959) gravity kernel, replacing the gravitational constant and density contrast with the background heat flow and conductivity contrast.
+
+### Radiogenic Contribution
+
+For a body with volumetric heat generation $A$, an additional kernel integrates the distributed source over the polygon cross-section:
+
+$$\delta q_z^{\text{rad}}(x) = \frac{A}{2\pi} \sum_{\text{edges}} \left[ x_i (z_{i+1} - z_i) \ln r - z_i (x_{i+1} - x_i) \theta + \ldots \right]$$
+
+The total vertical heat flow perturbation is the sum of the conductive and radiogenic contributions.
+
+### 2.5D and 2.75D Extensions
+
+As with gravity and magnetics, finite strike length is modelled via extensions to the 2D kernel:
+
+- **2.5D (symmetric strike)**: Body has equal finite extent $L$ in both along-strike directions. Anomaly is attenuated relative to the 2D result; as $L \to \infty$ the 2D limit is recovered.
+- **2.75D (asymmetric strike)**: Body has different extents $L_f$ (forward) and $L_b$ (backward) along strike. Suitable for bodies that are not centred on the profile.
+
+### Output Components
+
+The computation returns three components at each observation point:
+
+| Component             | Description                                      | Units   |
+|-----------------------|--------------------------------------------------|---------|
+| `heat_flow`           | Vertical heat flow perturbation $\delta q_z$     | mW/m²   |
+| `heat_flow_x`         | Horizontal heat flow perturbation $\delta q_x$   | mW/m²   |
+| `heat_flow_gradient`  | Horizontal gradient $\partial \delta q_z / \partial x$ | mW/m³   |
+
+The **total** surface heat flow at any point is:
+
+$$q_z^{\text{total}}(x) = q_0 + \delta q_z(x)$$
+
+where $q_0$ is the `background_heat_flow` specified in the model (default 65 mW/m²).
+
+### What to Supply to This Library
+
+When comparing observed and modelled heat flow:
+
+- Supply observed data as **surface heat flow** in **mW/m²**.
+- The modelled output `heat_flow` is the *perturbation* relative to the background; add `background_heat_flow` to obtain the absolute predicted value.
+- Background heat flow should reflect the regional geothermal baseline, typically obtained from a continental heat flow database (e.g. the International Heat Flow Commission dataset).
+
+### References
+
+- Talwani, M., Worzel, J. L., & Landisman, M. (1959). Rapid gravity computations for two-dimensional bodies with application to the Mendocino submarine fracture zone. *Journal of Geophysical Research*, 64(1), 49–59.
+- Čermák, V., & Rybach, L. (1982). Thermal conductivity and specific heat of minerals and rocks. In *Landolt-Börnstein: Numerical Data and Functional Relationships in Science and Technology*, Group V, Vol. 1a. Springer.
+- Turcotte, D. L., & Schubert, G. (2014). *Geodynamics* (3rd ed.). Cambridge University Press.
+- Pollack, H. N., Hurter, S. J., & Johnson, J. R. (1993). Heat flow from the Earth's interior: Analysis of the global data set. *Reviews of Geophysics*, 31(3), 267–280.
