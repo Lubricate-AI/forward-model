@@ -5,12 +5,13 @@ magnetic (Talwani 1965), gravity (Talwani 1959), and heat flow (planned).
 """
 
 from concurrent.futures import ProcessPoolExecutor
-from typing import Literal, NoReturn, overload
+from typing import Literal, overload
 
 import numpy as np
 from numpy.typing import NDArray
 
 from forward_model.compute.gravity import GravityComponents, calculate_gravity
+from forward_model.compute.heatflow_talwani import HeatFlowComponents, calculate_heat_flow
 from forward_model.compute.talwani import (
     MagneticComponents,
     PolygonComponents,
@@ -120,7 +121,7 @@ def calculate_anomaly(
 def calculate_anomaly(
     model: HeatFlowModel,
     parallel: bool = ...,
-) -> NoReturn: ...
+) -> HeatFlowComponents: ...
 
 
 def calculate_anomaly(
@@ -129,14 +130,14 @@ def calculate_anomaly(
     component: Literal[
         "bz", "bx", "total_field", "amplitude", "gradient", "all"
     ] = "bz",
-) -> NDArray[np.float64] | MagneticComponents | GravityComponents:
+) -> NDArray[np.float64] | MagneticComponents | GravityComponents | HeatFlowComponents:
     """Calculate anomaly for a forward model, dispatching on model type.
 
     Computes the anomaly using the appropriate algorithm for the model type:
     - ForwardModel (magnetic): Talwani (1965) algorithm, returns NDArray or
       MagneticComponents
     - GravityModel: Talwani (1959) algorithm, returns GravityComponents (gz in mGal)
-    - HeatFlowModel: Not yet implemented; raises NotImplementedError
+    - HeatFlowModel: 2D Talwani-style heat flow, returns HeatFlowComponents (mW/m²)
 
     Args:
         model: A ForwardModel, GravityModel, or HeatFlowModel instance.
@@ -150,9 +151,8 @@ def calculate_anomaly(
         - ForwardModel: ``NDArray[np.float64]`` or ``MagneticComponents``
           (when ``component="all"``)
         - GravityModel: ``GravityComponents`` with gz (mGal) and gz_gradient (mGal/m)
-
-    Raises:
-        NotImplementedError: If model is a HeatFlowModel.
+        - HeatFlowModel: ``HeatFlowComponents`` with heat_flow, heat_flow_x,
+          and heat_flow_gradient (all in mW/m²)
 
     Example:
         >>> mag_model = load_model("magnetic.json")
@@ -165,10 +165,7 @@ def calculate_anomaly(
         return calculate_gravity(model, parallel=parallel)
 
     if isinstance(model, HeatFlowModel):
-        raise NotImplementedError(
-            "Heat flow compute not yet implemented. "
-            "Track progress in the project issue tracker."
-        )
+        return calculate_heat_flow(model, parallel=parallel)
 
     # ForwardModel path — all existing logic unchanged below this point
     observation_points = model.get_observation_points()
