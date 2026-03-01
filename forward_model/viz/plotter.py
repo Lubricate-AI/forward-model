@@ -470,13 +470,14 @@ def plot_anomaly(
 
     Args:
         observation_x: X-coordinates of observation points (meters).
-        anomaly: Anomaly values (nT for magnetic, mGal for gravity).
+        anomaly: Anomaly values (nT for magnetic, mGal for gravity, mW/m² for heat flow).
         ax: Matplotlib axes to plot on. If None, creates new axes.
         xlim: Optional (min, max) x-axis limits in meters.
         component: Which component is being plotted. Controls axis labels.
                    One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
-                   ``"gradient"``, ``"gz"``, ``"gz_gradient"``.
-        gradient: Optional gradient values (nT/m for magnetic, mGal/m for gravity).
+                   ``"gradient"``, ``"gz"``, ``"gz_gradient"``, ``"heatflow"``,
+                   ``"heatflow_gradient"``.
+        gradient: Optional gradient values (nT/m for magnetic, mGal/m for gravity, mW/m²/m for heat flow).
                   When provided, overlaid on a twin y-axis with an orange dashed line.
 
     Returns:
@@ -579,7 +580,7 @@ def plot_combined(
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
         show_colorbar: If True, show colorbar when color_by is a continuous mode
-                      ("susceptibility" or "density").
+                      ("susceptibility", "density", or "thermal_conductivity").
         label_offsets: Optional mapping of body name to (dx, dz) offset from the
                       computed label anchor. Passed through to ``plot_model``.
         show_label_arrows: If True or per-body dict, draw arrows from text to centroid.
