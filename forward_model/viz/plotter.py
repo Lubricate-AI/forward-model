@@ -85,7 +85,7 @@ def plot_model(
     observation points.
 
     Args:
-        model: The forward model to visualize. Accepts ForwardModel or GravityModel.
+        model: The forward model to visualize. Accepts ForwardModel, GravityModel, or HeatFlowModel.
         ax: Matplotlib axes to plot on. If None, creates new axes.
         color_by: How to color bodies. "index" uses different colors for each
                  body, "susceptibility" uses a colormap based on susceptibility,
