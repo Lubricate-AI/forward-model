@@ -429,9 +429,7 @@ class TestRunNonMagneticModels:
         assert result.exit_code == 0
         assert output_plot.exists()
 
-    def test_run_heat_flow_model_basic(
-        self, heat_flow_model_json_file: Path
-    ) -> None:
+    def test_run_heat_flow_model_basic(self, heat_flow_model_json_file: Path) -> None:
         """Test that heat flow model runs successfully."""
         result = runner.invoke(
             app, ["run", str(heat_flow_model_json_file), "--no-plot"]
