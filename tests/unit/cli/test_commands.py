@@ -429,16 +429,65 @@ class TestRunNonMagneticModels:
         assert result.exit_code == 0
         assert output_plot.exists()
 
-    def test_run_heat_flow_model_not_implemented(
+    def test_run_heat_flow_model_basic(
         self, heat_flow_model_json_file: Path
     ) -> None:
-        """Test that heat flow model run raises NotImplementedError."""
+        """Test that heat flow model runs successfully."""
         result = runner.invoke(
             app, ["run", str(heat_flow_model_json_file), "--no-plot"]
         )
 
+        assert result.exit_code == 0
+        assert "Calculation complete" in result.output
+
+    def test_run_heat_flow_model_output_csv(
+        self, heat_flow_model_json_file: Path, tmp_path: Path
+    ) -> None:
+        """Test heat flow model run with CSV output."""
+        output_csv = tmp_path / "heatflow.csv"
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                str(heat_flow_model_json_file),
+                "--no-plot",
+                "--output-csv",
+                str(output_csv),
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert output_csv.exists()
+
+    def test_run_heat_flow_model_default_component(
+        self, heat_flow_model_json_file: Path
+    ) -> None:
+        """Test that default component for heat flow is heat_flow."""
+        result = runner.invoke(
+            app,
+            ["run", str(heat_flow_model_json_file), "--no-plot", "--verbose"],
+        )
+
+        assert result.exit_code == 0
+        assert "heat_flow" in result.output
+
+    def test_run_heat_flow_model_invalid_component(
+        self, heat_flow_model_json_file: Path
+    ) -> None:
+        """Test invalid component for heat flow model raises error."""
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                str(heat_flow_model_json_file),
+                "--no-plot",
+                "--component",
+                "bz",
+            ],
+        )
+
         assert result.exit_code != 0
-        assert "not yet implemented" in result.output.lower()
+        assert "not valid" in result.output.lower()
 
 
 class TestVisualizeCommand:
