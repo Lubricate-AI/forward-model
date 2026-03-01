@@ -1327,3 +1327,28 @@ class TestPlotCombinedHeatFlow:
         fig = plot_combined(model, anomaly, save_path=output)
         assert output.exists()
         plt.close(fig)
+
+    def test_heatflow_gradient_label_on_twin_axis(self) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.5),
+            name="HeatFlowBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+        anomaly = np.array([45.0, 60.0, 50.0])
+        gradient = np.array([0.2, 0.0, -0.2])
+
+        fig = plot_combined(model, anomaly, gradient=gradient)
+        # Axes: cross-section (0) + anomaly (1) + gradient twin (2)
+        assert len(fig.axes) >= 3
+        twin_ax = fig.axes[2]
+        assert "mW/m²" in twin_ax.get_ylabel()
+        plt.close()

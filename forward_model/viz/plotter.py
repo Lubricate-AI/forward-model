@@ -513,7 +513,8 @@ def plot_anomaly(
     if gradient is not None:
         ax2 = ax.twinx()
         _gradient_component = (
-            "gz_gradient" if component.startswith("gz") else "gradient"
+            "gz_gradient" if component.startswith("gz")
+            else ("heatflow_gradient" if component.startswith("heatflow") else "gradient")
         )
         _gradient_ylabel, _ = _COMPONENT_LABELS.get(
             _gradient_component, ("Gradient", "Gradient")
@@ -584,9 +585,10 @@ def plot_combined(
         show_label_arrows: If True or per-body dict, draw arrows from text to centroid.
         component: Which anomaly component is being plotted. Controls axis labels.
                    One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
-                   ``"gz"``, ``"gz_gradient"``. None auto-detects from model type.
+                   ``"gz"``, ``"gz_gradient"``, ``"heatflow"``, ``"heatflow_gradient"``.
+                   None auto-detects from model type.
         gradient: Optional gradient values for the secondary y-axis overlay.
-                  Units: nT/m for magnetic, mGal/m for gravity.
+                  Units: nT/m for magnetic, mGal/m for gravity, mW/m²/m for heat flow.
         show_3d: If True, add a third panel with a 3D extruded view.
         default_strike: Total strike length (m) used for 2D (infinite-strike) bodies
                        when ``show_3d=True``. Passed through to ``plot_model_3d``.
