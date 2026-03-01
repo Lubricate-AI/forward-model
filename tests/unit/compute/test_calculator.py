@@ -237,3 +237,17 @@ def test_top_level_exports_magnetic_and_gravity_components() -> None:
 
     assert MC is MagneticComponents
     assert GC is GravityComponents
+
+
+def test_heat_flow_components_exported_from_compute() -> None:
+    """HeatFlowComponents is importable from forward_model.compute."""
+    from forward_model.compute import HeatFlowComponents
+
+    assert HeatFlowComponents is not None
+
+
+def test_top_level_exports_heat_flow_components() -> None:
+    """HeatFlowComponents is importable from forward_model."""
+    from forward_model import HeatFlowComponents
+
+    assert HeatFlowComponents is not None

@@ -14,6 +14,7 @@ Example:
 from forward_model.compute import AnomalyComponents as AnomalyComponents
 from forward_model.compute import BatchResult as BatchResult
 from forward_model.compute import GravityComponents as GravityComponents
+from forward_model.compute import HeatFlowComponents as HeatFlowComponents
 from forward_model.compute import MagneticComponents as MagneticComponents
 from forward_model.compute import batch_calculate as batch_calculate
 from forward_model.compute import calculate_anomaly as calculate_anomaly
@@ -63,6 +64,7 @@ __all__ = [
     "batch_calculate",
     "calculate_anomaly",
     "GravityComponents",
+    "HeatFlowComponents",
     "MagneticComponents",
     # I/O
     "load_model",
