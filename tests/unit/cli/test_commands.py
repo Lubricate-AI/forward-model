@@ -331,9 +331,7 @@ Rectangle,0.05,0.0,100.0,50.0,100.0,50.0,200.0,0.0,200.0
 class TestRunNonMagneticModels:
     """Tests for run command with non-magnetic models."""
 
-    def test_run_gravity_model_basic(
-        self, gravity_model_json_file: Path
-    ) -> None:
+    def test_run_gravity_model_basic(self, gravity_model_json_file: Path) -> None:
         """Test that gravity model runs successfully."""
         result = runner.invoke(app, ["run", str(gravity_model_json_file), "--no-plot"])
 
@@ -370,8 +368,11 @@ class TestRunNonMagneticModels:
         result = runner.invoke(
             app,
             [
-                "run", str(gravity_model_json_file),
-                "--component", "gz_gradient", "--no-plot",
+                "run",
+                str(gravity_model_json_file),
+                "--component",
+                "gz_gradient",
+                "--no-plot",
             ],
         )
 

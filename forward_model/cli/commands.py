@@ -182,8 +182,7 @@ def run(
                 min_val = float(anomaly.min())
                 max_val = float(anomaly.max())
                 typer.echo(
-                    f"  {effective_component} range:"
-                    f" {min_val:.4f} to {max_val:.4f}"
+                    f"  {effective_component} range: {min_val:.4f} to {max_val:.4f}"
                 )
 
             # Export results
@@ -255,8 +254,7 @@ def run(
                 min_val = float(anomaly.min())
                 max_val = float(anomaly.max())
                 typer.echo(
-                    f"  {effective_component} range:"
-                    f" {min_val:.2f} to {max_val:.2f}"
+                    f"  {effective_component} range: {min_val:.2f} to {max_val:.2f}"
                 )
 
             # Export results (uses the selected component)
