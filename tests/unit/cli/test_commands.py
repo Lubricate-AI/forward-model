@@ -361,6 +361,32 @@ class TestRunNonMagneticModels:
             assert lines[0].strip() == "x_m,anomaly_mGal"
             assert len(lines) > 1
 
+    def test_run_gravity_model_with_json_output(
+        self, gravity_model_json_file: Path, tmp_path: Path
+    ) -> None:
+        """Test gravity model run with JSON output uses mGal label."""
+        output_json = tmp_path / "gravity_output.json"
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                str(gravity_model_json_file),
+                "--output-json",
+                str(output_json),
+                "--no-plot",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert output_json.exists()
+        with open(output_json) as f:
+            data = json.load(f)
+        assert "anomaly_mGal" in data["results"]
+        assert "anomaly_nT" not in data["results"]
+        assert len(data["results"]["anomaly_mGal"]) == len(
+            data["results"]["observation_x"]
+        )
+
     def test_run_gravity_model_gz_gradient_component(
         self, gravity_model_json_file: Path
     ) -> None:

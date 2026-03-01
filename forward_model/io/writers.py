@@ -49,6 +49,7 @@ def write_json(
     filepath: str | Path,
     model: AnyForwardModel,
     anomaly: NDArray[np.float64],
+    anomaly_label: str = "anomaly_nT",
 ) -> None:
     """Write model and anomaly results to JSON file.
 
@@ -60,6 +61,9 @@ def write_json(
         filepath: Output file path. Can be a string or Path object.
         model: The forward model that was used for computation.
         anomaly: Array of anomaly values (units depend on model type).
+        anomaly_label: Key name for the anomaly values in the output
+            JSON. Defaults to ``"anomaly_nT"`` for magnetic results;
+            use ``"anomaly_mGal"`` for gravity results.
 
     Example:
         >>> write_json("results.json", model, anomaly)
@@ -70,7 +74,7 @@ def write_json(
         "model": model.model_dump(),
         "results": {
             "observation_x": model.observation_x,
-            "anomaly_nT": anomaly.tolist(),
+            anomaly_label: anomaly.tolist(),
         },
     }
 

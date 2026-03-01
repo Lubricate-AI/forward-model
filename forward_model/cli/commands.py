@@ -92,7 +92,7 @@ def config_init(
 @app.command("run")
 def run(
     input_file: Path = typer.Argument(
-        ..., help="Path to input JSON model file", exists=True, dir_okay=False
+        ..., help="Path to model file (JSON or CSV)", exists=True, dir_okay=False
     ),
     output_csv: Path | None = typer.Option(
         None, "--output-csv", help="Save results to CSV file"
@@ -199,7 +199,12 @@ def run(
             if output_json:
                 if verbose:
                     typer.echo(f"Writing JSON to {output_json}...")
-                write_json(output_json, model, anomaly)
+                write_json(
+                    output_json,
+                    model,
+                    anomaly,
+                    anomaly_label="anomaly_mGal",
+                )
 
             if output_npy:
                 if verbose:
@@ -312,7 +317,7 @@ def run(
 @app.command("validate")
 def validate(
     input_file: Path = typer.Argument(
-        ..., help="Path to input JSON model file", exists=True, dir_okay=False
+        ..., help="Path to model file (JSON or CSV)", exists=True, dir_okay=False
     ),
     verbose: bool = typer.Option(
         False, "--verbose", "-v", help="Enable verbose output"
