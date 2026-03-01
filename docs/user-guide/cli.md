@@ -1,6 +1,6 @@
 # CLI Usage
 
-Forward Model provides a command-line interface for running magnetic anomaly calculations, validating models, and generating visualizations.
+Forward Model provides a command-line interface for running magnetic and gravity anomaly calculations, validating models, and generating visualizations.
 
 ## Installation Methods
 
@@ -29,7 +29,7 @@ This works directly from the source code without installation.
 
 ### `run` - Run Forward Model Calculation
 
-Calculate magnetic anomalies and optionally generate plots.
+Calculate magnetic or gravity anomalies and optionally generate plots. Model type is auto-detected from the input file content.
 
 ```bash
 forward-model run INPUT_FILE [OPTIONS]
@@ -84,6 +84,31 @@ Generating plot...
   Plot saved to output.png
 ✓ Calculation complete
 ```
+
+#### Running Gravity Models
+
+Gravity models are loaded automatically when the input JSON has `"model_type": "gravity"`. No explicit mode flag is required.
+
+```bash
+# Basic run — computes gz (mGal), displays plot
+forward-model run examples/dense_intrusion.json
+
+# Export vertical anomaly to CSV
+forward-model run examples/dense_intrusion.json --output-csv results.csv --no-plot
+
+# Export horizontal gradient instead
+forward-model run examples/dense_intrusion.json --component gz_gradient --output-csv gradient.csv --no-plot
+```
+
+Available `--component` values for gravity models:
+
+| Component | Description | Unit |
+|-----------|-------------|------|
+| `gz` (default) | Vertical gravity anomaly | mGal |
+| `gz_gradient` | Horizontal gradient of $g_z$ | mGal/m |
+
+!!! note
+    Passing a magnetic component (e.g., `--component bz`) to a gravity model raises an error, and vice versa.
 
 ---
 
