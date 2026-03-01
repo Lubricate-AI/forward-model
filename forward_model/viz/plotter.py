@@ -70,9 +70,8 @@ def _resolve_strike_extents(
 def plot_model(
     model: ForwardModel | GravityModel | HeatFlowModel,
     ax: Axes | None = None,
-    color_by: Literal[
-        "index", "susceptibility", "density", "thermal_conductivity"
-    ] | None = None,
+    color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"]
+    | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -127,7 +126,8 @@ def plot_model(
         _effective_color_by: Literal[
             "index", "susceptibility", "density", "thermal_conductivity"
         ] = (
-            "density" if _is_gravity
+            "density"
+            if _is_gravity
             else ("thermal_conductivity" if _is_heatflow else "susceptibility")
         )
     else:
@@ -527,11 +527,10 @@ def plot_anomaly(
     if gradient is not None:
         ax2 = ax.twinx()
         _gradient_component = (
-            "gz_gradient" if component.startswith("gz")
+            "gz_gradient"
+            if component.startswith("gz")
             else (
-                "heatflow_gradient"
-                if component.startswith("heatflow")
-                else "gradient"
+                "heatflow_gradient" if component.startswith("heatflow") else "gradient"
             )
         )
         _gradient_ylabel, _ = _COMPONENT_LABELS.get(
@@ -564,9 +563,8 @@ def plot_combined(
     style: str = "default",
     figsize: tuple[float, float] | None = None,
     dpi: int | None = None,
-    color_by: Literal[
-        "index", "susceptibility", "density", "thermal_conductivity"
-    ] | None = None,
+    color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"]
+    | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -627,15 +625,18 @@ def plot_combined(
     _is_gravity = isinstance(model, GravityModel)
     _is_heatflow = isinstance(model, HeatFlowModel)
     _effective_component: str = (
-        ("gz" if _is_gravity
-         else ("heatflow" if _is_heatflow else "total_field"))
-        if component is None else component
+        ("gz" if _is_gravity else ("heatflow" if _is_heatflow else "total_field"))
+        if component is None
+        else component
     )
     _effective_color_by: Literal[
         "index", "susceptibility", "density", "thermal_conductivity"
     ] = (
-        ("density" if _is_gravity
-         else ("thermal_conductivity" if _is_heatflow else "susceptibility"))
+        (
+            "density"
+            if _is_gravity
+            else ("thermal_conductivity" if _is_heatflow else "susceptibility")
+        )
         if color_by is None
         else color_by
     )
