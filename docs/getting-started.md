@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide will help you install Forward Model and run your first magnetic or gravity anomaly calculation.
+This guide will help you install Forward Model and run your first magnetic, gravity, or heat flow anomaly calculation.
 
 ## Installation
 
@@ -116,8 +116,9 @@ The calculation produces a plot with two panels:
 
 The magnetic anomaly shows the characteristic dipolar signature of a vertical body magnetized by Earth's field.
 
-!!! tip "Gravity modeling"
-    If you are working with gravity data, see the [Gravity Modeling example](user-guide/examples.md#gravity-modeling) for the equivalent workflow using `GravityModel` and `GravityProperties`.
+!!! tip "Other model types"
+    - **Gravity modeling**: see [Example 11](user-guide/examples.md) for the equivalent workflow using `GravityModel` and `GravityProperties` (density contrast in kg/m³, anomaly in mGal).
+    - **Heat flow modeling**: see [Example 12](user-guide/examples.md#example-12-granitic-intrusion) for `HeatFlowModel` with `ThermalProperties` (conductivity in W/m·K, anomaly in mW/m²).
 
 ## Next Steps
 

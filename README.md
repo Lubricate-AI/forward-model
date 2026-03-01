@@ -1,6 +1,6 @@
 # forward-model
 
-A Python package for 2D forward magnetic modeling using the Talwani algorithm.
+A Python package for 2D forward magnetic, gravity, and heat flow modeling using the Talwani algorithm.
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -10,7 +10,7 @@ A Python package for 2D forward magnetic modeling using the Talwani algorithm.
 [![Type Checking](https://img.shields.io/badge/type%20checking-pyright-blue)](https://github.com/microsoft/pyright)
 [![Security: bandit](https://img.shields.io/badge/security-bandit-yellow.svg)](https://github.com/PyCQA/bandit)
 
-Compute magnetic anomalies from geological cross-sections with arbitrary polygonal shapes. Ideal for exploration geophysics, geological modeling, and educational purposes.
+Compute magnetic, gravity, and heat flow anomalies from geological cross-sections with arbitrary polygonal shapes. Ideal for exploration geophysics, geological modeling, and educational purposes.
 
 ## Features
 
@@ -211,6 +211,37 @@ This example demonstrates:
 
 ![Multi-Body Model](docs/images/multi_body.png)
 
+## Example: Heat Flow Model
+
+Model a granitic intrusion with elevated conductivity and radiogenic heat production:
+
+```bash
+forward-model run examples/granitic_basin.json --plot heatflow.png --verbose
+```
+
+Output:
+```
+Loading model from examples/granitic_basin.json...
+  Loaded 1 bodies
+  61 observation points
+Calculating heat flow anomaly...
+  heat_flow range: 0.0000 to 12.3456 mW/m²
+Generating plot...
+  Plot saved to heatflow.png
+✓ Calculation complete
+```
+
+Or in Python:
+
+```python
+from forward_model import load_model, calculate_anomaly, plot_combined
+
+model = load_model("examples/granitic_basin.json")
+result = calculate_anomaly(model)   # returns HeatFlowComponents
+plot_combined(model, result.heat_flow, component="heat_flow",
+              gradient=result.heat_flow_gradient, save_path="heatflow.png")
+```
+
 ## Documentation
 
 📚 **[View Complete Documentation](https://lubricate-ai.github.io/forward-model/)**
@@ -241,20 +272,24 @@ See [`docs/examples.md`](docs/examples.md) for:
 ### 📦 Example Models
 
 The `examples/` directory contains:
-- `simple_dyke.json` - Basic vertical dyke model
-- `multi_body.json` - Multiple interacting bodies
+- `simple_dyke.json` - Basic vertical dyke model (magnetic)
+- `multi_body.json` - Multiple interacting bodies (magnetic)
+- `dense_intrusion.json` - Mafic intrusion (gravity)
+- `granitic_basin.json` - Granitic intrusion with radiogenic heat production (heat flow)
+- `heatflow_tutorial.ipynb` - End-to-end heat flow modeling notebook
+- `gravity_tutorial.ipynb` - End-to-end gravity modeling notebook
 - `README.md` - Guide to creating your own models
 
 ## Input Formats
 
-### JSON (Recommended)
+### JSON — Magnetic (Recommended)
 
 ```json
 {
   "bodies": [
     {
       "name": "Body name",
-      "susceptibility": 0.05,
+      "magnetic": {"susceptibility": 0.05},
       "vertices": [[x1, z1], [x2, z2], ...]
     }
   ],
@@ -263,6 +298,27 @@ The `examples/` directory contains:
     "inclination": 60.0,
     "declination": 0.0
   },
+  "observation_x": [x1, x2, x3, ...],
+  "observation_z": 0.0
+}
+```
+
+### JSON — Heat Flow
+
+```json
+{
+  "model_type": "heat_flow",
+  "background_heat_flow": 65.0,
+  "bodies": [
+    {
+      "name": "Body name",
+      "thermal": {
+        "conductivity": 3.3,
+        "heat_generation": 3.0
+      },
+      "vertices": [[x1, z1], [x2, z2], ...]
+    }
+  ],
   "observation_x": [x1, x2, x3, ...],
   "observation_z": 0.0
 }
