@@ -245,6 +245,34 @@ class TestPlotAnomaly:
         assert ax.get_title() == "Horizontal Gradient d(gz)/dx"
         plt.close()
 
+    def test_heatflow_component_ylabel(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([50.0, 65.0, 40.0])
+        ax = plot_anomaly(obs_x, anomaly, component="heatflow")
+        assert ax.get_ylabel() == "Heat Flow Anomaly (mW/m²)"
+        plt.close()
+
+    def test_heatflow_component_title(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([50.0, 65.0, 40.0])
+        ax = plot_anomaly(obs_x, anomaly, component="heatflow")
+        assert ax.get_title() == "Heat Flow Anomaly (mW/m²)"
+        plt.close()
+
+    def test_heatflow_gradient_component_ylabel(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.1, 0.05, -0.02])
+        ax = plot_anomaly(obs_x, anomaly, component="heatflow_gradient")
+        assert ax.get_ylabel() == "Heat Flow Gradient (mW/m²/m)"
+        plt.close()
+
+    def test_heatflow_gradient_component_title(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.1, 0.05, -0.02])
+        ax = plot_anomaly(obs_x, anomaly, component="heatflow_gradient")
+        assert ax.get_title() == "Heat Flow Gradient (mW/m²/m)"
+        plt.close()
+
     def test_end_to_end_with_gravity_model(self, gravity_model: GravityModel) -> None:
         """Smoke test: plot_anomaly with real gz output from calculate_anomaly."""
         from forward_model.compute.calculator import calculate_anomaly
@@ -790,7 +818,7 @@ class TestPlotModel3D:
 
 
 class TestComponentLabels:
-    """Tests for gravity additions to _COMPONENT_LABELS."""
+    """Tests for domain-specific additions to _COMPONENT_LABELS (gravity, heat flow)."""
 
     def test_gz_ylabel(self) -> None:
         from forward_model.viz.plotter import _COMPONENT_LABELS
@@ -815,6 +843,30 @@ class TestComponentLabels:
 
         _, title = _COMPONENT_LABELS["gz_gradient"]
         assert title == "Horizontal Gradient d(gz)/dx"
+
+    def test_heatflow_ylabel(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        ylabel, _ = _COMPONENT_LABELS["heatflow"]
+        assert ylabel == "Heat Flow Anomaly (mW/m²)"
+
+    def test_heatflow_title(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        _, title = _COMPONENT_LABELS["heatflow"]
+        assert title == "Heat Flow Anomaly (mW/m²)"
+
+    def test_heatflow_gradient_ylabel(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        ylabel, _ = _COMPONENT_LABELS["heatflow_gradient"]
+        assert ylabel == "Heat Flow Gradient (mW/m²/m)"
+
+    def test_heatflow_gradient_title(self) -> None:
+        from forward_model.viz.plotter import _COMPONENT_LABELS
+
+        _, title = _COMPONENT_LABELS["heatflow_gradient"]
+        assert title == "Heat Flow Gradient (mW/m²/m)"
 
 
 class TestPlotModelGravity:
@@ -907,6 +959,144 @@ class TestPlotModelGravity:
         ]
         assert len(texts) == 1
         assert "χ=" in texts[0].get_text()
+        plt.close()
+
+
+class TestPlotModelHeatFlow:
+    """Tests for plot_model with HeatFlowModel input."""
+
+    def test_heatflow_model_renders_without_error(self) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.5),
+            name="HeatFlowBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+
+        ax = plot_model(model)
+        assert ax is not None
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_heatflow_body_label_shows_conductivity(self) -> None:
+        from matplotlib.text import Annotation, Text
+
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.5),
+            name="HeatFlowBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+
+        ax = plot_model(model)
+        texts = [
+            c
+            for c in ax.get_children()
+            if isinstance(c, Text)
+            and not isinstance(c, Annotation)
+            and "HeatFlowBody" in c.get_text()
+        ]
+        assert len(texts) == 1
+        assert "2.5" in texts[0].get_text()
+        assert "W/m·K" in texts[0].get_text()
+        assert "χ=" not in texts[0].get_text()
+        plt.close()
+
+    def test_color_by_thermal_conductivity(self) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body1 = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.0),
+            name="Body1",
+        )
+        body2 = GeologicBody(
+            vertices=[[60.0, 100.0], [110.0, 100.0], [110.0, 200.0], [60.0, 200.0]],
+            thermal=ThermalProperties(conductivity=4.0),
+            name="Body2",
+        )
+        model = HeatFlowModel(
+            bodies=[body1, body2],
+            observation_x=[0.0, 55.0, 110.0],
+            observation_z=0.0,
+        )
+
+        ax = plot_model(model, color_by="thermal_conductivity")
+        assert len(ax.patches) > 0
+        plt.close()
+
+    def test_heatflow_default_color_by_is_thermal_conductivity(self) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body1 = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.0),
+            name="Body1",
+        )
+        body2 = GeologicBody(
+            vertices=[[60.0, 100.0], [110.0, 100.0], [110.0, 200.0], [60.0, 200.0]],
+            thermal=ThermalProperties(conductivity=4.0),
+            name="Body2",
+        )
+        model = HeatFlowModel(
+            bodies=[body1, body2],
+            observation_x=[0.0, 55.0, 110.0],
+            observation_z=0.0,
+        )
+
+        fig, ax = plt.subplots()
+        plot_model(model, ax=ax, show_colorbar=True)
+        # Colorbar should be present for multi-body with different conductivities
+        assert len(fig.axes) == 2  # colorbar axis added
+        plt.close()
+
+    def test_heatflow_colorbar_label_is_conductivity(self) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body1 = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.0),
+            name="Body1",
+        )
+        body2 = GeologicBody(
+            vertices=[[60.0, 100.0], [110.0, 100.0], [110.0, 200.0], [60.0, 200.0]],
+            thermal=ThermalProperties(conductivity=4.0),
+            name="Body2",
+        )
+        model = HeatFlowModel(
+            bodies=[body1, body2],
+            observation_x=[0.0, 55.0, 110.0],
+            observation_z=0.0,
+        )
+
+        fig, ax = plt.subplots()
+        plot_model(model, ax=ax, show_colorbar=True)
+        assert len(fig.axes) == 2
+        colorbar_ax = fig.axes[1]
+        ylabel = colorbar_ax.get_ylabel()
+        assert "W/m·K" in ylabel or "Thermal" in ylabel
         plt.close()
 
 
@@ -1013,3 +1203,152 @@ class TestPlotCombinedGravity:
         fig = plot_combined(gravity_model, components.gz, save_path=output)
         assert output.exists()
         plt.close(fig)
+
+
+class TestPlotCombinedHeatFlow:
+    """Tests for plot_combined with HeatFlowModel."""
+
+    def test_heatflow_model_creates_figure(self) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.5),
+            name="HeatFlowBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+        anomaly = np.array([45.0, 60.0, 50.0])
+
+        fig = plot_combined(model, anomaly)
+        assert fig is not None
+        assert len(fig.axes) == 2
+        plt.close()
+
+    def test_anomaly_ylabel_is_mw_per_m2(self) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.5),
+            name="HeatFlowBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+        anomaly = np.array([45.0, 60.0, 50.0])
+
+        fig = plot_combined(model, anomaly)
+        ylabel = fig.axes[1].get_ylabel()
+        assert "mW/m²" in ylabel
+        plt.close()
+
+    def test_cross_section_label_shows_conductivity(self) -> None:
+        from matplotlib.text import Annotation, Text
+
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.5),
+            name="HeatFlowBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+        anomaly = np.array([45.0, 60.0, 50.0])
+
+        fig = plot_combined(model, anomaly)
+        cross_ax = fig.axes[0]
+        texts = [
+            c
+            for c in cross_ax.get_children()
+            if isinstance(c, Text)
+            and not isinstance(c, Annotation)
+            and "HeatFlowBody" in c.get_text()
+        ]
+        assert len(texts) == 1
+        assert "W/m·K" in texts[0].get_text()
+        assert "χ=" not in texts[0].get_text()
+        plt.close()
+
+    def test_explicit_component_heatflow(self) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.5),
+            name="HeatFlowBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+        anomaly = np.array([45.0, 60.0, 50.0])
+
+        fig = plot_combined(model, anomaly, component="heatflow")
+        assert fig.axes[1].get_ylabel() == "Heat Flow Anomaly (mW/m²)"
+        plt.close()
+
+    def test_saves_to_file(self, tmp_path: Path) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.5),
+            name="HeatFlowBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+        anomaly = np.array([45.0, 60.0, 50.0])
+        output = tmp_path / "heatflow_combined.png"
+
+        fig = plot_combined(model, anomaly, save_path=output)
+        assert output.exists()
+        plt.close(fig)
+
+    def test_heatflow_gradient_label_on_twin_axis(self) -> None:
+        from forward_model.models import GeologicBody
+        from forward_model.models.heatflow_model import HeatFlowModel
+        from forward_model.models.properties import ThermalProperties
+
+        body = GeologicBody(
+            vertices=[[0.0, 100.0], [50.0, 100.0], [50.0, 200.0], [0.0, 200.0]],
+            thermal=ThermalProperties(conductivity=2.5),
+            name="HeatFlowBody",
+        )
+        model = HeatFlowModel(
+            bodies=[body],
+            observation_x=[0.0, 25.0, 50.0],
+            observation_z=0.0,
+        )
+        anomaly = np.array([45.0, 60.0, 50.0])
+        gradient = np.array([0.2, 0.0, -0.2])
+
+        fig = plot_combined(model, anomaly, gradient=gradient)
+        # Axes: cross-section (0) + anomaly (1) + gradient twin (2)
+        assert len(fig.axes) >= 3
+        twin_ax = fig.axes[2]
+        assert "mW/m²" in twin_ax.get_ylabel()
+        plt.close()

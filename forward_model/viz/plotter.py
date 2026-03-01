@@ -17,6 +17,7 @@ from numpy.typing import NDArray
 
 from forward_model.models.body import GeologicBody
 from forward_model.models.gravity_model import GravityModel
+from forward_model.models.heatflow_model import HeatFlowModel
 from forward_model.models.model import ForwardModel
 
 
@@ -67,9 +68,10 @@ def _resolve_strike_extents(
 
 
 def plot_model(
-    model: ForwardModel | GravityModel,
+    model: ForwardModel | GravityModel | HeatFlowModel,
     ax: Axes | None = None,
-    color_by: Literal["index", "susceptibility", "density"] | None = None,
+    color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"]
+    | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -84,12 +86,15 @@ def plot_model(
     observation points.
 
     Args:
-        model: The forward model to visualize. Accepts ForwardModel or GravityModel.
+        model: The forward model to visualize. Accepts ForwardModel,
+               GravityModel, or HeatFlowModel.
         ax: Matplotlib axes to plot on. If None, creates new axes.
         color_by: How to color bodies. "index" uses different colors for each
                  body, "susceptibility" uses a colormap based on susceptibility,
-                 "density" uses a colormap based on density contrast. If None
-                 (default), resolves to "density" for GravityModel and
+                 "density" uses a colormap based on density contrast.
+                 "thermal_conductivity" uses a colormap based on thermal conductivity.
+                 If None (default), resolves to "density" for GravityModel,
+                 "thermal_conductivity" for HeatFlowModel, and
                  "susceptibility" for ForwardModel.
         show_observation_lines: If True, show vertical dashed lines at obs points.
         xlim: Optional (min, max) x-axis limits in meters.
@@ -116,9 +121,14 @@ def plot_model(
 
     # Resolve None sentinel
     _is_gravity = isinstance(model, GravityModel)
+    _is_heatflow = isinstance(model, HeatFlowModel)
     if color_by is None:
-        _effective_color_by: Literal["index", "susceptibility", "density"] = (
-            "density" if _is_gravity else "susceptibility"
+        _effective_color_by: Literal[
+            "index", "susceptibility", "density", "thermal_conductivity"
+        ] = (
+            "density"
+            if _is_gravity
+            else ("thermal_conductivity" if _is_heatflow else "susceptibility")
         )
     else:
         _effective_color_by = color_by
@@ -174,6 +184,30 @@ def plot_model(
                 for body in model.bodies
             ]  # type: ignore
             _auto_colorbar = True
+    elif _effective_color_by == "thermal_conductivity":
+        thermal_values = [
+            body.thermal.conductivity
+            for body in model.bodies
+            if body.thermal is not None
+        ]
+        if not thermal_values or len(set(thermal_values)) == 1:
+            colors = [
+                cmap(0.5) if body.thermal is not None else _FALLBACK_COLOR
+                for body in model.bodies
+            ]
+        else:
+            _colorbar_norm = plt.Normalize(  # type: ignore
+                vmin=min(thermal_values), vmax=max(thermal_values)
+            )
+            colors = [
+                (
+                    cmap(_colorbar_norm(body.thermal.conductivity))
+                    if body.thermal is not None
+                    else _FALLBACK_COLOR
+                )
+                for body in model.bodies
+            ]  # type: ignore
+            _auto_colorbar = True
     else:  # "index"
         colors = plt.cm.tab10(np.linspace(0, 1, max(len(model.bodies), 10)))  # type: ignore
 
@@ -204,6 +238,8 @@ def plot_model(
 
         if body.gravity is not None:
             label = f"{body.name}\n(ρ={body.gravity.density_contrast:.1f} kg/m³)"
+        elif body.thermal is not None:
+            label = f"{body.name}\n(κ={body.thermal.conductivity:.2f} W/m·K)"
         elif body.magnetic is not None:
             label = f"{body.name}\n(χ={body.magnetic.susceptibility:.3f})"
         else:
@@ -243,6 +279,10 @@ def plot_model(
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
             sm.set_array([])  # type: ignore
             plt.colorbar(sm, ax=ax, label="Density Contrast (kg/m³)")  # type: ignore
+        elif _effective_color_by == "thermal_conductivity":
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
+            sm.set_array([])  # type: ignore
+            plt.colorbar(sm, ax=ax, label="Thermal Conductivity (W/m·K)")  # type: ignore
         else:
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
             sm.set_array([])  # type: ignore
@@ -415,6 +455,12 @@ _COMPONENT_LABELS: dict[str, tuple[str, str]] = {
     # Gravity components
     "gz": ("gz (mGal)", "Vertical Gravity Anomaly (gz)"),
     "gz_gradient": ("gz gradient (mGal/m)", "Horizontal Gradient d(gz)/dx"),
+    # Heat flow components
+    "heatflow": ("Heat Flow Anomaly (mW/m²)", "Heat Flow Anomaly (mW/m²)"),
+    "heatflow_gradient": (
+        "Heat Flow Gradient (mW/m²/m)",
+        "Heat Flow Gradient (mW/m²/m)",
+    ),
 }
 
 
@@ -435,13 +481,16 @@ def plot_anomaly(
 
     Args:
         observation_x: X-coordinates of observation points (meters).
-        anomaly: Anomaly values (nT for magnetic, mGal for gravity).
+        anomaly: Anomaly values (nT for magnetic, mGal for gravity,
+                 mW/m² for heat flow).
         ax: Matplotlib axes to plot on. If None, creates new axes.
         xlim: Optional (min, max) x-axis limits in meters.
         component: Which component is being plotted. Controls axis labels.
                    One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
-                   ``"gradient"``, ``"gz"``, ``"gz_gradient"``.
-        gradient: Optional gradient values (nT/m for magnetic, mGal/m for gravity).
+                   ``"gradient"``, ``"gz"``, ``"gz_gradient"``, ``"heatflow"``,
+                   ``"heatflow_gradient"``.
+        gradient: Optional gradient values (nT/m for magnetic,
+                  mGal/m for gravity, mW/m²/m for heat flow).
                   When provided, overlaid on a twin y-axis with an orange dashed line.
 
     Returns:
@@ -478,7 +527,11 @@ def plot_anomaly(
     if gradient is not None:
         ax2 = ax.twinx()
         _gradient_component = (
-            "gz_gradient" if component.startswith("gz") else "gradient"
+            "gz_gradient"
+            if component.startswith("gz")
+            else (
+                "heatflow_gradient" if component.startswith("heatflow") else "gradient"
+            )
         )
         _gradient_ylabel, _ = _COMPONENT_LABELS.get(
             _gradient_component, ("Gradient", "Gradient")
@@ -504,13 +557,14 @@ def plot_anomaly(
 
 
 def plot_combined(
-    model: ForwardModel | GravityModel,
+    model: ForwardModel | GravityModel | HeatFlowModel,
     anomaly: NDArray[np.float64],
     save_path: str | Path | None = None,
     style: str = "default",
     figsize: tuple[float, float] | None = None,
     dpi: int | None = None,
-    color_by: Literal["index", "susceptibility", "density"] | None = None,
+    color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"]
+    | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -533,7 +587,7 @@ def plot_combined(
     Args:
         model: The forward model to visualize.
         anomaly: Anomaly values (nT for magnetic components, mGal for gravity
-                components).
+                components, mW/m² for heat flow components).
         save_path: Optional path to save the figure. If None, does not save.
         style: Plot style name ("default", "publication", "presentation").
         figsize: Figure size as (width, height) in inches. If None, uses (12, 8).
@@ -543,15 +597,16 @@ def plot_combined(
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
         show_colorbar: If True, show colorbar when color_by is a continuous mode
-                      ("susceptibility" or "density").
+                      ("susceptibility", "density", or "thermal_conductivity").
         label_offsets: Optional mapping of body name to (dx, dz) offset from the
                       computed label anchor. Passed through to ``plot_model``.
         show_label_arrows: If True or per-body dict, draw arrows from text to centroid.
         component: Which anomaly component is being plotted. Controls axis labels.
                    One of ``"bz"``, ``"bx"``, ``"total_field"``, ``"amplitude"``,
-                   ``"gz"``, ``"gz_gradient"``. None auto-detects from model type.
+                   ``"gz"``, ``"gz_gradient"``, ``"heatflow"``, ``"heatflow_gradient"``.
+                   None auto-detects from model type.
         gradient: Optional gradient values for the secondary y-axis overlay.
-                  Units: nT/m for magnetic, mGal/m for gravity.
+                  Units: nT/m for magnetic, mGal/m for gravity, mW/m²/m for heat flow.
         show_3d: If True, add a third panel with a 3D extruded view.
         default_strike: Total strike length (m) used for 2D (infinite-strike) bodies
                        when ``show_3d=True``. Passed through to ``plot_model_3d``.
@@ -568,11 +623,20 @@ def plot_combined(
 
     # Resolve sentinel defaults based on model type
     _is_gravity = isinstance(model, GravityModel)
+    _is_heatflow = isinstance(model, HeatFlowModel)
     _effective_component: str = (
-        ("gz" if _is_gravity else "total_field") if component is None else component
+        ("gz" if _is_gravity else ("heatflow" if _is_heatflow else "total_field"))
+        if component is None
+        else component
     )
-    _effective_color_by: Literal["index", "susceptibility", "density"] = (
-        ("density" if _is_gravity else "susceptibility")
+    _effective_color_by: Literal[
+        "index", "susceptibility", "density", "thermal_conductivity"
+    ] = (
+        (
+            "density"
+            if _is_gravity
+            else ("thermal_conductivity" if _is_heatflow else "susceptibility")
+        )
         if color_by is None
         else color_by
     )
