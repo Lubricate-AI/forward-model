@@ -188,3 +188,264 @@ def _apply_heatflow_kernel_2_75d(
 
     qz *= scale_factor * conductivity_contrast
     return qz
+
+
+def _apply_radiogenic_kernel(
+    vertices: NDArray[np.float64],
+    observation_points: NDArray[np.float64],
+    heat_generation: float,
+    min_distance: float = 1e-10,
+) -> NDArray[np.float64]:
+    """Compute radiogenic heat flow contribution from a 2D polygon.
+
+    For a 2D body with uniform volumetric heat generation A (µW/m³), the
+    contribution to surface vertical heat flow at point (x, 0) is:
+
+        q_rad(x) = (A × 1e-6 / (2π)) × ∫∫_body z_s / r² dA' × 1e3 [mW/m²]
+
+    where r = distance from observation point to source point (x_s, z_s).
+    Via Green's theorem this area integral converts to a boundary line integral:
+
+        ∫∫_body z_s/r² dA = ∮_∂body arctan(x_s/z_s) dz_s
+
+    The per-edge analytic form (derived by integration by parts along each
+    straight edge parameterised by arc length) is:
+
+        I_edge = z₂·φ₂ − z₁·φ₁ + a·(tz·log(r₂/r₁) − tx·dθ)
+
+    where φₖ = arctan2(xₖ, zₖ) = arctan(xₖ/zₖ), dθ = arctan2(z₂,x₂) −
+    arctan2(z₁,x₁) (wrapped to [−π,π]), log = log(r₂/r₁), and
+    a = x₁·tz − z₁·tx (signed perpendicular distance from the observation
+    point to the edge line). The sum Σ I_edge is always ≥ 0 for a body
+    located entirely below the observation surface.
+
+    Args:
+        vertices: Nx2 array of polygon vertices [x, z] in meters.
+        observation_points: Mx2 array of observation points [x, z] in meters.
+        heat_generation: Volumetric heat generation A in µW/m³.
+        min_distance: Minimum distance threshold to avoid singularities (m).
+
+    Returns:
+        Radiogenic heat flow contribution in mW/m² at each observation point.
+    """
+    n_obs = len(observation_points)
+    q_rad = np.zeros(n_obs, dtype=np.float64)
+
+    # Convert µW/m³ → W/m³ (×1e-6), and W/m² → mW/m² (×1e3): net factor 1e-3
+    # Divide by 2π for the 2D half-space normalization.
+    scale_factor = heat_generation * 1e-3 / (2.0 * np.pi)
+
+    obs_x = observation_points[:, 0]
+    obs_z = observation_points[:, 1]
+    n_vertices = len(vertices)
+
+    for j in range(n_vertices):
+        j_next = (j + 1) % n_vertices
+
+        dx = vertices[j_next, 0] - vertices[j, 0]
+        dz = vertices[j_next, 1] - vertices[j, 1]
+        edge_length = np.sqrt(dx**2 + dz**2)
+
+        if edge_length < min_distance:
+            continue
+
+        tx = float(dx / edge_length)
+        tz = float(dz / edge_length)
+
+        x1 = vertices[j, 0] - obs_x
+        z1 = vertices[j, 1] - obs_z
+        x2 = vertices[j_next, 0] - obs_x
+        z2 = vertices[j_next, 1] - obs_z
+
+        r1 = np.sqrt(x1**2 + z1**2)
+        r2 = np.sqrt(x2**2 + z2**2)
+        valid = (r1 >= min_distance) & (r2 >= min_distance)
+
+        # phi = arctan(x/z) = arctan2(x, z)  [swapped args vs standard atan2]
+        phi1: NDArray[np.float64] = np.arctan2(x1, z1)
+        phi2: NDArray[np.float64] = np.arctan2(x2, z2)
+
+        # Standard dtheta = arctan2(z2,x2) - arctan2(z1,x1), wrapped to [-π,π]
+        theta1: NDArray[np.float64] = np.arctan2(z1, x1)
+        theta2: NDArray[np.float64] = np.arctan2(z2, x2)
+        dtheta: NDArray[np.float64] = theta2 - theta1
+        dtheta = np.where(dtheta > np.pi, dtheta - 2 * np.pi, dtheta)
+        dtheta = np.where(dtheta < -np.pi, dtheta + 2 * np.pi, dtheta)
+
+        r_ratio = np.where(valid, r2 / r1, 1.0)
+        log_ratio: NDArray[np.float64] = np.where(valid, np.log(r_ratio), 0.0)
+
+        # Signed perpendicular distance from observation point to edge line
+        a: NDArray[np.float64] = x1 * tz - z1 * tx
+
+        contrib = np.where(
+            valid,
+            z2 * phi2 - z1 * phi1 + a * (tz * log_ratio - tx * dtheta),
+            0.0,
+        )
+        q_rad += contrib
+
+    q_rad *= scale_factor
+    return q_rad
+
+
+_worker_obs_points: NDArray[np.float64] | None = None
+
+
+def _init_worker(obs_points: NDArray[np.float64]) -> None:
+    """Populate worker-process global with the shared observation grid."""
+    global _worker_obs_points
+    _worker_obs_points = obs_points
+
+
+def _compute_single_body(
+    args: tuple[
+        NDArray[np.float64],
+        NDArray[np.float64],
+        float,
+        float,
+        float,
+        float | None,
+        float | None,
+        float | None,
+    ],
+) -> NDArray[np.float64]:
+    """Compute heat flow for a single body. Module-level for pickling."""
+    vertices, obs, conductivity, heat_gen, q0, shl, sf, sb = args
+    if sf is not None:
+        if sb is None:  # pragma: no cover
+            raise ValueError("strike_backward must be set when strike_forward is set")
+        qz = _apply_heatflow_kernel_2_75d(vertices, obs, conductivity, q0, sf, sb)
+    elif shl is not None:
+        qz = _apply_heatflow_kernel_2_5d(vertices, obs, conductivity, q0, shl)
+    else:
+        qz = _apply_heatflow_kernel(vertices, obs, conductivity, q0)
+    if heat_gen > 0.0:
+        qz = qz + _apply_radiogenic_kernel(vertices, obs, heat_gen)
+    return qz
+
+
+def _compute_body_parallel(
+    args: tuple[
+        NDArray[np.float64],
+        float,
+        float,
+        float,
+        float | None,
+        float | None,
+        float | None,
+    ],
+) -> NDArray[np.float64]:
+    """Compute heat flow for one body using the worker-local observation points."""
+    if _worker_obs_points is None:  # pragma: no cover
+        raise RuntimeError("Worker process not initialized with observation points.")
+    vertices, conductivity, heat_gen, q0, shl, sf, sb = args
+    if sf is not None:
+        if sb is None:  # pragma: no cover
+            raise ValueError("strike_backward must be set when strike_forward is set")
+        qz = _apply_heatflow_kernel_2_75d(
+            vertices, _worker_obs_points, conductivity, q0, sf, sb
+        )
+    elif shl is not None:
+        qz = _apply_heatflow_kernel_2_5d(
+            vertices, _worker_obs_points, conductivity, q0, shl
+        )
+    else:
+        qz = _apply_heatflow_kernel(vertices, _worker_obs_points, conductivity, q0)
+    if heat_gen > 0.0:
+        qz = qz + _apply_radiogenic_kernel(vertices, _worker_obs_points, heat_gen)
+    return qz
+
+
+def calculate_heat_flow(
+    model: HeatFlowModel, parallel: bool = False
+) -> HeatFlowComponents:
+    """Calculate total heat flow anomaly for a heat flow model.
+
+    Computes surface heat flow perturbations using the 2D Talwani-style
+    algorithm, summing contributions from all geologic bodies via superposition.
+    Each body contributes:
+    - A conductive perturbation (from thermal conductivity contrast)
+    - An optional radiogenic contribution (from volumetric heat generation)
+
+    Args:
+        model: Complete heat flow model including bodies and observation points.
+        parallel: If True, compute each body's contribution in a separate process
+                  using ProcessPoolExecutor.
+
+    Returns:
+        HeatFlowComponents containing:
+        - heat_flow: Vertical heat flow perturbation in mW/m²
+        - heat_flow_x: Horizontal heat flow perturbation in mW/m²
+        - heat_flow_gradient: Horizontal gradient of heat_flow in mW/m³
+
+    Raises:
+        ValueError: If any body lacks thermal properties.
+    """
+    observation_points = model.get_observation_points()
+    q0 = model.background_heat_flow
+
+    per_body: list[
+        tuple[
+            NDArray[np.float64],
+            float,
+            float,
+            float,
+            float | None,
+            float | None,
+            float | None,
+        ]
+    ] = []
+    for body in model.bodies:
+        if body.thermal is None:
+            raise ValueError(
+                f"Body '{body.name}' has no thermal properties; "
+                "heat flow calculation requires thermal to be set"
+            )
+        per_body.append(
+            (
+                body.to_numpy(),
+                body.thermal.conductivity,
+                body.thermal.heat_generation,
+                q0,
+                body.strike_half_length,
+                body.strike_forward,
+                body.strike_backward,
+            )
+        )
+
+    if parallel:
+        with ProcessPoolExecutor(
+            initializer=_init_worker, initargs=(observation_points,)
+        ) as executor:
+            body_qz = list(executor.map(_compute_body_parallel, per_body))
+    else:
+        body_qz = [
+            _compute_single_body((v, observation_points, c, hg, q0, shl, sf, sb))
+            for v, c, hg, q0, shl, sf, sb in per_body
+        ]
+
+    total_qz: NDArray[np.float64] = np.sum(body_qz, axis=0)
+
+    # Horizontal gradient of vertical heat flow
+    obs_x: NDArray[np.float64] = observation_points[:, 0]
+    if len(obs_x) > 1:
+        qz_gradient: NDArray[np.float64] = np.gradient(total_qz, obs_x)
+    else:
+        qz_gradient = np.zeros_like(total_qz)
+
+    # Horizontal heat flow component (qx) via complementary kernel
+    body_qx: list[NDArray[np.float64]] = []
+    for body in model.bodies:
+        assert body.thermal is not None  # already validated above
+        qx = _apply_heatflow_kernel_x(
+            body.to_numpy(), observation_points, body.thermal.conductivity, q0
+        )
+        body_qx.append(qx)
+    total_qx: NDArray[np.float64] = np.sum(body_qx, axis=0)
+
+    return HeatFlowComponents(
+        heat_flow=total_qz,
+        heat_flow_x=total_qx,
+        heat_flow_gradient=qz_gradient,
+    )
