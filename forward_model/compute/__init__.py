@@ -1,4 +1,4 @@
-"""Magnetic and gravity anomaly computation algorithms."""
+"""Magnetic, gravity, and heat flow anomaly computation algorithms."""
 
 from forward_model.compute.batch import BatchResult, batch_calculate
 from forward_model.compute.calculator import calculate_anomaly

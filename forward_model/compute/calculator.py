@@ -1,7 +1,7 @@
 """High-level interface for forward model anomaly calculations.
 
 Dispatches to the appropriate algorithm based on model type:
-magnetic (Talwani 1965), gravity (Talwani 1959), and heat flow (planned).
+magnetic (Talwani 1965), gravity (Talwani 1959), and heat flow (Talwani-style 2D).
 """
 
 from concurrent.futures import ProcessPoolExecutor
@@ -124,6 +124,7 @@ def calculate_anomaly(
 def calculate_anomaly(
     model: HeatFlowModel,
     parallel: bool = ...,
+    component: Literal["bz", "bx", "total_field", "amplitude", "gradient", "all"] = ...,
 ) -> HeatFlowComponents: ...
 
 
@@ -154,8 +155,8 @@ def calculate_anomaly(
         - ForwardModel: ``NDArray[np.float64]`` or ``MagneticComponents``
           (when ``component="all"``)
         - GravityModel: ``GravityComponents`` with gz (mGal) and gz_gradient (mGal/m)
-        - HeatFlowModel: ``HeatFlowComponents`` with heat_flow, heat_flow_x,
-          and heat_flow_gradient (all in mW/m²)
+        - HeatFlowModel: ``HeatFlowComponents`` with heat_flow and heat_flow_x
+          (mW/m²) and heat_flow_gradient (mW/m³)
 
     Example:
         >>> mag_model = load_model("magnetic.json")
