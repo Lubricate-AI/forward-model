@@ -245,6 +245,34 @@ class TestPlotAnomaly:
         assert ax.get_title() == "Horizontal Gradient d(gz)/dx"
         plt.close()
 
+    def test_heatflow_component_ylabel(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([50.0, 65.0, 40.0])
+        ax = plot_anomaly(obs_x, anomaly, component="heatflow")
+        assert ax.get_ylabel() == "Heat Flow Anomaly (mW/m²)"
+        plt.close()
+
+    def test_heatflow_component_title(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([50.0, 65.0, 40.0])
+        ax = plot_anomaly(obs_x, anomaly, component="heatflow")
+        assert ax.get_title() == "Heat Flow Anomaly (mW/m²)"
+        plt.close()
+
+    def test_heatflow_gradient_component_ylabel(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.1, 0.05, -0.02])
+        ax = plot_anomaly(obs_x, anomaly, component="heatflow_gradient")
+        assert ax.get_ylabel() == "Heat Flow Gradient (mW/m²/m)"
+        plt.close()
+
+    def test_heatflow_gradient_component_title(self) -> None:
+        obs_x = [0.0, 10.0, 20.0]
+        anomaly = np.array([0.1, 0.05, -0.02])
+        ax = plot_anomaly(obs_x, anomaly, component="heatflow_gradient")
+        assert ax.get_title() == "Heat Flow Gradient (mW/m²/m)"
+        plt.close()
+
     def test_end_to_end_with_gravity_model(self, gravity_model: GravityModel) -> None:
         """Smoke test: plot_anomaly with real gz output from calculate_anomaly."""
         from forward_model.compute.calculator import calculate_anomaly
