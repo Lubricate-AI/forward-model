@@ -17,6 +17,7 @@ from numpy.typing import NDArray
 
 from forward_model.models.body import GeologicBody
 from forward_model.models.gravity_model import GravityModel
+from forward_model.models.heatflow_model import HeatFlowModel
 from forward_model.models.model import ForwardModel
 
 
@@ -67,9 +68,9 @@ def _resolve_strike_extents(
 
 
 def plot_model(
-    model: ForwardModel | GravityModel,
+    model: ForwardModel | GravityModel | HeatFlowModel,
     ax: Axes | None = None,
-    color_by: Literal["index", "susceptibility", "density"] | None = None,
+    color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"] | None = None,
     show_observation_lines: bool = True,
     xlim: tuple[float, float] | None = None,
     zlim: tuple[float, float] | None = None,
@@ -88,9 +89,10 @@ def plot_model(
         ax: Matplotlib axes to plot on. If None, creates new axes.
         color_by: How to color bodies. "index" uses different colors for each
                  body, "susceptibility" uses a colormap based on susceptibility,
-                 "density" uses a colormap based on density contrast. If None
-                 (default), resolves to "density" for GravityModel and
-                 "susceptibility" for ForwardModel.
+                 "density" uses a colormap based on density contrast.
+                 "thermal_conductivity" uses a colormap based on thermal conductivity.
+                 If None (default), resolves to "density" for GravityModel,
+                 "thermal_conductivity" for HeatFlowModel, and "susceptibility" for ForwardModel.
         show_observation_lines: If True, show vertical dashed lines at obs points.
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
@@ -116,9 +118,11 @@ def plot_model(
 
     # Resolve None sentinel
     _is_gravity = isinstance(model, GravityModel)
+    _is_heatflow = isinstance(model, HeatFlowModel)
     if color_by is None:
-        _effective_color_by: Literal["index", "susceptibility", "density"] = (
-            "density" if _is_gravity else "susceptibility"
+        _effective_color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"] = (
+            "density" if _is_gravity
+            else ("thermal_conductivity" if _is_heatflow else "susceptibility")
         )
     else:
         _effective_color_by = color_by
@@ -174,6 +178,28 @@ def plot_model(
                 for body in model.bodies
             ]  # type: ignore
             _auto_colorbar = True
+    elif _effective_color_by == "thermal_conductivity":
+        thermal_values = [
+            body.thermal.conductivity
+            for body in model.bodies
+            if body.thermal is not None
+        ]
+        if not thermal_values or len(set(thermal_values)) == 1:
+            colors = [
+                cmap(0.5) if body.thermal is not None else _FALLBACK_COLOR
+                for body in model.bodies
+            ]
+        else:
+            _colorbar_norm = plt.Normalize(vmin=min(thermal_values), vmax=max(thermal_values))  # type: ignore
+            colors = [
+                (
+                    cmap(_colorbar_norm(body.thermal.conductivity))
+                    if body.thermal is not None
+                    else _FALLBACK_COLOR
+                )
+                for body in model.bodies
+            ]  # type: ignore
+            _auto_colorbar = True
     else:  # "index"
         colors = plt.cm.tab10(np.linspace(0, 1, max(len(model.bodies), 10)))  # type: ignore
 
@@ -204,6 +230,8 @@ def plot_model(
 
         if body.gravity is not None:
             label = f"{body.name}\n(ρ={body.gravity.density_contrast:.1f} kg/m³)"
+        elif body.thermal is not None:
+            label = f"{body.name}\n(κ={body.thermal.conductivity:.2f} W/m·K)"
         elif body.magnetic is not None:
             label = f"{body.name}\n(χ={body.magnetic.susceptibility:.3f})"
         else:
@@ -243,6 +271,10 @@ def plot_model(
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
             sm.set_array([])  # type: ignore
             plt.colorbar(sm, ax=ax, label="Density Contrast (kg/m³)")  # type: ignore
+        elif _effective_color_by == "thermal_conductivity":
+            sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
+            sm.set_array([])  # type: ignore
+            plt.colorbar(sm, ax=ax, label="Thermal Conductivity (W/m·K)")  # type: ignore
         else:
             sm = plt.cm.ScalarMappable(cmap=cmap, norm=_colorbar_norm)  # type: ignore
             sm.set_array([])  # type: ignore
