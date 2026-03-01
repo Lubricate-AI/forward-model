@@ -165,19 +165,26 @@ def run(
             valid_gravity = {"gz", "gz_gradient"}
             if effective_component not in valid_gravity:
                 raise ValueError(
-                    f"Component '{effective_component}' is not valid for a gravity model. "
-                    f"Valid options: {', '.join(sorted(valid_gravity))}"
+                    f"Component '{effective_component}' is not valid "
+                    f"for a gravity model. "
+                    f"Valid options: "
+                    f"{', '.join(sorted(valid_gravity))}"
                 )
             if verbose:
                 typer.echo("Calculating gravity anomaly...")
             gravity_result = calculate_anomaly(model)
-            anomaly = {"gz": gravity_result.gz, "gz_gradient": gravity_result.gz_gradient}[
-                effective_component
-            ]
+            gravity_data = {
+                "gz": gravity_result.gz,
+                "gz_gradient": gravity_result.gz_gradient,
+            }
+            anomaly = gravity_data[effective_component]
             if verbose:
                 min_val = float(anomaly.min())
                 max_val = float(anomaly.max())
-                typer.echo(f"  {effective_component} range: {min_val:.4f} to {max_val:.4f}")
+                typer.echo(
+                    f"  {effective_component} range:"
+                    f" {min_val:.4f} to {max_val:.4f}"
+                )
 
             # Export results
             if output_csv:
@@ -229,8 +236,10 @@ def run(
             valid_magnetic = {"bz", "bx", "total_field", "amplitude", "gradient"}
             if effective_component not in valid_magnetic:
                 raise ValueError(
-                    f"Component '{effective_component}' is not valid for a magnetic model. "
-                    f"Valid options: {', '.join(sorted(valid_magnetic))}"
+                    f"Component '{effective_component}' is not valid "
+                    f"for a magnetic model. "
+                    f"Valid options: "
+                    f"{', '.join(sorted(valid_magnetic))}"
                 )
             if verbose:
                 typer.echo("Calculating magnetic anomaly...")
@@ -245,7 +254,10 @@ def run(
             if verbose:
                 min_val = float(anomaly.min())
                 max_val = float(anomaly.max())
-                typer.echo(f"  {effective_component} range: {min_val:.2f} to {max_val:.2f}")
+                typer.echo(
+                    f"  {effective_component} range:"
+                    f" {min_val:.2f} to {max_val:.2f}"
+                )
 
             # Export results (uses the selected component)
             if output_csv:

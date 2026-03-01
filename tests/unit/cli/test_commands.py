@@ -369,7 +369,10 @@ class TestRunNonMagneticModels:
         """Test gravity model run selecting gz_gradient component."""
         result = runner.invoke(
             app,
-            ["run", str(gravity_model_json_file), "--component", "gz_gradient", "--no-plot"],
+            [
+                "run", str(gravity_model_json_file),
+                "--component", "gz_gradient", "--no-plot",
+            ],
         )
 
         assert result.exit_code == 0

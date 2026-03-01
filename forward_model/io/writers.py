@@ -31,7 +31,10 @@ def write_csv(
 
     Example:
         >>> write_csv("results.csv", model.observation_x, anomaly)
-        >>> write_csv("gravity.csv", model.observation_x, gz, anomaly_label="anomaly_mGal")
+        >>> write_csv(
+        ...     "gravity.csv", model.observation_x, gz,
+        ...     anomaly_label="anomaly_mGal",
+        ... )
     """
     filepath = Path(filepath)
 
