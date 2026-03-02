@@ -7,7 +7,7 @@ import numpy as np
 from forward_model.compute.calculator import calculate_anomaly
 from forward_model.models.body import GeologicBody
 from forward_model.models.field import MagneticField
-from forward_model.models.model import ForwardModel
+from forward_model.models.model import MagneticModel
 
 
 def _make_rect_body(
@@ -33,7 +33,7 @@ def _make_rect_body(
 _FIELD = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
 
 
-def _make_model(n_bodies: int, n_obs: int) -> ForwardModel:
+def _make_model(n_bodies: int, n_obs: int) -> MagneticModel:
     bodies = [
         _make_rect_body(
             x_center=i * 200.0,
@@ -45,7 +45,7 @@ def _make_model(n_bodies: int, n_obs: int) -> ForwardModel:
         for i in range(n_bodies)
     ]
     obs_x = list(np.linspace(-1000.0, 1000.0 + n_bodies * 200.0, n_obs))
-    return ForwardModel(
+    return MagneticModel(
         bodies=bodies,
         field=_FIELD,
         observation_x=obs_x,
