@@ -25,7 +25,7 @@ from forward_model.compute.talwani import (
 )
 from forward_model.models.gravity_model import GravityModel
 from forward_model.models.heatflow_model import HeatFlowModel
-from forward_model.models.model import ForwardModel
+from forward_model.models.magnetic_model import MagneticModel
 
 _worker_obs_points: NDArray[np.float64] | None = None
 
@@ -97,7 +97,7 @@ def _compute_body_parallel(
 
 @overload
 def calculate_anomaly(
-    model: ForwardModel,
+    model: MagneticModel,
     parallel: bool = ...,
     component: Literal["bz", "bx", "total_field", "amplitude", "gradient"] = ...,
 ) -> NDArray[np.float64]: ...
@@ -105,7 +105,7 @@ def calculate_anomaly(
 
 @overload
 def calculate_anomaly(
-    model: ForwardModel,
+    model: MagneticModel,
     parallel: bool = ...,
     *,
     component: Literal["all"],
@@ -129,7 +129,7 @@ def calculate_anomaly(
 
 
 def calculate_anomaly(
-    model: ForwardModel | GravityModel | HeatFlowModel,
+    model: MagneticModel | GravityModel | HeatFlowModel,
     parallel: bool = False,
     component: Literal[
         "bz", "bx", "total_field", "amplitude", "gradient", "all"
@@ -138,13 +138,13 @@ def calculate_anomaly(
     """Calculate anomaly for a forward model, dispatching on model type.
 
     Computes the anomaly using the appropriate algorithm for the model type:
-    - ForwardModel (magnetic): Talwani (1965) algorithm, returns NDArray or
+    - MagneticModel (magnetic): Talwani (1965) algorithm, returns NDArray or
       MagneticComponents
     - GravityModel: Talwani (1959) algorithm, returns GravityComponents (gz in mGal)
     - HeatFlowModel: 2D Talwani-style heat flow, returns HeatFlowComponents (mW/m²)
 
     Args:
-        model: A ForwardModel, GravityModel, or HeatFlowModel instance.
+        model: A MagneticModel, GravityModel, or HeatFlowModel instance.
         parallel: If True, compute each body's contribution in a separate process.
         component: For ForwardModel only — which magnetic component to return.
                    Ignored for GravityModel. One of:
@@ -152,7 +152,7 @@ def calculate_anomaly(
                    ``"amplitude"``, ``"gradient"``, ``"all"``.
 
     Returns:
-        - ForwardModel: ``NDArray[np.float64]`` or ``MagneticComponents``
+        - MagneticModel: ``NDArray[np.float64]`` or ``MagneticComponents``
           (when ``component="all"``)
         - GravityModel: ``GravityComponents`` with gz (mGal) and gz_gradient (mGal/m)
         - HeatFlowModel: ``HeatFlowComponents`` with heat_flow and heat_flow_x
