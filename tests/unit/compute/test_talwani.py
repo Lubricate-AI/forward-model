@@ -12,7 +12,7 @@ from forward_model.compute import (
     field_to_magnetization,
 )
 from forward_model.compute.talwani import MagneticComponents
-from forward_model.models import MagneticModel, GeologicBody, MagneticField
+from forward_model.models import GeologicBody, MagneticField, MagneticModel
 
 
 def test_magnetic_components_alias() -> None:

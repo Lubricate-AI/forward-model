@@ -938,7 +938,9 @@ class TestPlotModelGravity:
         assert len(ax.patches) > 0
         plt.close()
 
-    def test_magnetic_model_default_unchanged(self, simple_model: MagneticModel) -> None:
+    def test_magnetic_model_default_unchanged(
+        self, simple_model: MagneticModel
+    ) -> None:
         """MagneticModel with default color_by=None still uses susceptibility path."""
         ax = plot_model(simple_model)
         assert len(ax.patches) > 0

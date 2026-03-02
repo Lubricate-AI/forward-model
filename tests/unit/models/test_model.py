@@ -5,9 +5,9 @@ import pytest
 from pydantic import ValidationError
 
 from forward_model.models import (
-    MagneticModel,
     GeologicBody,
     MagneticField,
+    MagneticModel,
     MagneticProperties,
 )
 

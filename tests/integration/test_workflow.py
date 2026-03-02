@@ -9,10 +9,10 @@ import pytest
 from forward_model.compute import calculate_anomaly
 from forward_model.io import load_model, write_csv, write_json
 from forward_model.models import (
-    MagneticModel,
     GeologicBody,
     HeatFlowModel,
     MagneticField,
+    MagneticModel,
     MagneticProperties,
     ThermalProperties,
 )

@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from forward_model.cli.commands import app
-from forward_model.models import MagneticModel, GravityModel, HeatFlowModel
+from forward_model.models import GravityModel, HeatFlowModel, MagneticModel
 
 runner = CliRunner()
 

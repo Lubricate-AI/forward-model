@@ -31,12 +31,12 @@ from forward_model.io import (
 )
 from forward_model.models import (
     AnyForwardModel,
-    MagneticModel,
     GeologicBody,
     GravityModel,
     GravityProperties,
     HeatFlowModel,
     MagneticField,
+    MagneticModel,
     MagneticProperties,
     ThermalProperties,
 )
@@ -78,4 +78,4 @@ __all__ = [
     "plot_combined",
 ]
 
-__version__ = "2.8.1"
+__version__ = "2.8.2"

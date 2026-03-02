@@ -6,13 +6,15 @@ from pathlib import Path
 import pytest
 
 from forward_model.io import load_model
-from forward_model.models import MagneticModel, GravityModel, HeatFlowModel
+from forward_model.models import GravityModel, HeatFlowModel, MagneticModel
 
 
 class TestLoadModel:
     """Tests for loading models from JSON."""
 
-    def test_load_valid_model(self, tmp_path: Path, simple_model: MagneticModel) -> None:
+    def test_load_valid_model(
+        self, tmp_path: Path, simple_model: MagneticModel
+    ) -> None:
         """Test loading a valid model from JSON."""
         # Write model to temporary file
         model_file = tmp_path / "model.json"

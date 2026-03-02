@@ -27,7 +27,7 @@ from forward_model.config import (
     load_config_with_sources,
     user_config_path,
 )
-from forward_model.models import MagneticModel, GravityModel, HeatFlowModel
+from forward_model.models import GravityModel, HeatFlowModel, MagneticModel
 
 app = typer.Typer(
     name="forward-model",

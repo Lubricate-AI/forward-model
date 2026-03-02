@@ -3,12 +3,12 @@
 import pytest
 
 from forward_model.models import (
-    MagneticModel,
     GeologicBody,
     GravityModel,
     GravityProperties,
     HeatFlowModel,
     MagneticField,
+    MagneticModel,
     MagneticProperties,
     ThermalProperties,
 )
