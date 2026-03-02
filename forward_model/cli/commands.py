@@ -212,7 +212,7 @@ def run(
                     model,
                     hf_result.heat_flow,
                     save_path=plot,
-                    component="heat_flow",
+                    component="heatflow",
                     gradient=hf_result.heat_flow_gradient,
                     style=effective_style,
                     dpi=effective_dpi,

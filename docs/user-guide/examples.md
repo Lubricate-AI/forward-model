@@ -814,7 +814,7 @@ from forward_model import load_model, calculate_anomaly, plot_combined
 
 model = load_model("examples/granitic_basin.json")
 result = calculate_anomaly(model)
-plot_combined(model, result.heat_flow, component="heat_flow",
+plot_combined(model, result.heat_flow, component="heatflow",
               gradient=result.heat_flow_gradient, save_path="granite.png")
 ```
 
