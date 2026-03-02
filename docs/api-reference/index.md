@@ -31,7 +31,7 @@ from forward_model import (
     plot_combined,           # Combined plot (recommended)
 
     # Magnetic Data Models
-    ForwardModel,            # Magnetic model class
+    MagneticModel,            # Magnetic model class
     GeologicBody,            # Body definition
     MagneticField,           # Field parameters
 
@@ -55,14 +55,14 @@ from forward_model.io import (
 
 All models use [Pydantic](https://docs.pydantic.dev/) for validation and serialization.
 
-### ForwardModel
+### MagneticModel
 
 The main model class containing all parameters for a forward calculation:
 
 ```python
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import MagneticModel, GeologicBody, MagneticField
 
-model = ForwardModel(
+model = MagneticModel(
     bodies=[...],           # List of GeologicBody objects
     field=MagneticField(...),  # Magnetic field parameters
     observation_x=[...],    # X-coordinates for observations
@@ -133,7 +133,7 @@ result.gz_gradient   # Horizontal gradient of gz (mGal/m), NDArray[float64]
 ```
 
 !!! note
-    `calculate_anomaly()` dispatches on model type: pass a `ForwardModel` for magnetic results, or a `GravityModel` for gravity results (`GravityComponents`).
+    `calculate_anomaly()` dispatches on model type: pass a `MagneticModel` for magnetic results, or a `GravityModel` for gravity results (`GravityComponents`).
 
 ## Usage Examples
 
@@ -155,7 +155,7 @@ plot_combined(model, anomaly, save_path="output.png")
 ### Creating Models Programmatically
 
 ```python
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import MagneticModel, GeologicBody, MagneticField
 from forward_model import calculate_anomaly
 import numpy as np
 
@@ -174,7 +174,7 @@ field = MagneticField(
 )
 
 # Create model
-model = ForwardModel(
+model = MagneticModel(
     bodies=[body],
     field=field,
     observation_x=list(range(-100, 101, 5)),
@@ -218,12 +218,12 @@ Forward Model uses comprehensive type hints for better IDE support and type chec
 
 ```python
 from forward_model import load_model, calculate_anomaly
-from forward_model.models import ForwardModel
+from forward_model.models import MagneticModel
 import numpy as np
 import numpy.typing as npt
 
 # Type hints for clarity
-model: ForwardModel = load_model("model.json")
+model: MagneticModel = load_model("model.json")
 anomaly: npt.NDArray[np.float64] = calculate_anomaly(model)
 ```
 
