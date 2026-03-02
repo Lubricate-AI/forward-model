@@ -1,21 +1,21 @@
-"""Tests for ForwardModel container."""
+"""Tests for MagneticModel container."""
 
 import numpy as np
 import pytest
 from pydantic import ValidationError
 
 from forward_model.models import (
-    ForwardModel,
+    MagneticModel,
     GeologicBody,
     MagneticField,
     MagneticProperties,
 )
 
 
-class TestForwardModel:
-    """Tests for ForwardModel container."""
+class TestMagneticModel:
+    """Tests for MagneticModel container."""
 
-    def test_valid_model(self, simple_model: ForwardModel) -> None:
+    def test_valid_model(self, simple_model: MagneticModel) -> None:
         """Test creating a valid forward model."""
         assert len(simple_model.bodies) == 1
         assert simple_model.field.intensity == 50000.0
@@ -25,7 +25,7 @@ class TestForwardModel:
     def test_empty_bodies_list(self, earth_field: MagneticField) -> None:
         """Test that empty bodies list is rejected."""
         with pytest.raises(ValidationError, match="at least 1 item"):
-            ForwardModel(
+            MagneticModel(
                 bodies=[],
                 field=earth_field,
                 observation_x=[0.0, 10.0],
@@ -37,7 +37,7 @@ class TestForwardModel:
     ) -> None:
         """Test that non-finite observation x coordinates are rejected."""
         with pytest.raises(ValidationError, match="must be finite"):
-            ForwardModel(
+            MagneticModel(
                 bodies=[simple_rectangle],
                 field=earth_field,
                 observation_x=[0.0, float("inf"), 10.0],
@@ -49,14 +49,14 @@ class TestForwardModel:
     ) -> None:
         """Test that non-finite observation z is rejected."""
         with pytest.raises(ValidationError, match="must be finite"):
-            ForwardModel(
+            MagneticModel(
                 bodies=[simple_rectangle],
                 field=earth_field,
                 observation_x=[0.0, 10.0],
                 observation_z=float("nan"),
             )
 
-    def test_get_observation_points(self, simple_model: ForwardModel) -> None:
+    def test_get_observation_points(self, simple_model: MagneticModel) -> None:
         """Test getting observation points as NumPy array."""
         points = simple_model.get_observation_points()
         assert isinstance(points, np.ndarray)
@@ -65,8 +65,8 @@ class TestForwardModel:
         assert np.allclose(points[:, 0], [-100.0, -50.0, 0.0, 25.0, 50.0, 100.0, 150.0])
         assert np.allclose(points[:, 1], 0.0)
 
-    def test_immutability(self, simple_model: ForwardModel) -> None:
-        """Test that ForwardModel is immutable."""
+    def test_immutability(self, simple_model: MagneticModel) -> None:
+        """Test that MagneticModel is immutable."""
         with pytest.raises(ValidationError):
             simple_model.observation_z = 10.0  # type: ignore
 
@@ -79,7 +79,7 @@ class TestForwardModel:
             magnetic=MagneticProperties(susceptibility=0.1),
             name="Body2",
         )
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[simple_rectangle, body2],
             field=earth_field,
             observation_x=[0.0, 50.0, 100.0],
@@ -90,15 +90,15 @@ class TestForwardModel:
         assert model.bodies[1].name == "Body2"
 
 
-class TestForwardModelOverlapValidation:
-    """Tests for the body overlap model_validator on ForwardModel."""
+class TestMagneticModelOverlapValidation:
+    """Tests for the body overlap model_validator on MagneticModel."""
 
     def _make_model(
         self,
         bodies: list[GeologicBody],
         earth_field: MagneticField,
-    ) -> ForwardModel:
-        return ForwardModel(
+    ) -> MagneticModel:
+        return MagneticModel(
             bodies=bodies,
             field=earth_field,
             observation_x=[0.0, 50.0],
