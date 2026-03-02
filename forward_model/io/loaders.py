@@ -7,7 +7,7 @@ from pathlib import Path
 from pydantic import TypeAdapter, ValidationError
 
 from forward_model.models import AnyForwardModel
-from forward_model.models.model import ForwardModel
+from forward_model.models.magnetic_model import MagneticModel
 
 # Type adapter for discriminated union
 _model_adapter: TypeAdapter[AnyForwardModel] = TypeAdapter(AnyForwardModel)
@@ -24,7 +24,7 @@ def load_model(filepath: str | Path) -> AnyForwardModel:
                  Can be a string or Path object.
 
     Returns:
-        Validated AnyForwardModel instance (ForwardModel, GravityModel, or
+        Validated AnyForwardModel instance (MagneticModel, GravityModel, or
             HeatFlowModel).
 
     Raises:
@@ -54,10 +54,10 @@ def load_model(filepath: str | Path) -> AnyForwardModel:
     return model
 
 
-def load_model_from_csv(filepath: str | Path) -> ForwardModel:
+def load_model_from_csv(filepath: str | Path) -> MagneticModel:
     """Load a forward model from a CSV file.
 
-    **Note:** CSV loading is restricted to magnetic models (ForwardModel).
+    **Note:** CSV loading is restricted to magnetic models (MagneticModel).
     Use JSON files to load gravity or heat flow models.
 
     CSV Format (3 sections, in order):
@@ -79,7 +79,7 @@ def load_model_from_csv(filepath: str | Path) -> ForwardModel:
                  Can be a string or Path object.
 
     Returns:
-        Validated ForwardModel instance (magnetic model only).
+        Validated MagneticModel instance (magnetic model only).
 
     Raises:
         FileNotFoundError: If the specified file does not exist.
@@ -158,7 +158,7 @@ def load_model_from_csv(filepath: str | Path) -> ForwardModel:
         }
 
         # Validate and return
-        model = ForwardModel.model_validate(model_data)
+        model = MagneticModel.model_validate(model_data)
         return model
 
     except ValidationError as e:
