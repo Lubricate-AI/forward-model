@@ -78,4 +78,4 @@ __all__ = [
     "plot_combined",
 ]
 
-__version__ = "2.8.0"
+__version__ = "2.8.1"
