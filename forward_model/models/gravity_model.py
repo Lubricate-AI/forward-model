@@ -8,7 +8,7 @@ from forward_model.models.base import ObservationModel
 class GravityModel(ObservationModel, frozen=True):
     """Complete forward gravity model specification.
 
-    Unlike ``ForwardModel``, this model does not require an inducing
+    Unlike ``MagneticModel``, this model does not require an inducing
     ``MagneticField`` — gravity bodies have no ambient field dependency.
 
     Attributes:
