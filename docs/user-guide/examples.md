@@ -820,16 +820,22 @@ plot_combined(model, result.heat_flow, component="heat_flow",
 
 ### Expected Results
 
-- **Anomaly type**: Positive heat flow anomaly centred above the body
-- **Peak amplitude**: ~5–15 mW/m² above background
+- **heat_flow component**: Perturbation to vertical heat flow at each observation point (mW/m²)
 - **Anomaly width**: broader than the body due to depth of burial
-- **Total heat flow at peak**: ~70–80 mW/m² (background + perturbation)
+- **heat_flow_gradient component**: Highlights the lateral edges of the body
+
+Run with `--verbose` to see the computed range:
+
+```
+heat_flow range: -46.7741 to -4.8115
+```
 
 ### Key Concepts
 
-- The **conductivity contrast** ($\Delta k = 3.3 - k_0$ where $k_0$ is the background conductivity) focuses heat upward, contributing a positive anomaly even without internal heat generation.
-- The **radiogenic term** adds a further positive contribution independent of the conductivity contrast.
-- Both effects superpose to produce the total anomaly.
+- The **conductivity** value (3.3 W/m·K) drives the conductive contribution via the edge-summation kernel.
+- The **heat_generation** value (3.0 µW/m³) contributes an additional radiogenic term computed by a separate boundary-integral kernel.
+- Both terms are summed via superposition to give the `heat_flow` output component.
+- Add `background_heat_flow` to `heat_flow` to obtain the total predicted surface heat flow.
 
 ---
 
@@ -897,15 +903,15 @@ print(f"Min heat flow perturbation: {result.heat_flow.min():.2f} mW/m²")
 
 ### Expected Results
 
-- **Anomaly type**: Negative heat flow anomaly (heat flow low)
-- **Mechanism**: Low-conductivity fill impedes upward heat transport, reducing surface heat flow above the basin
-- **Amplitude**: Several mW/m² below background
+- **heat_flow component**: Perturbation to vertical heat flow at each observation point (mW/m²)
+- The conductive and radiogenic kernels are summed via superposition
+- Run with `--verbose` to see the computed range for your model
 
 ### Key Concepts
 
-- A **negative conductivity contrast** ($k_1 < k_0$) diverts heat laterally, reducing vertical heat flow over the body.
-- Heat flow lows over sedimentary basins are commonly observed in geothermal surveys.
-- The anomaly reverses sign relative to a high-conductivity body.
+- Lower conductivity (1.5 W/m·K) produces a different magnitude conductive contribution than higher-conductivity bodies.
+- The `heat_generation` term (0.5 µW/m³) adds a radiogenic contribution at all points above the body.
+- Comparing models with different conductivity values shows how the conductive kernel scales with the input parameter.
 
 ---
 

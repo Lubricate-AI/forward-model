@@ -110,7 +110,7 @@ A granitic intrusion in a sedimentary basin — a heat flow model:
 - **Background heat flow**: 65.0 mW/m² (continental average)
 - **Observation points**: 61 points spanning −3000m to 3000m at surface
 
-**Expected result**: A positive heat flow anomaly of ~5–15 mW/m² centred above the granite body. Both the higher conductivity (which channels heat upward) and the internal heat generation (which adds a volumetric source) contribute to the elevated surface heat flow.
+**Expected result**: A heat flow perturbation computed via the Talwani-style edge-summation algorithm. The `heat_flow` component gives the vertical heat flow perturbation (mW/m²) at each observation point; add `background_heat_flow` to obtain the total predicted surface heat flow. Run with `--verbose` to inspect the computed range.
 
 **Learning objectives**:
 - Understanding the heat flow JSON model structure
