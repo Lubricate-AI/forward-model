@@ -31,7 +31,7 @@ from forward_model.io import (
 )
 from forward_model.models import (
     AnyForwardModel,
-    ForwardModel,
+    MagneticModel,
     GeologicBody,
     GravityModel,
     GravityProperties,
@@ -51,7 +51,7 @@ __all__ = [
     # Models
     "GeologicBody",
     "MagneticField",
-    "ForwardModel",
+    "MagneticModel",
     "GravityModel",
     "HeatFlowModel",
     "AnyForwardModel",
