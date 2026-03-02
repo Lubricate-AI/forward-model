@@ -1,11 +1,11 @@
 # Forward Model
 
-A Python package for 2D forward magnetic and gravity modeling using the Talwani algorithm.
+A Python package for 2D forward magnetic, gravity, and heat flow modeling using the Talwani algorithm.
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/Lubricate-AI/forward-model/blob/main/LICENSE)
 
-Compute magnetic and gravity anomalies from geological cross-sections with arbitrary polygonal shapes. Ideal for exploration geophysics, geological modeling, and educational purposes.
+Compute magnetic, gravity, and heat flow anomalies from geological cross-sections with arbitrary polygonal shapes. Ideal for exploration geophysics, geological modeling, and educational purposes.
 
 ## Features
 
@@ -57,7 +57,7 @@ New to Forward Model? Start with the [Getting Started guide](getting-started.md)
 
 ## Theory and Background
 
-Forward Model implements the Talwani algorithm for computing magnetic and gravity anomalies from 2D polygonal bodies. The method uses analytical solutions to calculate the magnetic field or gravity anomaly produced by bodies with arbitrary cross-sectional shapes.
+Forward Model implements the Talwani algorithm for computing magnetic, gravity, and heat flow anomalies from 2D polygonal bodies. The method uses analytical solutions to calculate the field anomaly produced by bodies with arbitrary cross-sectional shapes. Heat flow modeling uses the same Talwani-style edge-summation approach applied to 2D steady-state heat conduction (Laplace equation), with thermal conductivity contrast as the source property and optional radiogenic heat generation.
 
 Key references:
 

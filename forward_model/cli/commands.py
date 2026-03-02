@@ -115,7 +115,8 @@ def run(
         help=(
             "Anomaly component to export. "
             "Magnetic: bz (default), bx, total_field, amplitude, gradient. "
-            "Gravity: gz (default), gz_gradient."
+            "Gravity: gz (default), gz_gradient. "
+            "Heat flow: heat_flow (default), heat_flow_x, heat_flow_gradient."
         ),
     ),
     plot_style: str | None = typer.Option(
@@ -130,9 +131,9 @@ def run(
 ) -> None:
     """Run forward model calculation.
 
-    Loads a model from JSON or CSV, computes the anomaly (magnetic or gravity),
-    and optionally exports results and generates visualizations. Model type is
-    auto-detected from the file content.
+    Loads a model from JSON or CSV, computes the anomaly (magnetic, gravity,
+    or heat flow), and optionally exports results and generates visualizations.
+    Model type is auto-detected from the file content.
     """
     try:
         cfg = load_config()
@@ -153,13 +154,83 @@ def run(
 
         # Dispatch by model type
         if isinstance(model, HeatFlowModel):
-            raise NotImplementedError(
-                "Heat flow calculation not yet implemented. Tracked in future issues."
-            )
+            # --- Heat flow path ---
+            effective_component = component or "heat_flow"
+            valid_heatflow = {"heat_flow", "heat_flow_x", "heat_flow_gradient"}
+            if effective_component not in valid_heatflow:
+                raise ValueError(
+                    f"Component '{effective_component}' is not valid "
+                    f"for a heat flow model. "
+                    f"Valid options: "
+                    f"{', '.join(sorted(valid_heatflow))}"
+                )
+            if verbose:
+                typer.echo("Calculating heat flow anomaly...")
+            hf_result = calculate_anomaly(model)
+            hf_data = {
+                "heat_flow": hf_result.heat_flow,
+                "heat_flow_x": hf_result.heat_flow_x,
+                "heat_flow_gradient": hf_result.heat_flow_gradient,
+            }
+            anomaly = hf_data[effective_component]
+            if verbose:
+                min_val = float(anomaly.min())
+                max_val = float(anomaly.max())
+                typer.echo(
+                    f"  {effective_component} range: {min_val:.4f} to {max_val:.4f}"
+                )
+
+            if output_csv:
+                if verbose:
+                    typer.echo(f"Writing CSV to {output_csv}...")
+                write_csv(
+                    output_csv,
+                    model.observation_x,
+                    anomaly,
+                    anomaly_label="anomaly_mW_m2",
+                )
+
+            if output_json:
+                if verbose:
+                    typer.echo(f"Writing JSON to {output_json}...")
+                write_json(
+                    output_json,
+                    model,
+                    anomaly,
+                    anomaly_label="anomaly_mW_m2",
+                )
+
+            if output_npy:
+                if verbose:
+                    typer.echo(f"Writing NumPy to {output_npy}...")
+                write_numpy(output_npy, model.observation_x, anomaly)
+
+            if not no_plot:
+                if verbose:
+                    typer.echo("Generating plot...")
+                plot_combined(
+                    model,
+                    hf_result.heat_flow,
+                    save_path=plot,
+                    component="heatflow",
+                    gradient=hf_result.heat_flow_gradient,
+                    style=effective_style,
+                    dpi=effective_dpi,
+                )
+                if plot:
+                    if verbose:
+                        typer.echo(f"  Plot saved to {plot}")
+                else:
+                    if verbose:
+                        typer.echo("  Displaying plot...")
+                    import matplotlib.pyplot as plt
+
+                    plt.show()  # type: ignore[reportUnknownMemberType]
+
         elif not isinstance(model, (ForwardModel, GravityModel)):  # type: ignore[reportUnnecessaryIsInstance]
             raise ValueError(f"Unexpected model type: {type(model).__name__}")
 
-        if isinstance(model, GravityModel):
+        elif isinstance(model, GravityModel):
             # --- Gravity path ---
             effective_component = component or "gz"
             valid_gravity = {"gz", "gz_gradient"}

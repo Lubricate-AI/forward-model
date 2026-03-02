@@ -1,6 +1,6 @@
 # CLI Usage
 
-Forward Model provides a command-line interface for running magnetic and gravity anomaly calculations, validating models, and generating visualizations.
+Forward Model provides a command-line interface for running magnetic, gravity, and heat flow anomaly calculations, validating models, and generating visualizations.
 
 ## Installation Methods
 
@@ -29,7 +29,7 @@ This works directly from the source code without installation.
 
 ### `run` - Run Forward Model Calculation
 
-Calculate magnetic or gravity anomalies and optionally generate plots. Model type is auto-detected from the input file content.
+Calculate magnetic, gravity, or heat flow anomalies and optionally generate plots. Model type is auto-detected from the input file content.
 
 ```bash
 forward-model run INPUT_FILE [OPTIONS]
@@ -108,7 +108,39 @@ Available `--component` values for gravity models:
 | `gz_gradient` | Horizontal gradient of $g_z$ | mGal/m |
 
 !!! note
-    Passing a magnetic component (e.g., `--component bz`) to a gravity model raises an error, and vice versa.
+    Passing a component from the wrong model type (e.g., `--component bz` on a gravity or heat flow model) raises an error.
+
+#### Running Heat Flow Models
+
+Heat flow models are loaded automatically when the input JSON has `"model_type": "heat_flow"`. No explicit mode flag is required.
+
+```bash
+# Basic run — computes vertical heat flow perturbation, displays plot
+forward-model run examples/granitic_basin.json
+
+# Export vertical heat flow anomaly to CSV (no plot)
+forward-model run examples/granitic_basin.json --output-csv results.csv --no-plot
+
+# Export horizontal gradient instead
+forward-model run examples/granitic_basin.json \
+  --component heat_flow_gradient \
+  --output-csv gradient.csv --no-plot
+
+# Verbose output shows anomaly range in mW/m²
+forward-model run examples/granitic_basin.json --no-plot --verbose
+```
+
+Available `--component` values for heat flow models:
+
+| Component | Description | Unit |
+|-----------|-------------|------|
+| `heat_flow` (default) | Vertical heat flow perturbation | mW/m² |
+| `heat_flow_x` | Horizontal heat flow perturbation | mW/m² |
+| `heat_flow_gradient` | Horizontal gradient of vertical heat flow | mW/m³ |
+
+!!! note
+    The `heat_flow` component is the **perturbation** relative to `background_heat_flow`.
+    To obtain the total surface heat flow, add the background value (default 65 mW/m²).
 
 ---
 
@@ -204,14 +236,14 @@ forward-model visualize results.json \
 
 ## Input Formats
 
-### JSON Format (Recommended)
+### JSON Format — Magnetic (Recommended)
 
 ```json
 {
   "bodies": [
     {
       "name": "Body Name",
-      "susceptibility": 0.05,
+      "magnetic": {"susceptibility": 0.05},
       "vertices": [[x1, z1], [x2, z2], [x3, z3], [x4, z4]]
     }
   ],
@@ -225,20 +257,51 @@ forward-model visualize results.json \
 }
 ```
 
-**Field Descriptions:**
+### JSON Format — Gravity
 
-- `bodies`: List of geological bodies
-  - `name`: Descriptive name (string)
-  - `susceptibility`: Magnetic susceptibility in SI units (float)
-  - `vertices`: List of [x, z] coordinate pairs (meters)
-- `field`: Earth's magnetic field parameters
-  - `intensity`: Field strength in nanoTesla (nT)
-  - `inclination`: Angle from horizontal (-90° to 90°)
-  - `declination`: Azimuth angle (-180° to 180°)
-- `observation_x`: X-coordinates for observation points (meters)
-- `observation_z`: Z-coordinate for observation level (meters, usually 0)
+```json
+{
+  "model_type": "gravity",
+  "bodies": [
+    {
+      "name": "Body Name",
+      "gravity": {"density_contrast": 400.0},
+      "vertices": [[x1, z1], [x2, z2], [x3, z3], [x4, z4]]
+    }
+  ],
+  "observation_x": [x1, x2, x3, ...],
+  "observation_z": 0.0
+}
+```
 
-### CSV Format
+### JSON Format — Heat Flow
+
+```json
+{
+  "model_type": "heat_flow",
+  "background_heat_flow": 65.0,
+  "bodies": [
+    {
+      "name": "Body Name",
+      "thermal": {
+        "conductivity": 3.3,
+        "heat_generation": 3.0
+      },
+      "vertices": [[x1, z1], [x2, z2], [x3, z3], [x4, z4]]
+    }
+  ],
+  "observation_x": [x1, x2, x3, ...],
+  "observation_z": 0.0
+}
+```
+
+**Key heat flow fields:**
+
+- `background_heat_flow`: Regional heat flow baseline in mW/m² (default: 65.0)
+- `thermal.conductivity`: Body thermal conductivity in W/m·K (must be > 0)
+- `thermal.heat_generation`: Radiogenic heat production in µW/m³ (default: 0.0)
+
+### CSV Format (Magnetic Only)
 
 ```csv
 # Field parameters: intensity,inclination,declination,observation_z
@@ -250,7 +313,7 @@ Dyke,0.05,0.0,100.0,50.0,100.0,50.0,200.0,0.0,200.0
 ```
 
 !!! note
-    CSV format is more compact but less readable than JSON. Use JSON for complex models.
+    CSV format supports **magnetic models only**. Use JSON for gravity and heat flow models.
 
 ---
 

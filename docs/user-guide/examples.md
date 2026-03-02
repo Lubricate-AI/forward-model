@@ -759,6 +759,180 @@ fig = plot_combined(model, result.gz, component="gz")
 
 ---
 
+## Heat Flow Modeling
+
+Heat flow modeling predicts the surface heat flow perturbation caused by subsurface bodies with contrasting thermal conductivity and/or radiogenic heat production. The following examples illustrate the two most common scenarios.
+
+---
+
+## Example 12: Granitic Intrusion
+
+Model the heat flow anomaly over a granite body with elevated radiogenic heat production buried in a lower-conductivity sedimentary sequence.
+
+### Model Definition
+
+```json
+{
+  "model_type": "heat_flow",
+  "background_heat_flow": 65.0,
+  "bodies": [
+    {
+      "name": "Granitic Intrusion",
+      "thermal": {
+        "conductivity": 3.3,
+        "heat_generation": 3.0
+      },
+      "vertices": [
+        [-500.0,  500.0],
+        [ 500.0,  500.0],
+        [ 500.0, 2000.0],
+        [-500.0, 2000.0]
+      ]
+    }
+  ],
+  "observation_x": [-3000, -2500, -2000, -1500, -1000, -500, 0, 500, 1000, 1500, 2000, 2500, 3000],
+  "observation_z": 0.0
+}
+```
+
+### Parameters
+
+- **Body geometry**: 1000m wide × 1500m tall, 500–2000m depth
+- **Thermal conductivity**: 3.3 W/m·K (granite — high relative to surrounding sediments)
+- **Heat generation**: 3.0 µW/m³ (elevated radiogenic production from U, Th, K)
+- **Background heat flow**: 65.0 mW/m² (continental average)
+- **Observation**: Surface profile from −3000 to 3000m
+
+### Running the Model
+
+```bash
+# CLI
+forward-model run examples/granitic_basin.json --plot granite.png --verbose
+
+# Python
+from forward_model import load_model, calculate_anomaly, plot_combined
+
+model = load_model("examples/granitic_basin.json")
+result = calculate_anomaly(model)
+plot_combined(model, result.heat_flow, component="heatflow",
+              gradient=result.heat_flow_gradient, save_path="granite.png")
+```
+
+### Expected Results
+
+- **heat_flow component**: Perturbation to vertical heat flow at each observation point (mW/m²)
+- **Anomaly width**: broader than the body due to depth of burial
+- **heat_flow_gradient component**: Highlights the lateral edges of the body
+
+Run with `--verbose` to see the computed range:
+
+```
+heat_flow range: -46.7741 to -4.8115
+```
+
+### Key Concepts
+
+- The **conductivity** value (3.3 W/m·K) drives the conductive contribution via the edge-summation kernel.
+- The **heat_generation** value (3.0 µW/m³) contributes an additional radiogenic term computed by a separate boundary-integral kernel.
+- Both terms are summed via superposition to give the `heat_flow` output component.
+- Add `background_heat_flow` to `heat_flow` to obtain the total predicted surface heat flow.
+
+---
+
+## Example 13: Low-Conductivity Sedimentary Basin
+
+Model the heat flow depression over a sedimentary basin fill with lower thermal conductivity than the surrounding basement.
+
+### Model Definition
+
+```json
+{
+  "model_type": "heat_flow",
+  "background_heat_flow": 70.0,
+  "bodies": [
+    {
+      "name": "Sedimentary Basin Fill",
+      "thermal": {
+        "conductivity": 1.5,
+        "heat_generation": 0.5
+      },
+      "vertices": [
+        [-2000.0,  200.0],
+        [ 2000.0,  200.0],
+        [ 2000.0, 3000.0],
+        [-2000.0, 3000.0]
+      ]
+    }
+  ],
+  "observation_x": [-5000, -4000, -3000, -2000, -1000, 0, 1000, 2000, 3000, 4000, 5000],
+  "observation_z": 0.0
+}
+```
+
+### Parameters
+
+- **Body geometry**: 4000m wide × 2800m tall, 200–3000m depth
+- **Thermal conductivity**: 1.5 W/m·K (shale/mudstone — low)
+- **Heat generation**: 0.5 µW/m³ (low radiogenic production)
+- **Background heat flow**: 70.0 mW/m² (slightly elevated basement)
+
+### Running the Model
+
+```bash
+# CLI
+forward-model run basin.json --no-plot --verbose
+
+# Python
+from forward_model import HeatFlowModel, GeologicBody, ThermalProperties, calculate_anomaly
+
+basin_fill = GeologicBody(
+    name="Sedimentary Basin Fill",
+    thermal=ThermalProperties(conductivity=1.5, heat_generation=0.5),
+    vertices=[[-2000.0, 200.0], [2000.0, 200.0],
+              [2000.0, 3000.0], [-2000.0, 3000.0]],
+)
+model = HeatFlowModel(
+    bodies=[basin_fill],
+    observation_x=list(range(-5000, 5001, 1000)),
+    observation_z=0.0,
+    background_heat_flow=70.0,
+)
+result = calculate_anomaly(model)
+print(f"Min heat flow perturbation: {result.heat_flow.min():.2f} mW/m²")
+```
+
+### Expected Results
+
+- **heat_flow component**: Perturbation to vertical heat flow at each observation point (mW/m²)
+- The conductive and radiogenic kernels are summed via superposition
+- Run with `--verbose` to see the computed range for your model
+
+### Key Concepts
+
+- Lower conductivity (1.5 W/m·K) produces a different magnitude conductive contribution than higher-conductivity bodies.
+- The `heat_generation` term (0.5 µW/m³) adds a radiogenic contribution at all points above the body.
+- Comparing models with different conductivity values shows how the conductive kernel scales with the input parameter.
+
+---
+
+### Tips for Heat Flow Modeling
+
+**Parameter selection:**
+
+| Property | Typical Range | Notes |
+|----------|---------------|-------|
+| Conductivity | 1.0–7.0 W/m·K | Salt (5–7) is highest; shale (1.0–2.0) is lowest common |
+| Heat generation | 0–5 µW/m³ | Granites highest; mafics and carbonates near zero |
+| Background heat flow | 40–120 mW/m² | 65 mW/m² is continental average |
+
+**Interpreting components:**
+
+- Use `heat_flow` (vertical perturbation) for comparison to borehole heat flow measurements
+- Use `heat_flow_gradient` to identify lateral heat flow boundaries (useful for basin edge detection)
+- Add `background_heat_flow` to `heat_flow` to obtain the absolute predicted surface heat flow
+
+---
+
 ## See Also
 
 - [CLI Usage](cli.md) - Command-line tools for running examples

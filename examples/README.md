@@ -99,11 +99,37 @@ A more complex model with multiple interacting bodies:
 - Complex anomaly interpretation
 - Different body geometries (rectangle, triangle)
 
+### granitic_basin.json
+
+A granitic intrusion in a sedimentary basin — a heat flow model:
+
+- **Model type**: Heat flow (`model_type: "heat_flow"`)
+- **Body**: Granitic intrusion, 1000m × 1500m, 500–2000m depth
+- **Thermal conductivity**: 3.3 W/m·K (granite — high conductivity)
+- **Heat generation**: 3.0 µW/m³ (elevated radiogenic production from U, Th, K)
+- **Background heat flow**: 65.0 mW/m² (continental average)
+- **Observation points**: 61 points spanning −3000m to 3000m at surface
+
+**Expected result**: A heat flow perturbation computed via the Talwani-style edge-summation algorithm. The `heat_flow` component gives the vertical heat flow perturbation (mW/m²) at each observation point; add `background_heat_flow` to obtain the total predicted surface heat flow. Run with `--verbose` to inspect the computed range.
+
+**Learning objectives**:
+- Understanding the heat flow JSON model structure
+- Thermal conductivity contrast and its effect on surface heat flow
+- Radiogenic heat generation as a secondary source term
+- Typical heat flow anomaly magnitudes (mW/m²)
+
+```bash
+forward-model run examples/granitic_basin.json --plot granitic_basin.png
+```
+
+> **Note**: Heat flow and gravity models require JSON format. The CSV format is
+> supported for magnetic models only.
+
 ## Creating Your Own Models
 
-### JSON Format
+### JSON Format — Magnetic
 
-Models are defined in JSON with four required sections:
+Magnetic models are defined in JSON with four required sections:
 
 ```json
 {
@@ -124,9 +150,48 @@ Models are defined in JSON with four required sections:
 }
 ```
 
+### JSON Format — Heat Flow
+
+Heat flow models replace the `field` section with `background_heat_flow` and use
+`thermal` properties instead of `magnetic` or `gravity`:
+
+```json
+{
+  "model_type": "heat_flow",
+  "background_heat_flow": 65.0,
+  "bodies": [
+    {
+      "name": "Body name",
+      "thermal": {
+        "conductivity": 3.3,
+        "heat_generation": 2.5
+      },
+      "vertices": [[x1, z1], [x2, z2], [x3, z3], ...]
+    }
+  ],
+  "observation_x": [x1, x2, x3, ...],
+  "observation_z": 0.0
+}
+```
+
+Typical thermal property values:
+
+| Rock Type | Conductivity (W/m·K) | Heat Generation (µW/m³) |
+|-----------|---------------------|------------------------|
+| Granite | 3.0–3.5 | 2–5 |
+| Basalt | 1.5–2.5 | 0.1–0.5 |
+| Shale | 1.0–2.0 | 1–3 |
+| Sandstone | 2.0–4.0 | 0.5–1.5 |
+| Salt | 5–7 | ~0 |
+
+Continental background heat flow is approximately 65 mW/m².
+
 ### CSV Format
 
-Alternatively, use CSV format:
+The CSV format is supported for **magnetic models only**. Use JSON for gravity
+and heat flow models.
+
+Magnetic CSV format:
 
 ```csv
 # Field parameters: intensity,inclination,declination,observation_z
@@ -144,7 +209,7 @@ Dyke,0.05,0.0,100.0,20.0,100.0,20.0,300.0,0.0,300.0
    - Z-axis: Depth (meters, positive downward)
    - Observation points are at depth `observation_z` (usually 0)
 
-2. **Susceptibility values** (SI units):
+2. **Susceptibility values** — magnetic models (SI units):
    - Sedimentary rocks: 0.001 - 0.01
    - Mafic intrusive rocks: 0.05 - 0.15
    - Ultramafic rocks: 0.1 - 0.3
