@@ -465,6 +465,35 @@ class TestRunNonMagneticModels:
             expected_rows = len(heat_flow_model.observation_x) + 1
             assert len(lines) == expected_rows
 
+    def test_run_heat_flow_model_output_json(
+        self, heat_flow_model_json_file: Path, tmp_path: Path, heat_flow_model: HeatFlowModel
+    ) -> None:
+        """Test heat flow model run with JSON output."""
+        output_json = tmp_path / "heatflow_output.json"
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                str(heat_flow_model_json_file),
+                "--output-json",
+                str(output_json),
+                "--no-plot",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert output_json.exists()
+
+        # Verify JSON structure and content
+        with open(output_json) as f:
+            data = json.load(f)
+
+        assert "anomaly_mW_m2" in data["results"]
+        assert len(data["results"]["anomaly_mW_m2"]) == len(
+            data["results"]["observation_x"]
+        )
+        assert len(data["results"]["observation_x"]) == len(heat_flow_model.observation_x)
+
     def test_run_heat_flow_model_default_component(
         self, heat_flow_model_json_file: Path
     ) -> None:
