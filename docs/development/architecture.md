@@ -67,7 +67,7 @@ Prefer simple, readable code over clever optimizations:
 
 ```python
 # Good: Clear and maintainable
-def calculate_anomaly(model: ForwardModel) -> np.ndarray:
+def calculate_anomaly(model: MagneticModel) -> np.ndarray:
     """Calculate total magnetic anomaly."""
     total = np.zeros(len(model.observation_x))
     for body in model.bodies:
@@ -75,7 +75,7 @@ def calculate_anomaly(model: ForwardModel) -> np.ndarray:
     return total
 
 # Avoid: Premature optimization
-def calculate_anomaly(model: ForwardModel) -> np.ndarray:
+def calculate_anomaly(model: MagneticModel) -> np.ndarray:
     """Calculate with vectorization (harder to maintain)."""
     return np.sum([_calc(b, m) for b, m in zip(model.bodies, [model]*len(model.bodies))], axis=0)
 ```
@@ -95,7 +95,7 @@ Design functions to be easily testable:
 Uses [Pydantic](https://docs.pydantic.dev/) for data validation:
 
 ```python
-class ForwardModel(BaseModel):
+class MagneticModel(BaseModel):
     """Main model class with automatic validation."""
     bodies: List[GeologicBody]
     field: MagneticField
@@ -122,7 +122,7 @@ class ForwardModel(BaseModel):
 Core calculation based on Talwani & Heirtzler (1964):
 
 ```python
-def calculate_anomaly(model: ForwardModel) -> npt.NDArray[np.float64]:
+def calculate_anomaly(model: MagneticModel) -> npt.NDArray[np.float64]:
     """Calculate magnetic anomaly using Talwani algorithm.
 
     The algorithm computes the magnetic field from 2D polygonal bodies
@@ -159,15 +159,15 @@ Handles multiple file formats:
 **Loaders:**
 
 ```python
-def load_model(file_path: str) -> ForwardModel:
+def load_model(file_path: str) -> MagneticModel:
     """Load model from JSON file."""
     with open(file_path) as f:
         data = json.load(f)
-    return ForwardModel(**data)
+    return MagneticModel(**data)
 
-def load_model_from_csv(file_path: str) -> ForwardModel:
+def load_model_from_csv(file_path: str) -> MagneticModel:
     """Load model from CSV file."""
-    # Parse CSV and construct ForwardModel
+    # Parse CSV and construct MagneticModel
     ...
 ```
 
@@ -194,7 +194,7 @@ Matplotlib-based plotting with multiple styles:
 
 ```python
 def plot_combined(
-    model: ForwardModel,
+    model: MagneticModel,
     anomaly: np.ndarray,
     save_path: Optional[str] = None,
     style: str = "default",
@@ -267,7 +267,7 @@ def run(
 ```mermaid
 graph LR
     A[JSON/CSV File] --> B[load_model]
-    B --> C[ForwardModel]
+    B --> C[MagneticModel]
     C --> D[calculate_anomaly]
     D --> E[NumPy Array]
     E --> F[plot_combined]
