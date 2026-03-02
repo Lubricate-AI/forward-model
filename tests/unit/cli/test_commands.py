@@ -439,7 +439,10 @@ class TestRunNonMagneticModels:
         assert "Calculation complete" in result.output
 
     def test_run_heat_flow_model_output_csv(
-        self, heat_flow_model_json_file: Path, tmp_path: Path, heat_flow_model: HeatFlowModel
+        self,
+        heat_flow_model_json_file: Path,
+        tmp_path: Path,
+        heat_flow_model: HeatFlowModel,
     ) -> None:
         """Test heat flow model run with CSV output."""
         output_csv = tmp_path / "heatflow.csv"
@@ -466,7 +469,10 @@ class TestRunNonMagneticModels:
             assert len(lines) == expected_rows
 
     def test_run_heat_flow_model_output_json(
-        self, heat_flow_model_json_file: Path, tmp_path: Path, heat_flow_model: HeatFlowModel
+        self,
+        heat_flow_model_json_file: Path,
+        tmp_path: Path,
+        heat_flow_model: HeatFlowModel,
     ) -> None:
         """Test heat flow model run with JSON output."""
         output_json = tmp_path / "heatflow_output.json"
@@ -492,7 +498,9 @@ class TestRunNonMagneticModels:
         assert len(data["results"]["anomaly_mW_m2"]) == len(
             data["results"]["observation_x"]
         )
-        assert len(data["results"]["observation_x"]) == len(heat_flow_model.observation_x)
+        assert len(data["results"]["observation_x"]) == len(
+            heat_flow_model.observation_x
+        )
 
     def test_run_heat_flow_model_default_component(
         self, heat_flow_model_json_file: Path
