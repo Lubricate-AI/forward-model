@@ -491,7 +491,7 @@ from forward_model import (
     plot_combined,           # Combined cross-section and anomaly
 
     # Models
-    ForwardModel,            # Main model class
+    MagneticModel,            # Main model class
     GeologicBody,            # Body definition
     MagneticField,           # Field parameters
 )
@@ -502,7 +502,7 @@ from forward_model import (
 All models use Pydantic for validation:
 
 ```python
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import MagneticModel, GeologicBody, MagneticField
 
 # Create model programmatically
 body = GeologicBody(
@@ -517,7 +517,7 @@ field = MagneticField(
     declination=0.0
 )
 
-model = ForwardModel(
+model = MagneticModel(
     bodies=[body],
     field=field,
     observation_x=[-100, -50, 0, 50, 100],
