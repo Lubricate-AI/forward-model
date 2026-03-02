@@ -146,8 +146,8 @@ def calculate_anomaly(
     Args:
         model: A MagneticModel, GravityModel, or HeatFlowModel instance.
         parallel: If True, compute each body's contribution in a separate process.
-        component: For ForwardModel only — which magnetic component to return.
-                   Ignored for GravityModel. One of:
+        component: For MagneticModel only — which magnetic component to return.
+                   Ignored for GravityModel and HeatFlowModel. One of:
                    ``"bz"`` (default), ``"bx"``, ``"total_field"``,
                    ``"amplitude"``, ``"gradient"``, ``"all"``.
 
@@ -171,7 +171,7 @@ def calculate_anomaly(
     if isinstance(model, HeatFlowModel):
         return calculate_heat_flow(model, parallel=parallel)
 
-    # ForwardModel path — all existing logic unchanged below this point
+    # MagneticModel path — all existing logic unchanged below this point
     observation_points = model.get_observation_points()
 
     per_body: list[

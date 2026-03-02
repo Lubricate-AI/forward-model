@@ -7,7 +7,7 @@ import numpy as np
 from forward_model.compute.calculator import calculate_anomaly
 from forward_model.models.body import GeologicBody
 from forward_model.models.field import MagneticField
-from forward_model.models.model import MagneticModel
+from forward_model.models import MagneticModel
 
 
 def _make_rect_body(
