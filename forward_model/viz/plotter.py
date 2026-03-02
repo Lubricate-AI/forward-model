@@ -18,7 +18,7 @@ from numpy.typing import NDArray
 from forward_model.models.body import GeologicBody
 from forward_model.models.gravity_model import GravityModel
 from forward_model.models.heatflow_model import HeatFlowModel
-from forward_model.models.model import ForwardModel
+from forward_model.models.magnetic_model import MagneticModel
 
 
 def _polygon_centroid(vertices: NDArray[np.float64]) -> tuple[float, float]:
@@ -68,7 +68,7 @@ def _resolve_strike_extents(
 
 
 def plot_model(
-    model: ForwardModel | GravityModel | HeatFlowModel,
+    model: MagneticModel | GravityModel | HeatFlowModel,
     ax: Axes | None = None,
     color_by: Literal["index", "susceptibility", "density", "thermal_conductivity"]
     | None = None,
@@ -86,7 +86,7 @@ def plot_model(
     observation points.
 
     Args:
-        model: The forward model to visualize. Accepts ForwardModel,
+        model: The forward model to visualize. Accepts MagneticModel,
                GravityModel, or HeatFlowModel.
         ax: Matplotlib axes to plot on. If None, creates new axes.
         color_by: How to color bodies. "index" uses different colors for each
@@ -95,7 +95,7 @@ def plot_model(
                  "thermal_conductivity" uses a colormap based on thermal conductivity.
                  If None (default), resolves to "density" for GravityModel,
                  "thermal_conductivity" for HeatFlowModel, and
-                 "susceptibility" for ForwardModel.
+                 "susceptibility" for MagneticModel.
         show_observation_lines: If True, show vertical dashed lines at obs points.
         xlim: Optional (min, max) x-axis limits in meters.
         zlim: Optional (min, max) depth limits in meters (shallow, deep).
@@ -327,7 +327,7 @@ def plot_model(
 
 
 def plot_model_3d(
-    model: ForwardModel,
+    model: MagneticModel,
     default_strike: float = 10_000.0,
     ax: Axes3D | None = None,
     elev: float = 25.0,
@@ -557,7 +557,7 @@ def plot_anomaly(
 
 
 def plot_combined(
-    model: ForwardModel | GravityModel | HeatFlowModel,
+    model: MagneticModel | GravityModel | HeatFlowModel,
     anomaly: NDArray[np.float64],
     save_path: str | Path | None = None,
     style: str = "default",
@@ -686,8 +686,8 @@ def plot_combined(
             gradient=gradient,
         )
 
-        # Plot 3D view if requested (only supported for ForwardModel)
-        if show_3d and isinstance(model, ForwardModel):
+        # Plot 3D view if requested (only supported for MagneticModel)
+        if show_3d and isinstance(model, MagneticModel):
             plot_model_3d(model, default_strike=default_strike, ax=ax3d)
 
         if xlim is not None:

@@ -27,7 +27,7 @@ from forward_model.config import (
     load_config_with_sources,
     user_config_path,
 )
-from forward_model.models import ForwardModel, GravityModel, HeatFlowModel
+from forward_model.models import GravityModel, HeatFlowModel, MagneticModel
 
 app = typer.Typer(
     name="forward-model",
@@ -227,7 +227,7 @@ def run(
 
                     plt.show()  # type: ignore[reportUnknownMemberType]
 
-        elif not isinstance(model, (ForwardModel, GravityModel)):  # type: ignore[reportUnnecessaryIsInstance]
+        elif not isinstance(model, (MagneticModel, GravityModel)):  # type: ignore[reportUnnecessaryIsInstance]
             raise ValueError(f"Unexpected model type: {type(model).__name__}")
 
         elif isinstance(model, GravityModel):
@@ -415,7 +415,7 @@ def validate(
             typer.echo(f"  {len(model.observation_x)} observation points")
 
             # Print type-specific information
-            if isinstance(model, ForwardModel):
+            if isinstance(model, MagneticModel):
                 typer.echo(f"  Field intensity: {model.field.intensity:.1f} nT")
                 typer.echo(f"  Field inclination: {model.field.inclination:.1f}°")
                 typer.echo(f"  Field declination: {model.field.declination:.1f}°")
@@ -488,9 +488,9 @@ def visualize(
         # Reconstruct model and anomaly
         import numpy as np
 
-        from forward_model.models import ForwardModel
+        from forward_model.models import MagneticModel
 
-        model = ForwardModel.model_validate(data["model"])
+        model = MagneticModel.model_validate(data["model"])
         anomaly = np.array(data["results"]["anomaly_nT"])
 
         if verbose:

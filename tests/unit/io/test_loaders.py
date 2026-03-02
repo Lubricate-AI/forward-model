@@ -6,13 +6,15 @@ from pathlib import Path
 import pytest
 
 from forward_model.io import load_model
-from forward_model.models import ForwardModel, GravityModel, HeatFlowModel
+from forward_model.models import GravityModel, HeatFlowModel, MagneticModel
 
 
 class TestLoadModel:
     """Tests for loading models from JSON."""
 
-    def test_load_valid_model(self, tmp_path: Path, simple_model: ForwardModel) -> None:
+    def test_load_valid_model(
+        self, tmp_path: Path, simple_model: MagneticModel
+    ) -> None:
         """Test loading a valid model from JSON."""
         # Write model to temporary file
         model_file = tmp_path / "model.json"
@@ -21,13 +23,13 @@ class TestLoadModel:
 
         # Load and verify
         loaded = load_model(model_file)
-        assert isinstance(loaded, ForwardModel)
+        assert isinstance(loaded, MagneticModel)
         assert len(loaded.bodies) == len(simple_model.bodies)
         assert loaded.field.intensity == simple_model.field.intensity
         assert loaded.observation_x == simple_model.observation_x
 
     def test_load_with_string_path(
-        self, tmp_path: Path, simple_model: ForwardModel
+        self, tmp_path: Path, simple_model: MagneticModel
     ) -> None:
         """Test that string paths work."""
         model_file = tmp_path / "model.json"

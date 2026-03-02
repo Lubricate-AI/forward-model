@@ -245,7 +245,7 @@ The 2.5D edge contributions use these modified differences in place of the 2D Δ
 
 **Amplitude attenuation**: relative to the 2D value, the 2.5D amplitude is attenuated roughly as y₀ / √(r² + y₀²) at a characteristic 2D distance r from the profile. When y₀ ≫ r this factor approaches 1 and the 2D result is recovered; when y₀ ≪ r the anomaly is strongly suppressed.
 
-**Using 2.5D in practice**: set `strike_half_length` on any `GeologicBody` (the default `null` retains the 2D code path). Bodies with and without `strike_half_length` can coexist freely in a single `ForwardModel`.
+**Using 2.5D in practice**: set `strike_half_length` on any `GeologicBody` (the default `null` retains the 2D code path). Bodies with and without `strike_half_length` can coexist freely in a single `MagneticModel`.
 
 Typical applications:
 

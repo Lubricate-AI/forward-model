@@ -350,7 +350,7 @@ print(f"2.5D peak: {peak_25d:.2f} nT  ({100*(1 - peak_25d/peak_2d):.1f}% attenua
 
 - **`strike_half_length`**: Half the body's total along-strike length (metres). A body 1 km long uses `strike_half_length: 500.0`. Must be strictly positive; `null` (the default) selects the standard 2D code path.
 - **Attenuation factor**: For a characteristic 2D distance *r* from profile to body, the peak amplitude is attenuated roughly as y₀ / √(r² + y₀²) relative to the 2D value.
-- **Mixed models**: Individual bodies in the same `ForwardModel` can independently be 2D (no `strike_half_length`) or 2.5D (with `strike_half_length`), so only the bodies whose limited extent matters need the correction.
+- **Mixed models**: Individual bodies in the same `MagneticModel` can independently be 2D (no `strike_half_length`) or 2.5D (with `strike_half_length`), so only the bodies whose limited extent matters need the correction.
 - **Limiting behaviour**: As `strike_half_length` → ∞ the result converges to the 2D anomaly to within numerical precision.
 
 ---
@@ -362,7 +362,7 @@ Model a dyke with arbitrary dip angle.
 ### Model Definition
 
 ```python
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import MagneticModel, GeologicBody, MagneticField
 import numpy as np
 
 # Define dipping dyke geometry
@@ -397,7 +397,7 @@ field = MagneticField(
     declination=0.0
 )
 
-model = ForwardModel(
+model = MagneticModel(
     bodies=[body],
     field=field,
     observation_x=list(range(-100, 151, 5)),
@@ -539,7 +539,7 @@ print("✓ Results exported to multiple formats")
 
 ```python
 import json
-from forward_model.models import ForwardModel
+from forward_model.models import MagneticModel
 from forward_model.viz import plot_combined
 import numpy as np
 
@@ -547,7 +547,7 @@ import numpy as np
 with open("results.json") as f:
     data = json.load(f)
 
-model = ForwardModel(**data["model"])
+model = MagneticModel(**data["model"])
 x = np.array(data["results"]["x"])
 anomaly = np.array(data["results"]["anomaly"])
 

@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from forward_model.io.loaders import load_model_from_csv
-from forward_model.models import ForwardModel
+from forward_model.models import MagneticModel
 
 
 class TestLoadModelFromCSV:
@@ -22,7 +22,7 @@ Rectangle,0.05,0.0,100.0,50.0,100.0,50.0,200.0,0.0,200.0
 
         model = load_model_from_csv(csv_file)
 
-        assert isinstance(model, ForwardModel)
+        assert isinstance(model, MagneticModel)
         assert len(model.bodies) == 1
         assert model.bodies[0].name == "Rectangle"
         assert model.bodies[0].magnetic is not None

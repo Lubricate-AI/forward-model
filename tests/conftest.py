@@ -3,12 +3,12 @@
 import pytest
 
 from forward_model.models import (
-    ForwardModel,
     GeologicBody,
     GravityModel,
     GravityProperties,
     HeatFlowModel,
     MagneticField,
+    MagneticModel,
     MagneticProperties,
     ThermalProperties,
 )
@@ -37,9 +37,9 @@ def earth_field() -> MagneticField:
 @pytest.fixture
 def simple_model(
     simple_rectangle: GeologicBody, earth_field: MagneticField
-) -> ForwardModel:
+) -> MagneticModel:
     """A simple forward model with one rectangular body."""
-    return ForwardModel(
+    return MagneticModel(
         bodies=[simple_rectangle],
         field=earth_field,
         observation_x=[-100.0, -50.0, 0.0, 25.0, 50.0, 100.0, 150.0],
@@ -91,9 +91,9 @@ def body_2_75d() -> GeologicBody:
 
 
 @pytest.fixture
-def model_2_5d(body_2_5d: GeologicBody, earth_field: MagneticField) -> ForwardModel:
+def model_2_5d(body_2_5d: GeologicBody, earth_field: MagneticField) -> MagneticModel:
     """Forward model with a 2.5D body."""
-    return ForwardModel(
+    return MagneticModel(
         bodies=[body_2_5d],
         field=earth_field,
         observation_x=[-100.0, 0.0, 100.0],
@@ -102,9 +102,9 @@ def model_2_5d(body_2_5d: GeologicBody, earth_field: MagneticField) -> ForwardMo
 
 
 @pytest.fixture
-def model_2_75d(body_2_75d: GeologicBody, earth_field: MagneticField) -> ForwardModel:
+def model_2_75d(body_2_75d: GeologicBody, earth_field: MagneticField) -> MagneticModel:
     """Forward model with a 2.75D body."""
-    return ForwardModel(
+    return MagneticModel(
         bodies=[body_2_75d],
         field=earth_field,
         observation_x=[-100.0, 0.0, 100.0],

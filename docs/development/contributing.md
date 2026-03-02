@@ -143,7 +143,7 @@ import numpy as np
 import numpy.typing as npt
 
 def calculate_anomaly(
-    model: ForwardModel,
+    model: MagneticModel,
 ) -> npt.NDArray[np.float64]:
     """Calculate magnetic anomaly."""
     ...
@@ -159,11 +159,11 @@ def calculate_anomaly(
 # tests/unit/compute/test_talwani.py
 import pytest
 from forward_model import calculate_anomaly
-from forward_model.models import ForwardModel
+from forward_model.models import MagneticModel
 
 def test_calculate_anomaly_simple_dyke():
     """Test anomaly calculation for simple vertical dyke."""
-    model = ForwardModel(...)
+    model = MagneticModel(...)
     anomaly = calculate_anomaly(model)
     assert len(anomaly) == len(model.observation_x)
     assert anomaly.max() > 0
@@ -176,7 +176,7 @@ def test_calculate_anomaly_simple_dyke():
 - Update user guides for new features
 
 ```python
-def calculate_anomaly(model: ForwardModel) -> npt.NDArray[np.float64]:
+def calculate_anomaly(model: MagneticModel) -> npt.NDArray[np.float64]:
     """Calculate magnetic anomaly using Talwani algorithm.
 
     Args:
@@ -234,7 +234,7 @@ Use pytest fixtures for common setup:
 
 ```python
 import pytest
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import MagneticModel, GeologicBody, MagneticField
 
 @pytest.fixture
 def simple_dyke_model():
@@ -249,7 +249,7 @@ def simple_dyke_model():
         inclination=60.0,
         declination=0.0
     )
-    return ForwardModel(
+    return MagneticModel(
         bodies=[body],
         field=field,
         observation_x=[-100, 0, 100],

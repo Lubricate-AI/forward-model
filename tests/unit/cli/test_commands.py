@@ -7,13 +7,13 @@ import pytest
 from typer.testing import CliRunner
 
 from forward_model.cli.commands import app
-from forward_model.models import ForwardModel, GravityModel, HeatFlowModel
+from forward_model.models import GravityModel, HeatFlowModel, MagneticModel
 
 runner = CliRunner()
 
 
 @pytest.fixture
-def model_json_file(tmp_path: Path, simple_model: ForwardModel) -> Path:
+def model_json_file(tmp_path: Path, simple_model: MagneticModel) -> Path:
     """Create a temporary JSON model file."""
     model_file = tmp_path / "test_model.json"
     with open(model_file, "w") as f:
@@ -41,7 +41,7 @@ def heat_flow_model_json_file(tmp_path: Path, heat_flow_model: HeatFlowModel) ->
 
 @pytest.fixture
 def results_json_file(
-    tmp_path: Path, simple_model: ForwardModel, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, simple_model: MagneticModel, monkeypatch: pytest.MonkeyPatch
 ) -> Path:
     """Create a temporary results JSON file."""
     # Import here to avoid circular dependency
@@ -176,7 +176,7 @@ class TestRunCommand:
         assert len(data) > 0
 
     def test_run_with_csv_input(
-        self, tmp_path: Path, simple_model: ForwardModel
+        self, tmp_path: Path, simple_model: MagneticModel
     ) -> None:
         """Test run command with CSV input file."""
         # Create CSV model file

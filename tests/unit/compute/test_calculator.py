@@ -9,12 +9,12 @@ from forward_model.compute import (
     calculate_anomaly,
 )
 from forward_model.models import (
-    ForwardModel,
     GeologicBody,
     GravityModel,
     GravityProperties,
     HeatFlowModel,
     MagneticField,
+    MagneticModel,
     MagneticProperties,
 )
 
@@ -22,7 +22,7 @@ from forward_model.models import (
 class TestCalculateAnomaly:
     """Tests for high-level calculate_anomaly function."""
 
-    def test_simple_model(self, simple_model: ForwardModel) -> None:
+    def test_simple_model(self, simple_model: MagneticModel) -> None:
         """Test calculation with simple forward model."""
         anomaly = calculate_anomaly(simple_model)
 
@@ -40,7 +40,7 @@ class TestCalculateAnomaly:
             magnetic=MagneticProperties(susceptibility=0.0),
             name="Zero",
         )
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[zero_body],
             field=earth_field,
             observation_x=[0.0, 50.0, 100.0],
@@ -69,7 +69,7 @@ class TestCalculateAnomaly:
         obs_x = [0.0, 50.0, 100.0, 150.0]
 
         # Model with body 1 only
-        model1 = ForwardModel(
+        model1 = MagneticModel(
             bodies=[simple_rectangle],
             field=earth_field,
             observation_x=obs_x,
@@ -78,7 +78,7 @@ class TestCalculateAnomaly:
         anomaly1 = calculate_anomaly(model1)
 
         # Model with body 2 only
-        model2 = ForwardModel(
+        model2 = MagneticModel(
             bodies=[body2],
             field=earth_field,
             observation_x=obs_x,
@@ -87,7 +87,7 @@ class TestCalculateAnomaly:
         anomaly2 = calculate_anomaly(model2)
 
         # Model with both bodies
-        model_both = ForwardModel(
+        model_both = MagneticModel(
             bodies=[simple_rectangle, body2],
             field=earth_field,
             observation_x=obs_x,
@@ -112,7 +112,7 @@ class TestCalculateAnomaly:
             magnetic=MagneticProperties(susceptibility=0.05),
             name="Body2",
         )
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[simple_rectangle, body2],
             field=earth_field,
             observation_x=np.linspace(-100.0, 250.0, 50).tolist(),
@@ -129,7 +129,7 @@ class TestCalculateAnomaly:
         """Test with varying number of observation points."""
         for n_points in [1, 5, 10, 50]:
             obs_x = np.linspace(-100, 200, n_points).tolist()
-            model = ForwardModel(
+            model = MagneticModel(
                 bodies=[simple_rectangle],
                 field=earth_field,
                 observation_x=obs_x,
@@ -140,7 +140,7 @@ class TestCalculateAnomaly:
             assert np.all(np.isfinite(anomaly))
 
     def test_calculate_anomaly_all_returns_magnetic_components(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         """calculate_anomaly with component='all' returns MagneticComponents."""
         result = calculate_anomaly(simple_model, component="all")
@@ -153,7 +153,7 @@ class TestCalculateAnomaly:
             gravity=GravityProperties(density_contrast=2670.0),
             name="DensityOnly",
         )
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[body],
             field=earth_field,
             observation_x=[0.0, 50.0, 100.0],
@@ -203,8 +203,8 @@ class TestCalculateAnomalyDispatch:
         parallel = calculate_anomaly(heat_flow_model, parallel=True)
         np.testing.assert_allclose(serial.heat_flow, parallel.heat_flow, rtol=1e-10)
 
-    def test_forward_model_unchanged(self, simple_model: ForwardModel) -> None:
-        """Backward compat: ForwardModel still returns NDArray by default."""
+    def test_forward_model_unchanged(self, simple_model: MagneticModel) -> None:
+        """Backward compat: MagneticModel still returns NDArray by default."""
         result = calculate_anomaly(simple_model)
         assert isinstance(result, np.ndarray)
         assert result.shape == (7,)

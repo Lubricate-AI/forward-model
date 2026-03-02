@@ -12,7 +12,7 @@ from forward_model.compute import (
     field_to_magnetization,
 )
 from forward_model.compute.talwani import MagneticComponents
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import GeologicBody, MagneticField, MagneticModel
 
 
 def test_magnetic_components_alias() -> None:
@@ -494,8 +494,8 @@ class TestAnomalyComponents:
         [[100.0, 0.0], [50.0, 0.0], [-50.0, 0.0], [-100.0, 0.0]], dtype=np.float64
     )
 
-    def _simple_model(self, inclination: float = 60.0) -> ForwardModel:
-        """Build a minimal ForwardModel for calculate_anomaly tests."""
+    def _simple_model(self, inclination: float = 60.0) -> MagneticModel:
+        """Build a minimal MagneticModel for calculate_anomaly tests."""
         from forward_model.models.properties import MagneticProperties
 
         body = GeologicBody(
@@ -506,7 +506,7 @@ class TestAnomalyComponents:
         field = MagneticField(
             intensity=50000.0, inclination=inclination, declination=0.0
         )
-        return ForwardModel(
+        return MagneticModel(
             bodies=[body],
             field=field,
             observation_x=[-100.0, -50.0, 0.0, 50.0, 100.0],
@@ -590,7 +590,7 @@ class TestAnomalyComponents:
             name="Block",
         )
         field = MagneticField(intensity=50000.0, inclination=90.0, declination=0.0)
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[body],
             field=field,
             observation_x=[-200.0, -100.0, 0.0, 100.0, 200.0],
@@ -679,7 +679,7 @@ class TestMixed2DAnd25DModel:
     """Integration test: model with mixed 2D and 2.5D bodies."""
 
     def test_mixed_model_runs_without_error(self) -> None:
-        """ForwardModel with one 2D body and one 2.5D body computes without error."""
+        """MagneticModel with one 2D body and one 2.5D body computes without error."""
         from forward_model.models.properties import MagneticProperties
 
         body_2d = GeologicBody(
@@ -694,7 +694,7 @@ class TestMixed2DAnd25DModel:
             strike_half_length=500.0,
         )
         field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
-        model_mixed = ForwardModel(
+        model_mixed = MagneticModel(
             bodies=[body_2d, body_25d],
             field=field,
             observation_x=list(np.linspace(-200.0, 300.0, 51)),
@@ -716,7 +716,7 @@ class TestMixed2DAnd25DModel:
         body_2d = GeologicBody(
             vertices=verts, magnetic=MagneticProperties(susceptibility=0.05), name="2D"
         )
-        model_2d = ForwardModel(
+        model_2d = MagneticModel(
             bodies=[body_2d], field=field, observation_x=obs_x, observation_z=0.0
         )
 
@@ -726,7 +726,7 @@ class TestMixed2DAnd25DModel:
             name="2.5D",
             strike_half_length=150.0,
         )
-        model_25d = ForwardModel(
+        model_25d = MagneticModel(
             bodies=[body_25d], field=field, observation_x=obs_x, observation_z=0.0
         )
 

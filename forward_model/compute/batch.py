@@ -14,7 +14,7 @@ from numpy.typing import NDArray
 from forward_model.compute.calculator import calculate_anomaly
 from forward_model.io.loaders import load_model, load_model_from_csv
 from forward_model.io.writers import write_csv, write_json, write_numpy
-from forward_model.models import ForwardModel
+from forward_model.models import MagneticModel
 
 
 def _new_str_list() -> list[str]:
@@ -59,7 +59,7 @@ def _process_single(
         model = load_model(model_path)
 
     # Batch processing only supports magnetic models
-    if not isinstance(model, ForwardModel):
+    if not isinstance(model, MagneticModel):
         raise NotImplementedError(
             f"Batch processing for non-magnetic models is not yet implemented. "
             f"Tracked in future issues. Model {model_path} is of type "
