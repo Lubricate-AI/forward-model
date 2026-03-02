@@ -9,7 +9,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from forward_model.models import ForwardModel
+from forward_model.models import MagneticModel
 from forward_model.models.gravity_model import GravityModel
 from forward_model.viz import plot_anomaly, plot_combined, plot_model, plot_model_3d
 from forward_model.viz.plotter import _polygon_centroid, _resolve_strike_extents
@@ -18,20 +18,20 @@ from forward_model.viz.plotter import _polygon_centroid, _resolve_strike_extents
 class TestPlotModel:
     """Tests for plot_model function."""
 
-    def test_plot_model_creates_axes(self, simple_model: ForwardModel) -> None:
+    def test_plot_model_creates_axes(self, simple_model: MagneticModel) -> None:
         """Test that plot_model creates axes without errors."""
         ax = plot_model(simple_model)
         assert ax is not None
         plt.close()
 
-    def test_plot_model_with_custom_axes(self, simple_model: ForwardModel) -> None:
+    def test_plot_model_with_custom_axes(self, simple_model: MagneticModel) -> None:
         """Test providing custom axes."""
         _, ax = plt.subplots()
         result_ax = plot_model(simple_model, ax=ax)
         assert result_ax is ax
         plt.close()
 
-    def test_plot_model_has_elements(self, simple_model: ForwardModel) -> None:
+    def test_plot_model_has_elements(self, simple_model: MagneticModel) -> None:
         """Test that plot contains expected elements."""
         ax = plot_model(simple_model)
 
@@ -43,7 +43,7 @@ class TestPlotModel:
 
         plt.close()
 
-    def test_plot_model_color_by_index(self, simple_model: ForwardModel) -> None:
+    def test_plot_model_color_by_index(self, simple_model: MagneticModel) -> None:
         """Test plotting with color_by='index'."""
         ax = plot_model(simple_model, color_by="index")
         assert ax is not None
@@ -51,7 +51,7 @@ class TestPlotModel:
         plt.close()
 
     def test_plot_model_color_by_susceptibility(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         """Test plotting with color_by='susceptibility'."""
         ax = plot_model(simple_model, color_by="susceptibility")
@@ -60,7 +60,7 @@ class TestPlotModel:
         plt.close()
 
     def test_plot_model_with_observation_lines(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         """Test plotting with observation lines enabled."""
         ax = plot_model(simple_model, show_observation_lines=True)
@@ -70,7 +70,7 @@ class TestPlotModel:
         plt.close()
 
     def test_plot_model_without_observation_lines(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         """Test plotting with observation lines disabled."""
         ax = plot_model(simple_model, show_observation_lines=False)
@@ -78,14 +78,14 @@ class TestPlotModel:
         assert len(ax.patches) > 0
         plt.close()
 
-    def test_plot_model_with_xlim(self, simple_model: ForwardModel) -> None:
+    def test_plot_model_with_xlim(self, simple_model: MagneticModel) -> None:
         """Test that xlim correctly sets the x-axis limits."""
         xlim = (-50.0, 75.0)
         ax = plot_model(simple_model, xlim=xlim)
         assert ax.get_xlim() == xlim
         plt.close()
 
-    def test_plot_model_with_zlim(self, simple_model: ForwardModel) -> None:
+    def test_plot_model_with_zlim(self, simple_model: MagneticModel) -> None:
         """Test that zlim correctly sets the depth axis limits."""
         zlim = (50.0, 250.0)
         ax = plot_model(simple_model, zlim=zlim)
@@ -107,7 +107,7 @@ class TestPlotModel:
             name="Body2",
         )
         field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[body1, body2],
             field=field,
             observation_x=[0.0, 50.0, 100.0],
@@ -120,7 +120,7 @@ class TestPlotModel:
         assert len(fig.axes) == 1
         plt.close()
 
-    def test_plot_model_equal_aspect_false(self, simple_model: ForwardModel) -> None:
+    def test_plot_model_equal_aspect_false(self, simple_model: MagneticModel) -> None:
         """Test that equal_aspect=False does not lock axes to equal scale."""
         ax = plot_model(simple_model, equal_aspect=False)
         assert ax.get_aspect() != "equal"
@@ -290,7 +290,7 @@ class TestPlotAnomaly:
 class TestPlotCombined:
     """Tests for plot_combined function."""
 
-    def test_plot_combined_creates_figure(self, simple_model: ForwardModel) -> None:
+    def test_plot_combined_creates_figure(self, simple_model: MagneticModel) -> None:
         """Test that plot_combined creates a figure without errors."""
         anomaly = np.random.randn(len(simple_model.observation_x))
 
@@ -300,7 +300,7 @@ class TestPlotCombined:
         plt.close()
 
     def test_plot_combined_saves_to_file(
-        self, tmp_path: Path, simple_model: ForwardModel
+        self, tmp_path: Path, simple_model: MagneticModel
     ) -> None:
         """Test saving combined plot to file."""
         anomaly = np.random.randn(len(simple_model.observation_x))
@@ -311,7 +311,7 @@ class TestPlotCombined:
         plt.close(fig)
 
     def test_plot_combined_with_string_path(
-        self, tmp_path: Path, simple_model: ForwardModel
+        self, tmp_path: Path, simple_model: MagneticModel
     ) -> None:
         """Test that string paths work for saving."""
         anomaly = np.random.randn(len(simple_model.observation_x))
@@ -321,7 +321,7 @@ class TestPlotCombined:
         assert output_file.exists()
         plt.close(fig)
 
-    def test_plot_combined_subplots(self, simple_model: ForwardModel) -> None:
+    def test_plot_combined_subplots(self, simple_model: MagneticModel) -> None:
         """Test that combined plot has two subplots."""
         anomaly = np.random.randn(len(simple_model.observation_x))
 
@@ -337,7 +337,7 @@ class TestPlotCombined:
         plt.close()
 
     def test_plot_combined_with_style(
-        self, tmp_path: Path, simple_model: ForwardModel
+        self, tmp_path: Path, simple_model: MagneticModel
     ) -> None:
         """Test combined plot with different styles."""
         anomaly = np.random.randn(len(simple_model.observation_x))
@@ -351,7 +351,7 @@ class TestPlotCombined:
             plt.close(fig)
 
     def test_plot_combined_with_custom_figsize(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         """Test combined plot with custom figure size."""
         anomaly = np.random.randn(len(simple_model.observation_x))
@@ -364,7 +364,7 @@ class TestPlotCombined:
         plt.close()
 
     def test_plot_combined_with_custom_dpi(
-        self, tmp_path: Path, simple_model: ForwardModel
+        self, tmp_path: Path, simple_model: MagneticModel
     ) -> None:
         """Test combined plot with custom DPI."""
         anomaly = np.random.randn(len(simple_model.observation_x))
@@ -375,7 +375,7 @@ class TestPlotCombined:
         plt.close(fig)
 
     def test_plot_combined_vector_formats(
-        self, tmp_path: Path, simple_model: ForwardModel
+        self, tmp_path: Path, simple_model: MagneticModel
     ) -> None:
         """Test combined plot with vector formats (PDF, SVG)."""
         anomaly = np.random.randn(len(simple_model.observation_x))
@@ -386,7 +386,7 @@ class TestPlotCombined:
             assert output_file.exists()
             plt.close(fig)
 
-    def test_plot_combined_color_options(self, simple_model: ForwardModel) -> None:
+    def test_plot_combined_color_options(self, simple_model: MagneticModel) -> None:
         """Test combined plot with different color options."""
         anomaly = np.random.randn(len(simple_model.observation_x))
 
@@ -400,7 +400,7 @@ class TestPlotCombined:
         assert fig2 is not None
         plt.close(fig2)
 
-    def test_plot_combined_observation_lines(self, simple_model: ForwardModel) -> None:
+    def test_plot_combined_observation_lines(self, simple_model: MagneticModel) -> None:
         """Test combined plot with observation lines option."""
         anomaly = np.random.randn(len(simple_model.observation_x))
 
@@ -414,7 +414,7 @@ class TestPlotCombined:
         assert fig2 is not None
         plt.close(fig2)
 
-    def test_plot_combined_with_xlim(self, simple_model: ForwardModel) -> None:
+    def test_plot_combined_with_xlim(self, simple_model: MagneticModel) -> None:
         """Test that xlim is applied to both panels."""
         anomaly = np.random.randn(len(simple_model.observation_x))
         xlim = (-50.0, 75.0)
@@ -424,7 +424,7 @@ class TestPlotCombined:
         assert fig.axes[1].get_xlim() == xlim
         plt.close(fig)
 
-    def test_plot_combined_with_zlim(self, simple_model: ForwardModel) -> None:
+    def test_plot_combined_with_zlim(self, simple_model: MagneticModel) -> None:
         """Test that zlim is applied to the cross-section panel."""
         anomaly = np.random.randn(len(simple_model.observation_x))
         zlim = (50.0, 250.0)
@@ -448,7 +448,7 @@ class TestPlotCombined:
             name="Body2",
         )
         field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[body1, body2],
             field=field,
             observation_x=[0.0, 50.0, 100.0],
@@ -468,7 +468,7 @@ class TestPlotCombined:
         assert axes_without < axes_with
 
     def test_plot_combined_gradient_overlay_adds_twin_axis(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         """Supplying gradient to plot_combined adds a secondary axis
         in the anomaly panel."""
@@ -490,7 +490,7 @@ class TestPlotCombined:
         plt.close()
 
     def test_plot_combined_passes_label_offsets(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         """Test label_offsets and show_label_arrows propagate to cross-section axis."""
         from matplotlib.text import Annotation
@@ -511,14 +511,14 @@ class TestPlotCombined:
         assert len(annotations) > 0
         plt.close(fig)
 
-    def test_show_3d_adds_third_panel(self, simple_model: ForwardModel) -> None:
+    def test_show_3d_adds_third_panel(self, simple_model: MagneticModel) -> None:
         """show_3d=True adds a third (3D) panel to the combined figure."""
         anomaly = np.random.randn(len(simple_model.observation_x))
         fig = plot_combined(simple_model, anomaly, show_3d=True)
         assert len(fig.axes) >= 3
         plt.close(fig)
 
-    def test_show_3d_false_keeps_two_panels(self, simple_model: ForwardModel) -> None:
+    def test_show_3d_false_keeps_two_panels(self, simple_model: MagneticModel) -> None:
         """show_3d=False (default) keeps the original two-panel layout."""
         anomaly = np.random.randn(len(simple_model.observation_x))
         fig = plot_combined(simple_model, anomaly, show_3d=False)
@@ -526,7 +526,7 @@ class TestPlotCombined:
         plt.close(fig)
 
     def test_show_3d_with_xlim_applies_to_3d_panel(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         """When show_3d=True and xlim is supplied, xlim is applied to the 3D axes."""
         anomaly = np.zeros(len(simple_model.observation_x))
@@ -537,7 +537,7 @@ class TestPlotCombined:
         plt.close(fig)
 
     def test_show_3d_with_zlim_applies_to_3d_panel(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         """When show_3d=True and zlim is supplied, zlim is applied to the 3D axes."""
         anomaly = np.zeros(len(simple_model.observation_x))
@@ -556,7 +556,7 @@ class TestPlotModelBodyVisualProperties:
         self,
         color: str | list[float] | None = None,
         hatch: str | None = None,
-    ) -> ForwardModel:
+    ) -> MagneticModel:
         from forward_model.models import GeologicBody, MagneticField, MagneticProperties
 
         body = GeologicBody(
@@ -567,7 +567,7 @@ class TestPlotModelBodyVisualProperties:
             hatch=hatch,
         )
         field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
-        return ForwardModel(
+        return MagneticModel(
             bodies=[body],
             field=field,
             observation_x=[0.0, 25.0, 50.0],
@@ -633,7 +633,7 @@ class TestPolygonCentroid:
 class TestPlotModelLabelFeatures:
     """Tests for new label placement features in plot_model."""
 
-    def _make_model(self, label_loc: list[float] | None = None) -> ForwardModel:
+    def _make_model(self, label_loc: list[float] | None = None) -> MagneticModel:
         from forward_model.models import GeologicBody, MagneticField, MagneticProperties
 
         body = GeologicBody(
@@ -643,7 +643,7 @@ class TestPlotModelLabelFeatures:
             label_loc=label_loc,
         )
         field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
-        return ForwardModel(
+        return MagneticModel(
             bodies=[body],
             field=field,
             observation_x=[0.0, 25.0, 50.0],
@@ -754,7 +754,7 @@ class TestResolveStrikeExtents:
 class TestPlotModel3D:
     """Tests for plot_model_3d function."""
 
-    def test_returns_figure(self, simple_model: ForwardModel) -> None:
+    def test_returns_figure(self, simple_model: MagneticModel) -> None:
         """Smoke test: plot_model_3d returns a Figure without errors."""
         from matplotlib.figure import Figure
 
@@ -762,7 +762,7 @@ class TestPlotModel3D:
         assert isinstance(fig, Figure)
         plt.close(fig)
 
-    def test_returns_figure_2_5d(self, model_2_5d: ForwardModel) -> None:
+    def test_returns_figure_2_5d(self, model_2_5d: MagneticModel) -> None:
         """Smoke test: 2.5D model renders without errors."""
         from matplotlib.figure import Figure
 
@@ -770,7 +770,7 @@ class TestPlotModel3D:
         assert isinstance(fig, Figure)
         plt.close(fig)
 
-    def test_returns_figure_2_75d(self, model_2_75d: ForwardModel) -> None:
+    def test_returns_figure_2_75d(self, model_2_75d: MagneticModel) -> None:
         """Smoke test: 2.75D model renders without errors."""
         from matplotlib.figure import Figure
 
@@ -778,7 +778,7 @@ class TestPlotModel3D:
         assert isinstance(fig, Figure)
         plt.close(fig)
 
-    def test_default_strike_fallback(self, simple_model: ForwardModel) -> None:
+    def test_default_strike_fallback(self, simple_model: MagneticModel) -> None:
         """2D body (no strike fields) renders using default_strike without errors."""
         from matplotlib.figure import Figure
 
@@ -786,7 +786,7 @@ class TestPlotModel3D:
         assert isinstance(fig, Figure)
         plt.close(fig)
 
-    def test_custom_default_strike(self, simple_model: ForwardModel) -> None:
+    def test_custom_default_strike(self, simple_model: MagneticModel) -> None:
         """Different default_strike values produce a valid Figure."""
         from matplotlib.figure import Figure
 
@@ -794,7 +794,7 @@ class TestPlotModel3D:
         assert isinstance(fig, Figure)
         plt.close(fig)
 
-    def test_accepts_existing_ax(self, simple_model: ForwardModel) -> None:
+    def test_accepts_existing_ax(self, simple_model: MagneticModel) -> None:
         """Passing an existing Axes3D reuses it and returns its figure."""
         from mpl_toolkits.mplot3d import Axes3D
 
@@ -805,7 +805,7 @@ class TestPlotModel3D:
         assert fig_result is fig_pre
         plt.close(fig_pre)
 
-    def test_viewing_angle(self, simple_model: ForwardModel) -> None:
+    def test_viewing_angle(self, simple_model: MagneticModel) -> None:
         """Custom elev/azim are applied to the 3D axes."""
         from mpl_toolkits.mplot3d import Axes3D
 
@@ -938,14 +938,14 @@ class TestPlotModelGravity:
         assert len(ax.patches) > 0
         plt.close()
 
-    def test_magnetic_model_default_unchanged(self, simple_model: ForwardModel) -> None:
-        """ForwardModel with default color_by=None still uses susceptibility path."""
+    def test_magnetic_model_default_unchanged(self, simple_model: MagneticModel) -> None:
+        """MagneticModel with default color_by=None still uses susceptibility path."""
         ax = plot_model(simple_model)
         assert len(ax.patches) > 0
         plt.close()
 
     def test_magnetic_model_label_still_shows_chi(
-        self, simple_model: ForwardModel
+        self, simple_model: MagneticModel
     ) -> None:
         from matplotlib.text import Annotation, Text
 
@@ -1151,7 +1151,7 @@ class TestPlotCombinedGravity:
         assert "χ=" not in texts[0].get_text()
         plt.close()
 
-    def test_magnetic_model_ylabel_unchanged(self, simple_model: ForwardModel) -> None:
+    def test_magnetic_model_ylabel_unchanged(self, simple_model: MagneticModel) -> None:
         from forward_model.compute.calculator import calculate_anomaly
 
         anomaly = calculate_anomaly(simple_model, component="total_field")

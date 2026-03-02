@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 
 from forward_model.io import write_csv, write_json
-from forward_model.models import ForwardModel
+from forward_model.models import MagneticModel
 
 
 class TestWriteCSV:
@@ -44,7 +44,7 @@ class TestWriteCSV:
 class TestWriteJSON:
     """Tests for writing JSON files."""
 
-    def test_write_json(self, tmp_path: Path, simple_model: ForwardModel) -> None:
+    def test_write_json(self, tmp_path: Path, simple_model: MagneticModel) -> None:
         """Test writing model and results to JSON."""
         json_file = tmp_path / "results.json"
         anomaly = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
@@ -64,7 +64,7 @@ class TestWriteJSON:
         assert data["results"]["anomaly_nT"] == anomaly.tolist()
 
     def test_write_json_with_string_path(
-        self, tmp_path: Path, simple_model: ForwardModel
+        self, tmp_path: Path, simple_model: MagneticModel
     ) -> None:
         """Test that string paths work for JSON writing."""
         json_file = tmp_path / "results.json"
@@ -73,7 +73,7 @@ class TestWriteJSON:
         write_json(str(json_file), simple_model, anomaly)
         assert json_file.exists()
 
-    def test_json_roundtrip(self, tmp_path: Path, simple_model: ForwardModel) -> None:
+    def test_json_roundtrip(self, tmp_path: Path, simple_model: MagneticModel) -> None:
         """Test that we can write and reload a model."""
         json_file = tmp_path / "roundtrip.json"
         anomaly = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
@@ -86,7 +86,7 @@ class TestWriteJSON:
             data = json.load(f)
 
         # Verify we can reconstruct the model
-        reloaded = ForwardModel.model_validate(data["model"])
+        reloaded = MagneticModel.model_validate(data["model"])
         assert len(reloaded.bodies) == len(simple_model.bodies)
         assert reloaded.field.intensity == simple_model.field.intensity
         assert reloaded.observation_x == simple_model.observation_x

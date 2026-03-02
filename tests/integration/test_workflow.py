@@ -9,7 +9,7 @@ import pytest
 from forward_model.compute import calculate_anomaly
 from forward_model.io import load_model, write_csv, write_json
 from forward_model.models import (
-    ForwardModel,
+    MagneticModel,
     GeologicBody,
     HeatFlowModel,
     MagneticField,
@@ -42,7 +42,7 @@ class TestCompleteWorkflow:
             declination=0.0,
         )
 
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[body],
             field=field,
             observation_x=[-100.0, -50.0, 0.0, 50.0, 100.0, 150.0, 200.0],
@@ -71,7 +71,7 @@ class TestCompleteWorkflow:
         with open(json_file) as f:
             data = json.load(f)
 
-        reloaded_model = ForwardModel.model_validate(data["model"])
+        reloaded_model = MagneticModel.model_validate(data["model"])
 
         # Verify roundtrip equality
         assert len(reloaded_model.bodies) == len(model.bodies)
@@ -115,7 +115,7 @@ class TestCompleteWorkflow:
 
         field = MagneticField(intensity=50000.0, inclination=60.0, declination=0.0)
 
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[body1, body2],
             field=field,
             observation_x=np.linspace(-100, 250, 50).tolist(),
@@ -144,7 +144,7 @@ class TestJSONRoundtrip:
     def test_minimal_model_roundtrip(self, tmp_path: Path) -> None:
         """Test roundtrip with minimal model."""
         # Create minimal model
-        model = ForwardModel(
+        model = MagneticModel(
             bodies=[
                 GeologicBody(
                     vertices=[[0.0, 0.0], [1.0, 0.0], [1.0, 1.0]],
@@ -164,13 +164,13 @@ class TestJSONRoundtrip:
 
         # Load and verify
         loaded = load_model(json_file)
-        assert isinstance(loaded, ForwardModel)
+        assert isinstance(loaded, MagneticModel)
         assert len(loaded.bodies) == 1
         assert loaded.bodies[0].name == "Triangle"
         assert loaded.field.intensity == 50000.0
 
     def test_complex_model_roundtrip(
-        self, tmp_path: Path, simple_model: ForwardModel
+        self, tmp_path: Path, simple_model: MagneticModel
     ) -> None:
         """Test roundtrip with complex model from fixtures."""
         # Compute anomaly
@@ -185,7 +185,7 @@ class TestJSONRoundtrip:
             data = json.load(f)
 
         # Verify model can be reconstructed
-        reloaded = ForwardModel.model_validate(data["model"])
+        reloaded = MagneticModel.model_validate(data["model"])
         assert reloaded.model_dump() == simple_model.model_dump()
 
         # Verify results match
