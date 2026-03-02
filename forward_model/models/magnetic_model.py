@@ -6,7 +6,7 @@ from forward_model.models.base import ObservationModel
 from forward_model.models.field import MagneticField
 
 
-class ForwardModel(ObservationModel, frozen=True):
+class MagneticModel(ObservationModel, frozen=True):
     """Complete forward magnetic model specification.
 
     Attributes:
