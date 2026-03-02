@@ -9,7 +9,7 @@ from forward_model.models.body import GeologicBody
 from forward_model.models.field import MagneticField
 from forward_model.models.gravity_model import GravityModel
 from forward_model.models.heatflow_model import HeatFlowModel
-from forward_model.models.model import ForwardModel
+from forward_model.models.magnetic_model import MagneticModel
 from forward_model.models.properties import (
     GravityProperties,
     MagneticProperties,
@@ -17,7 +17,7 @@ from forward_model.models.properties import (
 )
 
 AnyForwardModel = Annotated[
-    ForwardModel | GravityModel | HeatFlowModel,
+    MagneticModel | GravityModel | HeatFlowModel,
     Field(discriminator="model_type"),
 ]
 
@@ -25,7 +25,7 @@ __all__ = [
     "ObservationModel",
     "GeologicBody",
     "MagneticField",
-    "ForwardModel",
+    "MagneticModel",
     "GravityModel",
     "HeatFlowModel",
     "MagneticProperties",
