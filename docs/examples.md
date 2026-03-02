@@ -230,7 +230,7 @@ for body in model.bodies:
 ### Step 2: Calculate Individual and Combined Anomalies
 
 ```python
-from forward_model.models import ForwardModel
+from forward_model.models import MagneticModel
 
 # Calculate total anomaly
 anomaly_total = calculate_anomaly(model)
@@ -239,7 +239,7 @@ anomaly_total = calculate_anomaly(model)
 anomalies_individual = []
 for body in model.bodies:
     # Create model with single body
-    single_body_model = ForwardModel(
+    single_body_model = MagneticModel(
         bodies=[body],
         field=model.field,
         observation_x=model.observation_x,
@@ -365,7 +365,7 @@ anomaly = calculate_anomaly(model)
 ### Programmatic Creation
 
 ```python
-from forward_model.models import ForwardModel, GeologicBody, MagneticField
+from forward_model.models import MagneticModel, GeologicBody, MagneticField
 import numpy as np
 
 # Define a body
@@ -389,7 +389,7 @@ field = MagneticField(
 )
 
 # Create model
-model = ForwardModel(
+model = MagneticModel(
     bodies=[body],
     field=field,
     observation_x=list(np.linspace(-100, 200, 61)),
